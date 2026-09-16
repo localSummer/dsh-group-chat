@@ -1,0 +1,12 @@
+# dsh-group-chat bundle layer: inserts the dual-face plugin row into the web
+# profile roster. Applied when the profile lists this package in
+# dsh.profile.bundles.
+#
+# The row is a bare plugin by package name: the node half (exports ".") runs
+# in the host process (group state machine + llm calls + fs material reads +
+# /api/group-chat HTTP API), and the `dsh.client` declaration in package.json
+# makes the browser half (exports "./client", served at
+# /plugins/<id>/client.js) load in the web GUI.
+- insert:
+    - id: group-chat
+      name: dsh-group-chat
