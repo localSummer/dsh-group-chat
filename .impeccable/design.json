@@ -1,0 +1,591 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-17T14:47:50+08:00",
+  "title": "Design System: 模型群聊（dsh-group-chat）",
+  "extensions": {
+    "colorMeta": {
+      "info-fill": {
+        "role": "primary",
+        "displayName": "Info 填充",
+        "canonical": "var(--dsw-alias-button-info-fill, #4f6ef7)",
+        "note": "发送主按钮、用户气泡、用户头像；会话区唯一强色块",
+        "tonalRamp": [
+          "oklch(22% 0.207 269.4)",
+          "oklch(33% 0.207 269.4)",
+          "oklch(44% 0.207 269.4)",
+          "oklch(55% 0.207 269.4)",
+          "oklch(66% 0.207 269.4)",
+          "oklch(77% 0.207 269.4)",
+          "oklch(88% 0.207 269.4)",
+          "oklch(96% 0.207 269.4)"
+        ]
+      },
+      "focus-brand": {
+        "role": "primary",
+        "displayName": "焦点品牌色",
+        "canonical": "var(--dsw-alias-brand-primary, var(--dsw-alias-state-business-primary, #4f6ef7))",
+        "note": "全部自有控件 focus-visible 2px 描边"
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "错误色",
+        "canonical": "var(--dsw-alias-state-error-primary, #e5484d)",
+        "note": "停止按钮、错误文字、danger 操作钮",
+        "tonalRamp": [
+          "oklch(22% 0.193 23)",
+          "oklch(33% 0.193 23)",
+          "oklch(44% 0.193 23)",
+          "oklch(55% 0.193 23)",
+          "oklch(66% 0.193 23)",
+          "oklch(77% 0.193 23)",
+          "oklch(88% 0.193 23)",
+          "oklch(96% 0.193 23)"
+        ]
+      },
+      "bg-base": {
+        "role": "neutral",
+        "displayName": "根底色",
+        "canonical": "var(--dsw-alias-bg-base, transparent)",
+        "note": "面板根"
+      },
+      "bg-layer-2": {
+        "role": "neutral",
+        "displayName": "凹陷面",
+        "canonical": "var(--dsw-alias-bg-layer-2, transparent)",
+        "note": "抽屉、文件浏览器"
+      },
+      "bg-layer-3": {
+        "role": "neutral",
+        "displayName": "标准卡片面",
+        "canonical": "var(--dsw-alias-bg-layer-3, rgba(128,128,128,.06))",
+        "note": "消息卡、角色卡、@弹层"
+      },
+      "bg-module": {
+        "role": "neutral",
+        "displayName": "模块底",
+        "canonical": "var(--dsw-alias-bg-module-platform, rgba(128,128,128,.12))",
+        "note": "徽章、中性头像、系统通知胶囊"
+      },
+      "border-l1": {
+        "role": "neutral",
+        "displayName": "一级边框",
+        "canonical": "var(--dsw-alias-border-l1, rgba(128,128,128,.2))",
+        "note": "栏间分隔、消息卡边框、会话列表左规线"
+      },
+      "border-l2": {
+        "role": "neutral",
+        "displayName": "二级边框",
+        "canonical": "var(--dsw-alias-border-l2, rgba(128,128,128,.3))",
+        "note": "卡片与控件标准边框、思考体左规线"
+      },
+      "border-l3": {
+        "role": "neutral",
+        "displayName": "三级边框",
+        "canonical": "var(--dsw-alias-border-l3, rgba(128,128,128,.4))",
+        "note": "无角色头像默认 2px 环"
+      },
+      "label-primary": {
+        "role": "neutral",
+        "displayName": "一级文字",
+        "canonical": "var(--dsw-alias-label-primary, inherit)"
+      },
+      "label-secondary": {
+        "role": "neutral",
+        "displayName": "二级文字",
+        "canonical": "var(--dsw-alias-label-secondary, inherit)"
+      },
+      "label-tertiary": {
+        "role": "neutral",
+        "displayName": "三级文字",
+        "canonical": "var(--dsw-alias-label-tertiary, inherit)"
+      },
+      "label-dimmed": {
+        "role": "neutral",
+        "displayName": "弱化文字",
+        "canonical": "var(--dsw-alias-label-dimmed, rgba(128,128,128,.5))",
+        "note": "仅作卡片 hover 边框"
+      },
+      "label-on-info": {
+        "role": "neutral",
+        "displayName": "info 前景白",
+        "canonical": "var(--dsw-alias-label-primary-foreground, #fff)"
+      },
+      "hover-fill": {
+        "role": "neutral",
+        "displayName": "hover 交互底",
+        "canonical": "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12))"
+      },
+      "active-fill": {
+        "role": "neutral",
+        "displayName": "选中交互底",
+        "canonical": "var(--dsw-alias-interactive-bg-active, rgba(128,128,128,.18))"
+      },
+      "input-bg": {
+        "role": "neutral",
+        "displayName": "输入控件底",
+        "canonical": "var(--dsw-specific-input-major, var(--dsw-alias-bg-layer-3, transparent))"
+      },
+      "scrollbar": {
+        "role": "neutral",
+        "displayName": "滚动条色",
+        "canonical": "var(--dsw-alias-scrollbar-bg-l2, rgba(128,128,128,.35))"
+      },
+      "on-danger": {
+        "role": "neutral",
+        "displayName": "danger 前景白",
+        "canonical": "#ffffff",
+        "note": "停止按钮文字；与令牌回退同为代码仅有的字面色"
+      },
+      "role-blue": {
+        "role": "tertiary",
+        "displayName": "群青",
+        "canonical": "#5b8def",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.156 262.5)",
+          "oklch(33% 0.156 262.5)",
+          "oklch(44% 0.156 262.5)",
+          "oklch(55% 0.156 262.5)",
+          "oklch(66% 0.156 262.5)",
+          "oklch(77% 0.156 262.5)",
+          "oklch(88% 0.156 262.5)",
+          "oklch(96% 0.156 262.5)"
+        ]
+      },
+      "role-green": {
+        "role": "tertiary",
+        "displayName": "松绿",
+        "canonical": "#22a06b",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.133 159.6)",
+          "oklch(33% 0.133 159.6)",
+          "oklch(44% 0.133 159.6)",
+          "oklch(55% 0.133 159.6)",
+          "oklch(66% 0.133 159.6)",
+          "oklch(77% 0.133 159.6)",
+          "oklch(88% 0.133 159.6)",
+          "oklch(96% 0.133 159.6)"
+        ]
+      },
+      "role-amber": {
+        "role": "tertiary",
+        "displayName": "琥珀",
+        "canonical": "#e8912d",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.150 64.1)",
+          "oklch(33% 0.150 64.1)",
+          "oklch(44% 0.150 64.1)",
+          "oklch(55% 0.150 64.1)",
+          "oklch(66% 0.150 64.1)",
+          "oklch(77% 0.150 64.1)",
+          "oklch(88% 0.150 64.1)",
+          "oklch(96% 0.150 64.1)"
+        ]
+      },
+      "role-purple": {
+        "role": "tertiary",
+        "displayName": "紫藤",
+        "canonical": "#c678dd",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.164 318.2)",
+          "oklch(33% 0.164 318.2)",
+          "oklch(44% 0.164 318.2)",
+          "oklch(55% 0.164 318.2)",
+          "oklch(66% 0.164 318.2)",
+          "oklch(77% 0.164 318.2)",
+          "oklch(88% 0.164 318.2)",
+          "oklch(96% 0.164 318.2)"
+        ]
+      },
+      "role-red": {
+        "role": "tertiary",
+        "displayName": "绯红",
+        "canonical": "#e05661",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.172 18.8)",
+          "oklch(33% 0.172 18.8)",
+          "oklch(44% 0.172 18.8)",
+          "oklch(55% 0.172 18.8)",
+          "oklch(66% 0.172 18.8)",
+          "oklch(77% 0.172 18.8)",
+          "oklch(88% 0.172 18.8)",
+          "oklch(96% 0.172 18.8)"
+        ]
+      },
+      "role-teal": {
+        "role": "tertiary",
+        "displayName": "青瓷",
+        "canonical": "#56b6c2",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.092 206.3)",
+          "oklch(33% 0.092 206.3)",
+          "oklch(44% 0.092 206.3)",
+          "oklch(55% 0.092 206.3)",
+          "oklch(66% 0.092 206.3)",
+          "oklch(77% 0.092 206.3)",
+          "oklch(88% 0.092 206.3)",
+          "oklch(96% 0.092 206.3)"
+        ]
+      },
+      "role-olive": {
+        "role": "tertiary",
+        "displayName": "橄榄",
+        "canonical": "#98c379",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.110 133)",
+          "oklch(33% 0.110 133)",
+          "oklch(44% 0.110 133)",
+          "oklch(55% 0.110 133)",
+          "oklch(66% 0.110 133)",
+          "oklch(77% 0.110 133)",
+          "oklch(88% 0.110 133)",
+          "oklch(96% 0.110 133)"
+        ]
+      },
+      "role-bronze": {
+        "role": "tertiary",
+        "displayName": "古铜",
+        "canonical": "#d19a66",
+        "note": "仅角色环/点",
+        "tonalRamp": [
+          "oklch(22% 0.095 63.8)",
+          "oklch(33% 0.095 63.8)",
+          "oklch(44% 0.095 63.8)",
+          "oklch(55% 0.095 63.8)",
+          "oklch(66% 0.095 63.8)",
+          "oklch(77% 0.095 63.8)",
+          "oklch(88% 0.095 63.8)",
+          "oklch(96% 0.095 63.8)"
+        ]
+      },
+      "role-fallback": {
+        "role": "tertiary",
+        "displayName": "无角色回退灰",
+        "canonical": "#888888",
+        "tonalRamp": [
+          "oklch(22% 0 0)",
+          "oklch(33% 0 0)",
+          "oklch(44% 0 0)",
+          "oklch(55% 0 0)",
+          "oklch(66% 0 0)",
+          "oklch(77% 0 0)",
+          "oklch(88% 0 0)",
+          "oklch(96% 0 0)"
+        ]
+      },
+      "business-focus-fallback": {
+        "canonical": "#4f6ef7",
+        "displayName": "Focus 回退蓝",
+        "note": "var(--dsw-alias-state-business-primary) 缺省时的输入 focus 边框回退；输入控件 focus 一致色",
+        "role": "accent",
+        "tonalRamp": [
+          "oklch(22% 0.207 269.4)",
+          "oklch(33% 0.207 269.4)",
+          "oklch(44% 0.207 269.4)",
+          "oklch(55% 0.207 269.4)",
+          "oklch(66% 0.207 269.4)",
+          "oklch(77% 0.207 269.4)",
+          "oklch(88% 0.207 269.4)",
+          "oklch(96% 0.207 269.4)"
+        ]
+      },
+      "error-fallback": {
+        "canonical": "#e5484d",
+        "displayName": "错误回退红",
+        "note": "var(--dsw-alias-state-error-primary) 缺省时的错误文字与停止按钮回退色",
+        "role": "danger",
+        "tonalRamp": [
+          "oklch(22% 0.189 27.3)",
+          "oklch(33% 0.189 27.3)",
+          "oklch(44% 0.189 27.3)",
+          "oklch(55% 0.189 27.3)",
+          "oklch(66% 0.189 27.3)",
+          "oklch(77% 0.189 27.3)",
+          "oklch(88% 0.189 27.3)",
+          "oklch(96% 0.189 27.3)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "设置页标题（15px/600），全插件字号上限。"
+      },
+      "subtitle": {
+        "displayName": "Subtitle",
+        "purpose": "会话标题与抽屉标题（14px/600）。"
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "根字号与消息正文（14px/1.6）；字体栈整体继承宿主。"
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "输入控件、角色名（13px）。"
+      },
+      "minor": {
+        "displayName": "Minor",
+        "purpose": "会话行、@候选、文件行、思考体（12.5px，思考体行高 1.7）。"
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "表单标签、chips、提示、区块头（12px/500，区块头 600）。"
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "系统通知、思考摘要、角色人设（11.5px/1.5）。"
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "角色卡模型徽章（11px/500/line-height 17）。"
+      },
+      "micro-tiny": {
+        "displayName": "Micro-tiny",
+        "purpose": "流内模型徽章、相对时间、文件尺寸（10.5px/500）。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "popup-lv3",
+        "value": "var(--dsw-shadow-lv3, 0 8px 24px rgba(0,0,0,.18))",
+        "purpose": "@成员候选弹层，向下投。"
+      },
+      {
+        "name": "drawer-left",
+        "value": "-12px 0 32px rgba(0,0,0,.14)",
+        "purpose": "角色编辑抽屉（380px 滑出），向左投。"
+      },
+      {
+        "name": "aside-overlay-left",
+        "value": "-12px 0 32px rgba(0,0,0,.16)",
+        "purpose": "≤880px 容器下右栏的覆盖态，向左投。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "presence-ring",
+        "value": "1.8s ease-in-out infinite (box-shadow 0→4px, color-mix 22% of --role-color)",
+        "purpose": "正在流式发言角色的头像呼吸光环——唯一循环动画，live 行卸载即停。"
+      },
+      {
+        "name": "msg-in",
+        "value": ".22s cubic-bezier(.16,1,.3,1) (fade + translateY 6px)",
+        "purpose": "消息入场（用户/角色/系统统一的出现确认）。"
+      },
+      {
+        "name": "pop-in",
+        "value": ".16s cubic-bezier(.16,1,.3,1) (fade + translateY 4px)",
+        "purpose": "@成员弹层出现。"
+      },
+      {
+        "name": "rise-in",
+        "value": ".18s cubic-bezier(.16,1,.3,1) (fade + translateY 6px，保留 translateX(-50%))",
+        "purpose": "「回到底部」药丸出现。"
+      },
+      {
+        "name": "think-in",
+        "value": ".2s ease-out (fade + translateY 3px)",
+        "purpose": "思考折叠行展开正文。"
+      },
+      {
+        "name": "fade-in",
+        "value": ".18–.3s ease-out (fade)",
+        "purpose": "错误提示 / 文件浏览器 / 空状态的出现。"
+      },
+      {
+        "name": "sys-in",
+        "value": ".24s ease-out (fade + scale .96)",
+        "purpose": "系统通知胶囊入场。"
+      },
+      {
+        "name": "aside-collapse",
+        "value": "宽模式 width 304→0：开 .28s cubic-bezier(.16,1,.3,1) / 合 .24s ease-in；窄容器(≤880px) translateX 滑行：.3s / .26s",
+        "purpose": "右栏开合的布局连续性——唯一的 layout 动画；子元素固定宽 280 防重排；visibility 延迟切换保证键盘安全。"
+      },
+      {
+        "name": "drawer-in",
+        "value": ".22s cubic-bezier(.16,1,.3,1) (translateX 32px + fade)",
+        "purpose": "角色抽屉入场。"
+      },
+      {
+        "name": "drawer-out",
+        "value": ".14s ease-in forwards (translateX 32px + fade)",
+        "purpose": "角色抽屉退场（取消/Esc 走 140ms 退场后卸载）。"
+      },
+      {
+        "name": "row-response",
+        "value": ".12s (background-color, color)",
+        "purpose": "平铺行、chips、操作钮、主题框的状态响应。"
+      },
+      {
+        "name": "card-response",
+        "value": ".16s (border-color, background-color)",
+        "purpose": "卡片、输入控件、chevron 旋转。"
+      },
+      {
+        "name": "dot-scale",
+        "value": ".12s, scale(1.12)",
+        "purpose": "调色盘色点 hover；reduced-motion 下禁用。"
+      },
+      {
+        "name": "loading-spin",
+        "value": "1s linear infinite",
+        "purpose": "加载图标旋转；reduced-motion 下禁用。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "cq-aside-overlay",
+        "value": "880px (container)",
+        "note": "右栏转绝对定位覆盖层（z-index 15 + 投影）。"
+      },
+      {
+        "name": "cq-compact",
+        "value": "640px (container)",
+        "note": "左栏收窄 200px，消息体 max-width 76%→88%。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "发送主按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "会话区唯一主操作（info 填充）；源件为宿主 P.Button primary，此处按令牌合成等效外观。",
+      "html": "<button class=\"ds-btn-primary\">发送</button>",
+      "css": ".ds-btn-primary{background:var(--dsw-alias-button-info-fill,#4f6ef7);border:1px solid transparent;color:var(--dsw-alias-label-primary-foreground,#fff);font-size:13px;font-weight:600;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;transition:filter .16s}.ds-btn-primary:hover{filter:brightness(1.08)}.ds-btn-primary:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}.ds-btn-primary:disabled{opacity:.45;cursor:default}"
+    },
+    {
+      "name": "停止按钮",
+      "kind": "button",
+      "refersTo": "stop-button",
+      "description": "对话进行中替换发送按钮；P.Button outline 基座上的自定义 danger 覆写。",
+      "html": "<button class=\"ds-btn-stop\">停止</button>",
+      "css": ".ds-btn-stop{background:var(--dsw-alias-state-error-primary,#e5484d);border:1px solid transparent;color:#fff;font-size:13px;font-weight:600;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;transition:filter .16s}.ds-btn-stop:hover{filter:brightness(1.08);color:#fff}.ds-btn-stop:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}"
+    },
+    {
+      "name": "参与角色 chip",
+      "kind": "chip",
+      "refersTo": "participant-chip",
+      "description": "composer 内切换本轮参与角色的胶囊，携 8px 角色色点；选中换 active 底。",
+      "html": "<button class=\"ds-partchip\"><span class=\"ds-chipdot\"></span>产品经理</button> <button class=\"ds-partchip on\"><span class=\"ds-chipdot\"></span>工程师</button>",
+      "css": ".ds-partchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:transparent;color:var(--dsw-alias-label-secondary,inherit);border-radius:999px;padding:2px 10px;font-size:12px;line-height:1.5;cursor:pointer;font-family:inherit;transition:background-color .12s,color .12s}.ds-partchip:hover{color:var(--dsw-alias-label-primary,inherit)}.ds-partchip.on{background:var(--dsw-alias-interactive-bg-active,rgba(128,128,128,.18));color:var(--dsw-alias-label-primary,inherit)}.ds-partchip:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}.ds-partchip:disabled{opacity:.5;cursor:default}.ds-chipdot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;background:#5b8def}"
+    },
+    {
+      "name": "模型徽章",
+      "kind": "chip",
+      "refersTo": "model-badge",
+      "description": "模块底胶囊，标注角色绑定的 provider/model；角色卡 11px、消息流内 10.5px。",
+      "html": "<span class=\"ds-model-badge\">deepseek / chat</span>",
+      "css": ".ds-model-badge{background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.12));border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;line-height:17px;color:var(--dsw-alias-label-secondary,inherit);white-space:nowrap;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis}"
+    },
+    {
+      "name": "会话行（目录树）",
+      "kind": "nav",
+      "refersTo": "session-row",
+      "description": "平铺导航行的标准形态：无边框、圆角 6、hover 换底、选中 active 底 + 600。",
+      "html": "<div role=\"button\" tabindex=\"0\" class=\"ds-sess-row\"><span class=\"ds-sess-dot\"></span><span class=\"ds-sess-name\">定价策略讨论</span></div>",
+      "css": ".ds-sess-row{display:flex;align-items:center;gap:6px;min-width:0;border:none;background:none;border-radius:6px;padding:4px 8px;font-size:12.5px;color:var(--dsw-alias-label-secondary,inherit);transition:background-color .12s,color .12s;cursor:pointer;text-align:left;font-family:inherit}.ds-sess-row:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit)}.ds-sess-row.on{background:var(--dsw-alias-interactive-bg-active,rgba(128,128,128,.2));color:var(--dsw-alias-label-primary,inherit);font-weight:600}.ds-sess-row:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}.ds-sess-dot{flex:none;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}.ds-sess-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+    },
+    {
+      "name": "角色卡",
+      "kind": "card",
+      "refersTo": "role-card",
+      "description": "右栏群成员卡：色点 + 名字 + 模型徽章，人设 2 行钳制；hover 边框转弱化色。",
+      "html": "<div role=\"button\" tabindex=\"0\" class=\"ds-role-card\"><div class=\"ds-role-head\"><span class=\"ds-role-dot\"></span><span class=\"ds-role-name\">产品经理</span></div><div class=\"ds-role-persona\">关注用户价值与商业闭环，习惯先问「这个功能为谁解决什么问题」。</div><div class=\"ds-role-menu\"><span class=\"ds-model-badge\">deepseek / chat</span></div></div>",
+      "css": ".ds-role-card{border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:var(--dsw-alias-bg-layer-3,transparent);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:7px;transition:border-color .16s,background-color .16s;font-family:inherit;text-align:left;cursor:pointer;color:inherit}.ds-role-card:hover{border-color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.5))}.ds-role-card:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}.ds-role-head{display:flex;gap:8px;align-items:center}.ds-role-dot{width:10px;height:10px;border-radius:50%;flex:none;background:#22a06b}.ds-role-name{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-primary,inherit)}.ds-role-persona{font-size:11.5px;color:var(--dsw-alias-label-tertiary,inherit);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ds-role-menu{display:flex;align-items:center;justify-content:space-between;gap:8px}.ds-model-badge{background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.12));border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;line-height:17px;color:var(--dsw-alias-label-secondary,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}"
+    },
+    {
+      "name": "角色消息卡",
+      "kind": "custom",
+      "refersTo": "message-card",
+      "description": "消息流的内容卡：28px 色环头像 + 头部行（名/徽章/时间）+ layer-3 卡内 markdown 正文。",
+      "html": "<div class=\"ds-msg\"><div class=\"ds-avatar\">工</div><div class=\"ds-msg-body\"><div class=\"ds-msg-head\"><span class=\"ds-msg-name\">工程师</span><span class=\"ds-msg-model\">deepseek / chat</span><span class=\"ds-msg-time\">3 分钟前</span></div><div class=\"ds-msg-text\">这个方案的存储选型建议走 SQLite，单文件落盘足够覆盖当前规模。</div></div></div>",
+      "css": ".ds-msg{display:flex;gap:10px;align-items:flex-start;max-width:100%;font-family:inherit}.ds-avatar{width:28px;height:28px;box-sizing:border-box;border:2px solid #22a06b;border-radius:50%;background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex:none}.ds-msg-body{max-width:76%;min-width:0;display:flex;flex-direction:column;gap:5px}.ds-msg-head{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--dsw-alias-label-secondary,inherit)}.ds-msg-name{font-weight:600;color:var(--dsw-alias-label-primary,inherit)}.ds-msg-model{background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.12));border-radius:999px;padding:0 7px;font-size:10.5px;font-weight:500;line-height:16px;color:var(--dsw-alias-label-secondary,inherit)}.ds-msg-time{font-size:10.5px;color:var(--dsw-alias-label-tertiary,inherit)}.ds-msg-text{background:var(--dsw-alias-bg-layer-3,rgba(128,128,128,.06));border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.15));padding:10px 14px;border-radius:12px;line-height:1.6;text-align:left;color:var(--dsw-alias-label-primary,inherit);overflow-wrap:anywhere}"
+    },
+    {
+      "name": "用户消息气泡",
+      "kind": "custom",
+      "refersTo": "user-bubble",
+      "description": "用户侧 = info 填充行反转气泡，纯文本 pre-wrap，边框透明；与角色卡形成方向对比。",
+      "html": "<div class=\"ds-msg-mine\"><div class=\"ds-avatar-mine\">我</div><div class=\"ds-msg-body-mine\"><div class=\"ds-msg-head-mine\"><span class=\"ds-msg-name\">我</span></div><div class=\"ds-msg-text-mine\">那我们对比一下三个方案的迁移成本。</div></div></div>",
+      "css": ".ds-msg-mine{display:flex;gap:10px;align-items:flex-start;flex-direction:row-reverse;font-family:inherit}.ds-avatar-mine{width:28px;height:28px;box-sizing:border-box;border:2px solid transparent;border-radius:50%;background:var(--dsw-alias-button-info-fill,#4f6ef7);color:var(--dsw-alias-label-primary-foreground,#fff);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex:none}.ds-msg-body-mine{max-width:76%;display:flex;flex-direction:column;gap:5px;align-items:flex-end}.ds-msg-head-mine{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--dsw-alias-label-secondary,inherit)}.ds-msg-name{font-weight:600;color:var(--dsw-alias-label-primary,inherit)}.ds-msg-text-mine{background:var(--dsw-alias-button-info-fill,#4f6ef7);border:1px solid transparent;padding:10px 14px;border-radius:12px;line-height:1.6;text-align:left;color:var(--dsw-alias-label-primary-foreground,#fff);white-space:pre-wrap;word-break:break-word}"
+    },
+    {
+      "name": "@成员弹层",
+      "kind": "custom",
+      "refersTo": "mention-popup",
+      "description": "钉在 composer 输入框上方的浮层：layer-3 + 圆角 10 + shadow-lv3，候选项携色点。",
+      "html": "<div class=\"ds-mention\"><button class=\"ds-mention-item on\"><span class=\"ds-chipdot\"></span><span class=\"ds-mention-name\">评审员</span><span class=\"ds-mention-model\">glm / chat</span></button><span class=\"ds-mention-hint\">↑↓ 选择 · Enter/Tab 插入 · Esc 关闭</span></div>",
+      "css": ".ds-mention{background:var(--dsw-alias-bg-layer-3,#fff);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));border-radius:10px;box-shadow:var(--dsw-shadow-lv3,0 8px 24px rgba(0,0,0,.18));max-height:220px;overflow-y:auto;padding:4px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent;font-family:inherit}.ds-mention-item{display:flex;align-items:center;gap:8px;border:none;background:none;color:var(--dsw-alias-label-secondary,inherit);font:inherit;font-size:12.5px;text-align:left;cursor:pointer;padding:6px 8px;border-radius:6px;transition:background-color .12s,color .12s}.ds-mention-item.on,.ds-mention-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15));color:var(--dsw-alias-label-primary,inherit)}.ds-mention-item:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}.ds-mention-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}.ds-mention-model{font-size:11px;color:var(--dsw-alias-label-tertiary,inherit)}.ds-mention-hint{font-size:11px;color:var(--dsw-alias-label-tertiary,inherit);padding:2px 8px 1px}.ds-chipdot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;background:#e8912d}"
+    }
+  ],
+  "narrative": {
+    "northStar": "「三区工作台」",
+    "overview": "导航 / 会话 / 上下文三区分权的工作台：左栏定位（搜索 + 群组→会话目录树），中栏阅读（以宿主同源的 MarkdownText 正文 + 思考折叠行为阅读中心），右栏管理（角色卡 + 工作区目录）。会话流是唯一的主舞台，发送是唯一的主操作（info 填充）；配置不挤进会话栏，阅读不被管理打断——这是对旧两栏「左栏过载」结构的直接否定。角色编辑走右侧滑出抽屉，进一步把表单从工作台上移开。视觉世界完全继承宿主：颜色、边框、阴影一律走 DSW 别名令牌（--dsw-alias-*）带灰阶回退，明暗主题随宿主切换；交互控件优先取宿主原语（Button / Input / Switch / Tooltip / DisclosureRow / MarkdownText / 60+ 描边图标 / fileSizeText），插件自有 CSS 只覆盖原语管不到的部分。个性只来自一处：角色色环与色点（8 色 PALETTE）。密度偏高、克制、低强度；没有气泡墙，没有装饰性渐变，没有投影堆叠——深度靠分层底色 + 1px 边框，投影只给临时浮层。命名签名交互是流式发言的「正在输入…」行 + 思考折叠实时摘要（对标宿主会话流的 ReasoningRow）。界面文案为中文。",
+    "keyCharacteristics": [
+      "三区固定/流体的工作台骨架：左 232px、右 304px、中央流体，容器查询降级（≤880px 右栏覆盖式、≤640px 左栏 200px）",
+      "DSW 令牌纪律：一切颜色经 --dsw-alias-* + 灰阶回退；PALETTE 8 色是仅有的字面色，且只用于角色环/点",
+      "宿主原语优先：Button / Input / Switch / Tooltip / DisclosureRow / MarkdownText / Icon*Outline 直接复用，自有 CSS 补足布局与定制件",
+      "分层不投影：静止表面零阴影，阴影只属于浮层（@弹层 / 抽屉 / 覆盖式右栏）",
+      "行/卡二分：导航一律平铺行（圆角 6），卡片只承载内容单元（圆角 12）",
+      "微字号梯队承载身份信息（模型徽章、时间、尺寸），保持阅读列安静"
+    ],
+    "rules": [
+      {
+        "name": "唯一个性源规则",
+        "body": "角色颜色只以环和点的形式出现（头像环、色点），永不染指表面、文字或边框。任何一个屏里的彩色面积以个位数像素计。",
+        "section": "colors"
+      },
+      {
+        "name": "令牌纪律规则",
+        "body": "每个颜色引用都是 var(--dsw-alias-*, 灰阶回退) 的完整对；PALETTE 8 色 + #888 回退 + danger 上的 #fff 是代码里仅有的字面色。新样式不得绕过这对结构。",
+        "section": "colors"
+      },
+      {
+        "name": "窄梯规则",
+        "body": "不引入 15px 以上的字号；层级升级优先用 600 字重和颜色（secondary→primary），其次才是 +1px。徽章类永远 ≤11px。",
+        "section": "typography"
+      },
+      {
+        "name": "行/卡二分规则",
+        "body": "导航与列表一律平铺行（无边框、圆角 6、hover 换底色）；卡片（圆角 12、边框、底色）只承载内容单元——角色卡、消息卡、设置卡。禁止给平铺行加边框或给卡片去掉边框。",
+        "section": "layout"
+      },
+      {
+        "name": "三区守恒规则",
+        "body": "只有三个常驻区。新功能要么进右栏（管理类）、要么走抽屉/弹层（临时类），不得开辟第四栏。",
+        "section": "layout"
+      },
+      {
+        "name": "分层不投影规则",
+        "body": "静止表面（卡片、行、面板）零阴影。需要阴影 = 你正在做一个浮层（弹层/抽屉/覆盖），用完即走。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 原语优先：宿主有 Button/Input/Switch/Tooltip/DisclosureRow/MarkdownText/Icon*Outline 就直接用；自有 CSS 只写原语覆盖不到的布局与定制件。",
+      "Do 每个颜色引用都带完整 var(--dsw-alias-*, 灰阶回退) 对，明暗主题自动成立。",
+      "Do 角色颜色只画环和点；头像环 2px、角色点 10px、chip 点 8px。",
+      "Do 响应式用容器查询（880px / 640px 两级），新面板不依赖视口媒体查询。",
+      "Do 所有滚动容器给 scrollbar-width:thin + scrollbar 色；所有自有可交互控件给 focus-visible 2px 品牌描边 + offset 1px。",
+      "Do 破坏性操作用两次点击确认（第一次变 danger 红），Esc 关闭临时层，键盘可达（Enter/Space/↑↓/Tab）。",
+      "Do prefers-reduced-motion:reduce 下关闭全部过渡与动画（含抽屉入场与加载旋转）。",
+      "Do 时间显示用相对时间（刚刚 / N 分钟前 / N 小时前 / M月D日）。"
+    ],
+    "donts": [
+      "Don't 在 PALETTE 之外引入字面色（danger 上的 #fff 与令牌回退值除外）；也不要把 PALETTE 用在环/点之外的任何地方。",
+      "Don't 给静止表面加阴影——阴影只属于弹层/抽屉/覆盖式右栏。",
+      "Don't 开辟第四栏或把表单塞进会话区；管理进右栏，临时走抽屉/弹层。",
+      "Don't 使用 Unicode 图形符或伪造光标（如 ▍）——图标一律取 Icon*Outline 原语，流式态用「正在输入…」时间槽 + opacity .92 表达。",
+      "Don't 把侧边栏入口的对齐 hack（panelRow :has(.dsgc-entryOverlay) 系列规则与 newSession 类名钩子）复制到新表面——那是外壳插槽的度量对齐权宜，由 client.js 文件头注释持有，不属于本设计系统。",
+      "Don't 在本文件记录产品事实（用户、用途、能力约束）——归 PRODUCT.md；设计文档只管视觉。"
+    ]
+  }
+}
