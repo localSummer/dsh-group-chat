@@ -258,7 +258,7 @@ components:
 ### Inputs / Fields
 - **自有控件**（input/select/textarea）：`input-bg` 底 + `border-l2`，圆角 8，13px，focus 边框 → 输入焦点色；表单字段 = 12px/500 标签 + 5px 间距。
 - **搜索**：P.Input 带描边图标（IconSearchOutline16）。
-- **Composer 输入**：卡内无边框 **contenteditable**（非受控——React 不管理其子节点；36px 起、自适应增高至 180px、左缩进 14px）。@成员 = 原子芯片（`.dsgc-chipin`：`contenteditable=false` + `draggable`，退格整删、`user-select:all`）；序列化契约：芯片展开回纯文本「@名字␠」、`<br>`→换行——**芯片=糖、正则=真**（参与判定与发送值仍由 mentionedRoles 正则对序列化文本承载，手打 @名字 与芯片等价）。行为：Enter 发送 / Shift+Enter `insertLineBreak` 换行 / 粘贴强制 `text/plain`（`insertText`）/ IME 组合期只读不写 DOM；@词删除与换行走 execCommand（`delete`/`insertLineBreak`）保 undo 栈；芯片经 Range 直插（`insertHTML` 后选区会落进 contenteditable=false 芯片内部导致光标丢失/空格失灵），光标显式钉回尾随空格之后；占位符 = 独立覆盖层 `.dsgc-ph`（`pointer-events:none`，对齐主会话——不用 ::before，生成内容会把聚焦光标顶到占位文字之后）。
+- **Composer 输入**：卡内无边框 **contenteditable**（非受控——React 不管理其子节点；36px 起、自适应增高至 180px、左缩进 14px）。@成员 = 原子芯片（`.dsgc-chipin`：`contenteditable=false` + `draggable`，退格整删、`user-select:all`）；序列化契约：芯片展开回纯文本「@名字␠」、`<br>`→换行——**芯片=糖、正则=真**（参与判定与发送值仍由 mentionedRoles 正则对序列化文本承载，手打 @名字 与芯片等价）。行为：Enter 发送 / Shift+Enter `insertLineBreak` 换行（弹层开时亦然——换行后的 input 事件自然关弹层）/ 粘贴与拖放均强制 `text/plain`（`insertText`，拖放是粘贴之外的第二入口）/ IME 组合期只读不写 DOM（`isComposing` + keyCode 229 双守卫）；插入全程走 execCommand（`delete`/`insertHTML`/`insertText`）保 undo 栈，`insertHTML` 后选区经 `data-new` 标记营救（部分浏览器把选区落进 contenteditable=false 芯片内部，曾致空格丢失与光标不可见）；弹层失焦即关、候选索引按候选收缩钳制、芯片插入前校验选区落在输入区内、发送带在途锁；占位符 = 独立覆盖层 `.dsgc-ph`（`pointer-events:none`，对齐主会话——不用 ::before，生成内容会把聚焦光标顶到占位文字之后）。
 - **安静输入**：会话主题框为无边框透明输入（secondary 色，focus 提为 primary）；目录树重命名为内联 mini 输入（12.5px，圆角 6）。
 
 ### Navigation

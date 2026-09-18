@@ -7,7 +7,7 @@
  * @module dsh-group-chat/client/panel
  */
 
-import { useCallback, useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type CSSProperties, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import { Icon, P } from './ui.ts'
 import { api } from './api.ts'
 import { Bubble } from './Bubble.tsx'
@@ -91,6 +91,9 @@ export function GroupChatPanel(): ReactNode {
   const [navOpen, setNavOpen] = useState(true)
   const [atBottom, setAtBottom] = useState(true)
   const inputRef = useRef<HTMLDivElement | null>(null)
+  /** 发送在途锁：防快速连按 Enter 时，SSE busyNow 未及更新导致的第二次发送
+   *  触发服务端拒绝并弹出误导性错误横幅（服务端本就有 run.running 兜底） */
+  const sendingRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   // 初始加载 + SSE 订阅；Host 新建群组/会话后自动选中新项
@@ -207,6 +210,10 @@ export function GroupChatPanel(): ReactNode {
   const mentionCandidates = mention !== null
     ? enabledRoles.filter((r) => r.name.toLowerCase().includes(mention.toLowerCase()))
     : []
+  /** 钳制后的候选索引：候选由 enabledRoles 实时派生，SSE 快照 / 右栏启停开关都会
+   *  在无 input 事件的情况下收缩它——裸 mentionIdx 会越界，Enter 时
+   *  mentionCandidates[mentionIdx] = undefined → insertChip 崩溃且 @词已被删丢失 */
+  const mentionIdxC = mentionCandidates.length ? Math.min(mentionIdx, mentionCandidates.length - 1) : 0
 
   /** 光标前未闭合的 @词（弹层触发判定）；无返回 null */
   const queryAtCaret = (): string | null => {
@@ -226,18 +233,22 @@ export function GroupChatPanel(): ReactNode {
   }
 
   /** 弹层候选 → 删掉光标前的 @词、插入原子芯片 + 尾随空格，并把光标钉在空格后。
-   *  芯片经 Range 直插而非 execCommand('insertHTML')——后者插入 contenteditable=false
-   *  节点后，部分浏览器把选区落进芯片内部（不可编辑处），导致后续 insertText 失灵
-   *  （空格丢失）且光标不可见；@词删除仍走 execCommand('delete') 保 undo。
-   *  尾随空格必须是 U+0020 普通空格（序列化与正则边界依赖它）。 */
+   *  入区守卫：选区必须落在输入区内——失焦后 stale 弹层 + 点击候选的组合会用
+   *  消息区的选区插芯片，把节点插进 React 管理的气泡 DOM，必须拒之门外。
+   *  全程走 execCommand（delete/insertHTML/insertText）保 undo 栈；insertHTML
+   *  插入 contenteditable=false 节点后部分浏览器把选区落进芯片内部（不可编辑处，
+   *  曾致 insertText 失灵、空格丢失、光标不可见）——用临时 data-new 标记找到
+   *  刚插的芯片、显式把选区钉到其后，再 insertText 补空格。
+   *  尾随空格必须是 U+0020（序列化与正则边界依赖它）。 */
   const insertChip = (role: SnapshotRole): void => {
     const el = inputRef.current
     const sel = window.getSelection()
     if (!el || !sel) return
+    if (!sel.anchorNode || !el.contains(sel.anchorNode)) return
     el.focus({ preventScroll: true })
     // 1. 删除光标前的 @词（在锚文本节点内按区间删）
     const node = sel.anchorNode
-    if (node && node.nodeType === Node.TEXT_NODE) {
+    if (node.nodeType === Node.TEXT_NODE) {
       const text = node.nodeValue || ''
       const off = sel.anchorOffset
       const m = /(?:^|\s)@([^\s@]*)$/.exec(text.slice(0, off))
@@ -253,73 +264,87 @@ export function GroupChatPanel(): ReactNode {
         }
       }
     }
-    // 2. 在（删除后塌缩的）选区处直插「芯片 + 尾随空格」片段
-    if (sel.rangeCount === 0) return
-    const at = sel.getRangeAt(0)
-    at.collapse(true)
-    const frag = at.createContextualFragment(chipHtml(role) + ' ')
-    const last = frag.lastChild
-    at.insertNode(frag)
-    // 3. 光标显式钉到尾随空格之后并保持聚焦
-    if (last) {
-      const caret = document.createRange()
-      caret.setStartAfter(last)
-      caret.collapse(true)
-      sel.removeAllRanges()
-      sel.addRange(caret)
-    }
-    el.focus({ preventScroll: true })
+    // 2. 插入芯片（带临时 data-new 标记，供下一步定位刚插入的节点）
+    document.execCommand('insertHTML', false, chipHtml(role).replace('class="dsgc-chipin"', 'class="dsgc-chipin" data-new=""'))
+    const chip = el.querySelector<HTMLElement>('.dsgc-chipin[data-new]')
+    if (!chip) return
+    // 3. 选区显式钉到芯片之后，再补尾随空格（insertText 后光标自然落在空格后）
+    const after = document.createRange()
+    after.setStartAfter(chip)
+    after.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(after)
+    document.execCommand('insertText', false, ' ')
+    chip.removeAttribute('data-new')
     setMention(null)
     setMentionIdx(0)
     syncFromDOM()
   }
 
-  /** 粘贴强制纯文本：取 text/plain 经 insertText 注入，杜绝富文本/HTML 进输入区 */
+  /** 粘贴/拖放强制纯文本：取 text/plain 经 insertText 注入，杜绝富文本/HTML 进
+   *  输入区——拖放是粘贴之外的第二个入口，同样要堵（不堵则拖入 <img> 等可见
+   *  但序列化为空，所见非所发） */
   const onPasteCE = (e: ReactClipboardEvent<HTMLDivElement>): void => {
     e.preventDefault()
     const text = e.clipboardData.getData('text/plain')
+    if (text) document.execCommand('insertText', false, text)
+  }
+  const onDragOverCE = (e: ReactDragEvent<HTMLDivElement>): void => {
+    e.preventDefault() // 允许 drop 落点，实际插入交给 onDropCE 纯文本化
+  }
+  const onDropCE = (e: ReactDragEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    const text = e.dataTransfer.getData('text/plain')
     if (text) document.execCommand('insertText', false, text)
   }
 
   const mentionedRoles = enabledRoles.filter((r) => new RegExp('(^|\\s)@' + escapeRegExp(r.name) + '(?=\\s|$)').test(input))
 
   const sendMsg = async (): Promise<void> => {
-    if (busyNow) return
-    // 被 @ 的成员优先作为本轮参与角色
-    const parts = mentionedRoles.length ? mentionedRoles.map((r) => r.id) : participants
-    if (!parts.length) {
-      setErr(mentionedRoles.length ? '' : '请至少选择一个参与角色（或在消息中 @成员）')
-      if (!mentionedRoles.length) return
-    }
-    const res = await action({ kind: 'send', sessionId: sess!.id, text: input, participantRoleIds: parts, rounds }) as ActionOk | null
-    if (res && !res.ok && res.error) setErr(res.error)
-    else if (res && res.ok) {
-      const el = inputRef.current
-      if (el) el.innerHTML = ''
-      setInput('')
-      setMention(null)
-      setErr('')
-      setAtBottom(true)
-      syncFromDOM()
+    if (busyNow || !sess || sendingRef.current) return
+    sendingRef.current = true
+    try {
+      // 被 @ 的成员优先作为本轮参与角色
+      const parts = mentionedRoles.length ? mentionedRoles.map((r) => r.id) : participants
+      if (!parts.length) {
+        setErr(mentionedRoles.length ? '' : '请至少选择一个参与角色（或在消息中 @成员）')
+        if (!mentionedRoles.length) return
+      }
+      const res = await action({ kind: 'send', sessionId: sess.id, text: input, participantRoleIds: parts, rounds }) as ActionOk | null
+      if (res && !res.ok && res.error) setErr(res.error)
+      else if (res && res.ok) {
+        const el = inputRef.current
+        if (el) el.innerHTML = ''
+        setInput('')
+        setMention(null)
+        setErr('')
+        setAtBottom(true)
+        syncFromDOM()
+      }
+    } finally {
+      sendingRef.current = false
     }
   }
   const onInputKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
-    // IME 组合中的按键（含 Enter 选词）不参与任何快捷逻辑
-    if (e.nativeEvent.isComposing) return
+    // IME 组合中的按键（含 Enter 选词）不参与任何快捷逻辑；
+    // keyCode 229 兜底 Safari 提交组合时 isComposing 为假的历史坑
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
     if (mention !== null && mentionCandidates.length) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setMentionIdx((mentionIdx + 1) % mentionCandidates.length)
+        setMentionIdx((mentionIdxC + 1) % mentionCandidates.length)
         return
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setMentionIdx((mentionIdx - 1 + mentionCandidates.length) % mentionCandidates.length)
+        setMentionIdx((mentionIdxC - 1 + mentionCandidates.length) % mentionCandidates.length)
         return
       }
-      if (e.key === 'Enter' || e.key === 'Tab') {
+      // Enter 插芯片仅限无 Shift——Shift+Enter 在弹层开时仍是换行（用户明确要换行），
+      // 换行后的 input 事件会经 queryAtCaret 自然关掉弹层
+      if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
         e.preventDefault()
-        insertChip(mentionCandidates[mentionIdx])
+        insertChip(mentionCandidates[mentionIdxC])
         return
       }
     }
@@ -910,9 +935,9 @@ export function GroupChatPanel(): ReactNode {
                     <button
                       key={r.id}
                       type="button"
-                      className={'dsgc-mentionitem' + (i === mentionIdx ? ' on' : '')}
+                      className={'dsgc-mentionitem' + (i === mentionIdxC ? ' on' : '')}
                       role="option"
-                      aria-selected={i === mentionIdx ? 'true' : 'false'}
+                      aria-selected={i === mentionIdxC ? 'true' : 'false'}
                       // 阻止 mousedown 抢走输入区焦点/选区——点击候选时插入芯片依赖原光标
                       onMouseDown={(e) => { e.preventDefault() }}
                       onClick={() => { insertChip(r) }}
@@ -948,6 +973,11 @@ export function GroupChatPanel(): ReactNode {
               onInput={onInputCE}
               onKeyDown={onInputKeyDown}
               onPaste={onPasteCE}
+              onDrop={onDropCE}
+              onDragOver={onDragOverCE}
+              // 失焦即关弹层：mention 只随 input 事件更新，click 移光标/点外部
+              // 都不触发 input，不关会留下 stale 弹层（Enter 在错误位置插芯片）
+              onBlur={() => { setMention(null) }}
             />
           </div>
           <div className="dsgc-sendrow">
