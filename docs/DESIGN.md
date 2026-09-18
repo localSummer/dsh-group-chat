@@ -285,7 +285,7 @@ P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「�
 
 - **签名循环**：`dsgc-presence` 1.8s ease-in-out infinite——正在流式发言的角色头像以 `--role-color`（color-mix 22%）呼吸 4px 光环；随 live 行卸载即停。`dsgc-typing-shimmer` 1.8s linear infinite——live 行「正在输入…」时间槽的品牌蓝微光扫动（对标宿主 TurnStatus「深度求索中...」：`--dsw-static-deepseek-500/200` 渐变带 + `background-clip:text` + `background-position` 扫动；reduced-motion 降级为静态渐变）。`dsgc-dot-breathe` 1.2s（0/.2/.4s 交错）——首个 delta 前「思考中」占位行的三点呼吸。
 - **出现确认**（fade + 轻微位移）：消息 `.22s`（6px 上浮）、@弹层 `.16s`（4px）、回到底部 `.18s`（6px，保留 translateX(-50%) 定位）、思考正文 `.2s`（3px）、错误 `.18s` / 文件浏览器 `.2s` / 空状态 `.3s`（纯 fade）、系统消息 `.24s`（scale .96）。
-- **布局连续性（唯一的 layout 动画，左右对称两处）**：左右栏折叠，同一配方。宽模式 `width →0` + opacity（开 `.28s` 曲线到 / 合 `.24s` ease-in），子元素固定宽防内容重排（左栏 212 / 右栏 280），`visibility` 延迟 `.22s` 切换（关闭时键盘焦点安全）；窄容器（≤880px）右栏覆盖层 `translateX` 滑行（开 `.3s` / 合 `.26s`），左栏在 ≤640px 下子元素改 `width:auto` 适配 200px 窄宽。**接缝收合钮随接缝滑行**：宽模式由布局驱动（中栏连续变宽，贴缘绝对定位的钮自动同步，无自有动画）；窄模式右钮以同曲线 `right` 过渡（`.3s`）跟踪覆盖层左缘。
+- **布局连续性（唯一的 layout 动画，左右对称两处）**：左右栏折叠，同一配方。宽模式 `width →0` + opacity（开 `.28s` 曲线到 / 合 `.24s` ease-in），子元素经 flex 列默认 stretch 填满内容区（不写死宽度——面板为 content-box，宿主无全局 border-box，写死像素会与内容区实宽脱节致左右内距失衡；收合期间内容随面板收缩，行内 ellipsis 渐进截断 + nowrap 元素 `overflow:hidden` 防涂抹），`visibility` 延迟 `.22s` 切换（关闭时键盘焦点安全）；窄容器（≤880px）右栏覆盖层 `translateX` 滑行（开 `.3s` / 合 `.26s`），左栏在 ≤640px 下收窄至 200px。**接缝收合钮随接缝滑行**：宽模式由布局驱动（中栏连续变宽，贴缘绝对定位的钮自动同步，无自有动画）；窄模式右钮以同曲线 `right` 过渡（`.3s`）跟踪覆盖层左缘。
 - **抽屉**：入 `.22s`（32px 滑入 + 淡入）；出 `.14s` ease-in + `pointer-events:none`——取消/Esc 走 140ms 退场后卸载，保存成功为即时确认。
 - **时长纪律**：微反馈 ≤150ms（色彩过渡 `.12/.16s` 沿用）→ 出现 160–240ms → 布局 260–300ms。
 - **Reduced motion**：全部过渡与动画停用（含 presence 光环、右栏与抽屉），保留承载意义的颜色/透明度状态；加载旋转亦停。

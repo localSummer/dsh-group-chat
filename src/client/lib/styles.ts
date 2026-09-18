@@ -20,8 +20,11 @@ export const CSS = [
   '@keyframes dsgc-spin{to{transform:rotate(360deg)}}',
   /* ===== 左导航栏（可收起，收合动画与右栏同款配方） ===== */
   '.dsgc-nav{width:232px;flex:none;display:flex;flex-direction:column;gap:8px;border-right:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));padding:12px 10px;min-height:0;min-width:0;transition:width .28s cubic-bezier(.16,1,.3,1),opacity .18s ease,padding .28s cubic-bezier(.16,1,.3,1),border-right-width .28s cubic-bezier(.16,1,.3,1)}',
-  /* 子元素定宽防收合动画期间内容重排（与右栏同款手法；212 = 232 − 2×10 padding） */
-  '.dsgc-nav>*{flex:none;width:212px;box-sizing:border-box}',
+  /* 子元素经 flex 列默认 stretch 填满内容区（不写死宽度：内容区实宽 232px——
+     宿主无全局 border-box，面板为 content-box，旧版写死 212px 曾致右侧多出
+     20px 死区、左右内距失衡）；收合动画期间内容随面板收缩，行内 ellipsis
+     渐进截断 + visibility 0.22s 切断，无溢出涂抹 */
+  '.dsgc-nav>*{flex:none}',
   '.dsgc-nav.closed{width:0;opacity:0;padding-left:0;padding-right:0;border-right-width:0;visibility:hidden;transition:width .24s ease-in,opacity .16s ease-in,padding .24s ease-in,border-right-width .24s ease-in,visibility 0s .22s}',
   '.dsgc-search{flex:none}',
   '.dsgc-search input{font-size:13px}',
@@ -45,7 +48,7 @@ export const CSS = [
   '.dsgc-sess-row.on{background:var(--dsw-alias-interactive-bg-active,rgba(128,128,128,.2));color:var(--dsw-alias-label-primary,inherit);font-weight:600}',
   '.dsgc-sess-dot{flex:none;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}',
   '.dsgc-sess-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-  '.dsgc-addsess{border:none;background:none;color:var(--dsw-alias-label-tertiary,inherit);cursor:pointer;text-align:left;font-size:12px;line-height:1.5;padding:5px 8px;border-radius:6px;transition:background-color .12s,color .12s;font-family:inherit;display:flex;align-items:center;gap:5px;white-space:nowrap}',
+  '.dsgc-addsess{border:none;background:none;color:var(--dsw-alias-label-tertiary,inherit);cursor:pointer;text-align:left;font-size:12px;line-height:1.5;padding:5px 8px;border-radius:6px;transition:background-color .12s,color .12s;font-family:inherit;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden}',
   '.dsgc-addsess:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit)}',
   '.dsgc-rename{font:inherit;font-size:12.5px;min-width:0;flex:1;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:var(--dsw-specific-input-major,var(--dsw-alias-bg-layer-3,transparent));color:inherit;border-radius:6px;padding:1px 6px;outline:none;transition:border-color .16s}',
   '.dsgc-rename:focus{border-color:var(--dsw-alias-state-business-primary,#4f6ef7)}',
@@ -183,7 +186,9 @@ export const CSS = [
   '.dsgc-mentionhint{font-size:11px;color:var(--dsw-alias-label-tertiary,inherit);padding:2px 8px 1px}',
   /* ===== 右上下文栏 ===== */
   '.dsgc-aside{width:304px;flex:none;display:flex;flex-direction:column;gap:10px;border-left:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));padding:12px;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent;transition:width .28s cubic-bezier(.16,1,.3,1),opacity .18s ease,padding .28s cubic-bezier(.16,1,.3,1),border-left-width .28s cubic-bezier(.16,1,.3,1)}',
-  '.dsgc-aside>*{flex:none;width:280px;box-sizing:border-box}',
+  /* 子元素经 flex 列默认 stretch 填满内容区（面板为 content-box、内容区实宽
+     304px；旧版写死 280px 曾致右侧多出 24px 死区） */
+  '.dsgc-aside>*{flex:none}',
   '.dsgc-aside.closed{width:0;opacity:0;padding-left:0;padding-right:0;border-left-width:0;visibility:hidden;transition:width .24s ease-in,opacity .16s ease-in,padding .24s ease-in,border-left-width .24s ease-in,visibility 0s .22s}',
   '.dsgc-sec{display:flex;flex-direction:column;gap:8px;flex:none}',
   '.dsgc-sechead{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;color:var(--dsw-alias-label-tertiary,inherit);padding-top:2px}',
@@ -238,7 +243,7 @@ export const CSS = [
   '.dsgc-wsrow{display:flex;gap:6px;align-items:center;min-width:0}',
   '.dsgc-wsrow .dsgc-input{width:auto;flex:1;min-width:0}',
   '.dsgc-wsrow>button{flex:none;white-space:nowrap}',
-  '.dsgc-nav>button{white-space:nowrap}',
+  '.dsgc-nav>button{white-space:nowrap;overflow:hidden}',
   '.dsgc-fbpath{flex:1;min-width:0;font-size:11px;color:var(--dsw-alias-label-secondary,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
   '.dsgc-fblist{display:flex;flex-direction:column;gap:1px;max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent}',
   '.dsgc-fbrow{display:flex;align-items:center;gap:7px;width:100%;border:none;background:none;color:var(--dsw-alias-label-primary,inherit);font:inherit;font-size:12.5px;text-align:left;cursor:pointer;padding:3px 8px;border-radius:6px;transition:background-color .12s}',
@@ -251,8 +256,8 @@ export const CSS = [
   /* ===== 键盘焦点 ===== */
   '.dsgc-partchip:focus-visible,.dsgc-mentionitem:focus-visible,.dsgc-dot:focus-visible,.dsgc-opbtn:focus-visible,.dsgc-twist:focus-visible,.dsgc-addsess:focus-visible,.dsgc-grow-row:focus-visible,.dsgc-sess-row:focus-visible,.dsgc-rename:focus-visible,.dsgc-fbrow:focus-visible,.dsgc-role:focus-visible,.dsgc-roundbtn:focus-visible,.dsgc-tobtn:focus-visible,.dsgc-seambtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}',
   /* ===== 窄容器：右栏覆盖式呈现 ===== */
-  '@container (max-width: 880px){.dsgc-aside{position:absolute;top:0;right:0;bottom:0;z-index:15;width:min(304px,88%);box-shadow:-12px 0 32px rgba(0,0,0,.16);border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .2s ease}.dsgc-aside>*{width:auto}.dsgc-aside.closed{width:min(304px,88%);padding-left:12px;padding-right:12px;border-left-width:1px;transform:translateX(calc(100% + 14px));opacity:0;transition:transform .26s ease-in,opacity .18s ease-in,visibility 0s .24s}.dsgc-seambtn.right:not(.closed){right:min(304px,88%)}}',
-  '@container (max-width: 640px){.dsgc-nav{width:200px}.dsgc-nav>*{width:auto}.dsgc-msgbody{max-width:88%}}',
+  '@container (max-width: 880px){.dsgc-aside{position:absolute;top:0;right:0;bottom:0;z-index:15;width:min(304px,88%);box-shadow:-12px 0 32px rgba(0,0,0,.16);border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .2s ease}.dsgc-aside.closed{width:min(304px,88%);padding-left:12px;padding-right:12px;border-left-width:1px;transform:translateX(calc(100% + 14px));opacity:0;transition:transform .26s ease-in,opacity .18s ease-in,visibility 0s .24s}.dsgc-seambtn.right:not(.closed){right:min(304px,88%)}}',
+  '@container (max-width: 640px){.dsgc-nav{width:200px}.dsgc-msgbody{max-width:88%}}',
   /* ===== 侧边栏入口对齐（外壳将插槽内容包在 panelGlyph span 内，必须用后代 :has） ===== */
   '[class*="panelList"]:has(.dsgc-entryOverlay){margin-top:4px}',
   '[class*="panelRow"]:has(.dsgc-entryOverlay){position:relative;box-sizing:border-box;height:36px;min-height:36px;padding:0 10px;font-size:13px;transition:background-color .12s,color .12s}',
