@@ -241,6 +241,15 @@ export const CSS = [
   /* 入口 hover：宿主 panelRow:hover 只给灰底、不变文字色（低强度到近无感）；
      对齐任务看板入口行——hover 灰底 + 文字/图标转 label-primary */
   '[class*="panelRow"]:has(.dsgc-entryOverlay):hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit)}',
+  /* DOM 注入式全幅视图（任务看板 data-dsh-taskboard-active / SSH data-dsh-ssh-active）
+     激活时接管中央列：外壳面板状态机未变（activePanelId 仍指向群聊），但视图已被
+     覆盖——群聊入口随之视觉复位，避免停留“激活”态误导当前所在视图。两行特异性
+     相同（0,4,1），hover 行在后，复位不吞 hover 反馈 */
+  'html[data-dsh-taskboard-active] [class*="panelRow"][class*="panelActive"]:has(.dsgc-entryOverlay),html[data-dsh-ssh-active] [class*="panelRow"][class*="panelActive"]:has(.dsgc-entryOverlay){background:transparent;color:var(--dsw-alias-label-secondary,inherit);font-weight:400}',
+  'html[data-dsh-taskboard-active] [class*="panelRow"]:has(.dsgc-entryOverlay):hover,html[data-dsh-ssh-active] [class*="panelRow"]:has(.dsgc-entryOverlay):hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit)}',
+  /* 收起态例外：外壳把收起栏所有面板图标统一为 primary 色（激活与否不由颜色表达），
+     复位规则不得把群聊图标调暗成 secondary；仅去掉激活底色即可 */
+  'html[data-dsh-taskboard-active] [data-sidebar-collapsed] [class*="panelRow"]:has(.dsgc-entryOverlay),html[data-dsh-ssh-active] [data-sidebar-collapsed] [class*="panelRow"]:has(.dsgc-entryOverlay),html[data-dsh-taskboard-active] [class*="collapsed"] [class*="panelRow"]:has(.dsgc-entryOverlay),html[data-dsh-ssh-active] [class*="collapsed"] [class*="panelRow"]:has(.dsgc-entryOverlay){color:var(--dsw-alias-label-primary,inherit)}',
   '[class*="panelRow"]:has(.dsgc-entryOverlay) > [class*="panelTitle"]{padding-left:24px}',
   '.dsgc-entryOverlay{position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;box-sizing:border-box}',
   '.dsgc-entryIcon{flex:none;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}',
