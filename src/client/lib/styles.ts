@@ -88,6 +88,16 @@ export const CSS = [
   '.dsgc-think .dsgc-thinkrow:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.1))}',
   '.dsgc-think .dsgc-thinksummary{color:var(--dsw-alias-label-tertiary,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:44ch;font-size:11.5px;margin-left:6px}',
   '.dsgc-think .dsgc-thinkbody{font-size:12.5px;line-height:1.7;color:var(--dsw-alias-label-secondary,inherit);white-space:pre-wrap;word-break:break-word;border-left:2px solid var(--dsw-alias-border-l2,rgba(128,128,128,.25));margin:2px 0 4px;padding:2px 0 2px 10px;max-height:320px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent;animation:dsgc-think-in .2s ease-out}',
+  /* 首 delta 前的「思考中」占位行：ThinkRow 同语言（思考图标 + 次要色 12px 小字）
+     + 三点交错呼吸动画——深度思考模型首字节可能等数秒到数十秒，空白气泡会被
+     感知为卡死；delta 到达后被真实思考行/正文自然替换 */
+  '.dsgc-pending{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-label-secondary,inherit)}',
+  '.dsgc-pending svg{flex:none}',
+  '.dsgc-pendingdots{display:inline-flex;gap:2px;align-items:center}',
+  '.dsgc-pendingdots i{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.3;animation:dsgc-dot-breathe 1.2s ease-in-out infinite}',
+  '.dsgc-pendingdots i:nth-child(2){animation-delay:.2s}',
+  '.dsgc-pendingdots i:nth-child(3){animation-delay:.4s}',
+  '@keyframes dsgc-dot-breathe{0%,100%{opacity:.25}50%{opacity:1}}',
   '.dsgc-sysmsg{align-self:center;font-size:11.5px;color:var(--dsw-alias-label-secondary,inherit);background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.1));border-radius:999px;padding:2px 10px;text-align:center;max-width:90%;animation:dsgc-sys-in .24s ease-out}',
   /* ===== 工具调用行 / 确认卡片（对标思考折叠语言） ===== */
   '.dsgc-tool{margin:2px 0}',
@@ -256,7 +266,7 @@ export const CSS = [
   '.dsgc-entryIcon svg{width:18px;height:18px;display:block}',
   '[data-sidebar-collapsed] .dsgc-entryOverlay,[class*="collapsed"] .dsgc-entryOverlay{justify-content:center;padding:0}',
   '[data-sidebar-collapsed] [class*="panelRow"]:has(.dsgc-entryOverlay),[class*="collapsed"] [class*="panelRow"]:has(.dsgc-entryOverlay){margin:0 auto}',
-  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-think .dsgc-thinkbody,.dsgc-msg.live .dsgc-avatar,.dsgc-loading svg{animation:none}}',
+  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-think .dsgc-thinkbody,.dsgc-msg.live .dsgc-avatar,.dsgc-loading svg,.dsgc-pendingdots i{animation:none}}',
   /* ===== 设置页（同一卡片语言） ===== */
   '.dgcs-page{display:flex;flex-direction:column;gap:14px;padding:4px 0}',
   '.dgcs-head{display:flex;flex-direction:column;gap:6px}',

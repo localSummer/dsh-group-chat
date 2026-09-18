@@ -265,7 +265,7 @@ components:
 左侧目录树全平铺行：群组行（继承字号，选中仅 600 + primary，无底色）+ 会话行（12.5px / 行高 1.5，行距 2px、行内边距 6px 8px，5px 点，选中 = `active-fill` + 600）；群组块间距 6px，会话列表与群组行间 4px 呼吸；hover 换 `hover-fill`；`.12s` 过渡。折叠 chevron 旋转 -90°（`.16s ease`）。节点操作钮 hover 才显现；重命名走内联输入；删除 = 两次点击确认（第一次变 danger 红并提示「再次点击确认删除」）。「新会话」为弱化矮行（12px / 行高 1.5 / 内边距 5px 8px）。整行 `role="button"` + `tabIndex` + Enter/Space 键控。
 
 ### 消息流（签名组件）
-角色消息 = 28px 圆头像（2px 角色色环，无角色时 `border-l3`/用户头像 info 填充透明环）+ 头部行（名字 600 + 模型徽章 10.5px + 相对时间）+ layer-3 卡内 MarkdownText（宿主同源渲染，labels 冻结对象：复制/已复制/脚注）。用户消息 = info 填充行反转气泡，纯文本 pre-wrap。系统通知 = 居中 `bg-module` 胶囊（11.5px，错误态换错误色文字）。**流式行**：时间槽显示「正在输入…」+ streaming MarkdownText（opacity .92）+ 运行中的思考折叠（摘要实时跟随最新一行）。空态 = 居中 40ch（20px 描边图标 50% 透明度 + 13px/600 标题 + 提示）。
+角色消息 = 28px 圆头像（2px 角色色环，无角色时 `border-l3`/用户头像 info 填充透明环）+ 头部行（名字 600 + 模型徽章 10.5px + 相对时间）+ layer-3 卡内 MarkdownText（宿主同源渲染，labels 冻结对象：复制/已复制/脚注）。用户消息 = info 填充行反转气泡，纯文本 pre-wrap。系统通知 = 居中 `bg-module` 胶囊（11.5px，错误态换错误色文字）。**流式行**：时间槽显示「正在输入…」+ streaming MarkdownText（opacity .92）+ 运行中的思考折叠（摘要实时跟随最新一行）；首个 delta 到达前卡内渲染「思考中」占位行（ThinkRow 同语言：思考图标 + 次要色 12px + 三点交错呼吸 1.2s，`dsgc-dot-breathe`；深度思考模型首字节可能等数秒到数十秒，空白气泡会被感知为卡死）。空态 = 居中 40ch（20px 描边图标 50% 透明度 + 13px/600 标题 + 提示）。
 
 ### 思考折叠行（签名组件）
 P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「思考」+ 折叠摘要（剥离 markdown 标记的纯文本，44ch 截断，11.5px）；展开体为 pre-wrap 纯文本 12.5px/1.7，左缘 2px `border-l2` 规线，max-height 320px 滚动。

@@ -51,6 +51,17 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
             <div className="dsgc-msgtext live">
               {snap.run.partialReasoning ? <ThinkRow text={snap.run.partialReasoning} running /> : null}
               {snap.run.partial ? <P.MarkdownText text={snap.run.partial} streaming labels={MD_LABELS} /> : null}
+              {/* 首 delta 前的「思考中」占位（深度思考模型首字节可能等数秒到数十秒，
+                  空白气泡会被感知为卡死）；delta 到达后被真实思考行/正文自然替换 */}
+              {!snap.run.partial && !snap.run.partialReasoning
+                ? (
+                  <div className="dsgc-pending">
+                    {Icon(P.IconThinkOutline14, 14)}
+                    <span>思考中</span>
+                    <span className="dsgc-pendingdots" aria-hidden="true"><i /><i /><i /></span>
+                  </div>
+                )
+                : null}
             </div>
           </div>
         </div>,
