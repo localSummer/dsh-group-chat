@@ -26,15 +26,18 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { createElement as h } from 'react'
 import { injectStyles } from './styles.ts'
-import { GroupChatPanel } from './panel.ts'
-import { GroupChatSettingsSection } from './settings.ts'
-import { Glyph } from './glyph.ts'
+import { GroupChatPanel } from './GroupChatPanel.tsx'
+import { GroupChatSettingsSection } from './GroupChatSettingsSection.tsx'
+import { Glyph } from './Glyph.tsx'
 
 /** Host 侧注册的设置命名空间 shape 与命名名（与宿主半拼写同一值，两边不共享代码）。 */
 interface GroupChatSettings {
   enabled?: boolean
 }
 const SETTINGS_NAMESPACE = 'group-chat'
+
+/** Client plugin id. */
+export const name = 'group-chat-client'
 
 /** Required services. */
 export const inject = ['slots', 'settingsScope']

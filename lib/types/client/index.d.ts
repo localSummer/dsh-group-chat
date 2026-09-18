@@ -18,6 +18,8 @@
  * @module dsh-group-chat/client
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
+/** Client plugin id. */
+export declare const name = "group-chat-client";
 /** Required services. */
 export declare const inject: string[];
 /**
