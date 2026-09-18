@@ -35,7 +35,7 @@ export const TOOL_SCHEMAS = [
   },
   {
     name: 'run_command',
-    description: '在群组工作区目录内执行 shell 命令（如运行测试、git 操作；需要用户逐条确认，超时 120 秒）',
+    description: '在群组工作区目录内执行 shell 命令（如运行测试、git 操作；超时 120 秒；是否需要确认取决于群组权限档位）',
     parameters: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] },
   },
 ] as const

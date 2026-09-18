@@ -3,12 +3,29 @@
  * 数据模型：Group 1..N Session，消息挂在会话上；角色与工作区目录挂在群组上。
  * @module dsh-group-chat/core/types
  */
+/**
+ * 群组权限档位（对齐主会话 /permission 三档）：
+ * - view_only 仅可查看：只保留 read_file/list_dir，run_command 从 schema 剔除
+ * - workspace_write 工作区内修改：run_command 可用，每条命令逐条确认
+ * - full_access 完全权限：run_command 免确认直接执行
+ */
+export type PermissionTier = 'view_only' | 'workspace_write' | 'full_access';
+/** 全部合法档位（展示顺序）。 */
+export declare const PERMISSION_TIERS: readonly PermissionTier[];
+/** 档位安全化：合法字符串原样，其余 undefined。 */
+export declare function asPermissionTier(value: unknown): PermissionTier | undefined;
+/**
+ * ledger 行档位归一（v2→v3 兼容）：显式 permissionTier 优先；
+ * 缺失时按旧布尔迁移——allowCommands=true → workspace_write（今日语义即
+ * 「可执行命令但逐条确认」），false/无字段 → view_only。
+ */
+export declare function migrateTier(permissionTier: unknown, allowCommands: unknown): PermissionTier;
 /** 群组：角色与工作区目录的宿主。 */
 export interface GroupRecord {
     id: string;
     name: string;
     workspaceDir: string;
-    allowCommands?: boolean;
+    permissionTier: PermissionTier;
     roleIds: string[];
     sessionIds: string[];
 }
@@ -153,7 +170,7 @@ export interface Snapshot {
         id: string;
         name: string;
         workspaceDir: string;
-        allowCommands: boolean;
+        permissionTier: PermissionTier;
         roleIds: string[];
         sessionIds: string[];
     }[];
@@ -202,7 +219,7 @@ export interface MutateArgs {
     name?: string;
     topic?: string;
     path?: string;
-    allowed?: boolean;
+    tier?: string;
     enabled?: boolean;
 }
 /** send 动作的参数形态。 */

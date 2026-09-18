@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { messageJson, roleJson } from '../src/core/json.ts'
-import { asEffort, asNumber } from '../src/core/types.ts'
+import { asEffort, asNumber, asPermissionTier, migrateTier, PERMISSION_TIERS } from '../src/core/types.ts'
 import { TOOL_SCHEMAS } from '../src/core/tools.ts'
 
 describe('messageJson', () => {
@@ -65,5 +65,25 @@ describe('工具 schema', () => {
   it('三个工具齐备且 run_command 需要 command 参数', () => {
     expect(TOOL_SCHEMAS.map((t) => t.name)).toEqual(['read_file', 'list_dir', 'run_command'])
     expect(TOOL_SCHEMAS[2].parameters.required).toContain('command')
+  })
+})
+
+describe('权限档位', () => {
+  it('asPermissionTier：三档合法值原样，其余 undefined', () => {
+    for (const tier of PERMISSION_TIERS) expect(asPermissionTier(tier)).toBe(tier)
+    expect(asPermissionTier('full')).toBeUndefined()
+    expect(asPermissionTier('')).toBeUndefined()
+    expect(asPermissionTier(1)).toBeUndefined()
+    expect(asPermissionTier(undefined)).toBeUndefined()
+  })
+
+  it('migrateTier：显式 permissionTier 优先；缺失时按 v2 布尔迁移（true→工作区内修改，false/无→仅可查看）', () => {
+    expect(migrateTier('full_access', true)).toBe('full_access')
+    expect(migrateTier('view_only', true)).toBe('view_only')
+    expect(migrateTier(undefined, true)).toBe('workspace_write')
+    expect(migrateTier(undefined, false)).toBe('view_only')
+    expect(migrateTier(undefined, undefined)).toBe('view_only')
+    expect(migrateTier('bogus', true)).toBe('workspace_write')
+    expect(migrateTier('bogus', undefined)).toBe('view_only')
   })
 })

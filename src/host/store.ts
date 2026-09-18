@@ -2,7 +2,7 @@
  * 持久化（PERSISTENCE.md v2.1：会话级文件隔离）。
  *
  * 目录布局（每群组一目录，一会话一文件）：
- *   <dir>/ledger.json                              群组/会话清单（schema 2，纯清单，pretty）
+ *   <dir>/ledger.json                              群组/会话清单（schema 3，纯清单，pretty；群组含 permissionTier）
  *   <dir>/<group-id>/workspaceDir                  工作区目录设置（纯文本一行）
  *   <dir>/<group-id>/roles.json                    群组角色（schema 1，紧凑）
  *   <dir>/<group-id>/sessions/session-<uuid>.json   会话（schema 1，自包含，紧凑）
@@ -334,10 +334,10 @@ export class Store {
   }
 }
 
-/** ledger 清单的读取形态（hydrate 用）。 */
+/** ledger 清单的读取形态（hydrate 用；allowCommands 为 v2 遗留字段，读取时经 migrateTier 迁移）。 */
 export interface LedgerDocument {
   schema?: number
-  groups?: { id: string, name?: string, allowCommands?: boolean }[]
+  groups?: { id: string, name?: string, permissionTier?: string, allowCommands?: boolean }[]
   sessions?: { id: string, groupId: string }[]
 }
 
@@ -371,5 +371,5 @@ export function scanSessionIds(store: Store, groupId: string): string[] {
 
 /** 空群组记录构造（hydrate 兜底路径用）。 */
 export function emptyGroup(id: string, name: string): GroupRecord {
-  return { id, name, workspaceDir: '', allowCommands: false, roleIds: [], sessionIds: [] }
+  return { id, name, workspaceDir: '', permissionTier: 'view_only', roleIds: [], sessionIds: [] }
 }

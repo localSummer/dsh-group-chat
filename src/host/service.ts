@@ -24,7 +24,7 @@ import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import { messageJson, roleJson } from '../core/json.ts'
 import { CMD_CAPTURE_MAX_BYTES, CMD_OUTPUT_MAX_CHARS, READ_FILE_MAX_BYTES, RUN_CMD_TIMEOUT_MS, TOOL_FLOOR_COST_CHARS, TOOL_REPEAT_LIMIT, TOOL_RESULTS_TOTAL_MAX, TOOL_SCHEMAS, TRANSCRIPT_TOOL_SUMMARY } from '../core/tools.ts'
 import type { BrowseResult, EffortOptions, GroupRecord, LastCreated, MessageRecord, ModelCatalog, MutateArgs, RoleRecord, RunState, SendArgs, SessionRecord, Snapshot, SpeakResult, ToolCallRecord, ToolExecution } from '../core/types.ts'
-import { asEffort, asNumber } from '../core/types.ts'
+import { asEffort, asNumber, asPermissionTier, migrateTier } from '../core/types.ts'
 import { emptyGroup, LedgerDocument, scanGroupIds, scanSessionIds, STORE_DIR, Store } from './store.ts'
 
 /** llm wire 的工具调用 id（branded）。 */
@@ -125,13 +125,9 @@ export function createGroupChatService(ctx: Context): GroupChatService {
   let flushScheduled = false
 
   const ledgerDocument = (): LedgerDocument & { savedAt: number } => ({
-    schema: 2,
+    schema: 3,
     savedAt: Date.now(),
-    groups: [...groups.values()].map((g) => {
-      const item: { id: string, name: string, allowCommands?: boolean } = { id: g.id, name: g.name }
-      if (g.allowCommands === true) item.allowCommands = true
-      return item
-    }),
+    groups: [...groups.values()].map((g) => ({ id: g.id, name: g.name, permissionTier: g.permissionTier })),
     sessions: [...groups.values()].flatMap((g) => g.sessionIds.map((sid) => ({ id: sid, groupId: g.id }))),
   })
   const sessionDocument = (s: SessionRecord) => ({
@@ -302,7 +298,7 @@ export function createGroupChatService(ctx: Context): GroupChatService {
     if (ledger && Array.isArray(ledger.groups)) {
       for (const g of ledger.groups) {
         if (g && typeof g.id === 'string' && !groups.has(g.id)) {
-          groups.set(g.id, { id: g.id, name: String(g.name || '群组'), workspaceDir: '', allowCommands: g.allowCommands === true, roleIds: [], sessionIds: [] })
+          groups.set(g.id, { id: g.id, name: String(g.name || '群组'), workspaceDir: '', permissionTier: migrateTier(g.permissionTier, g.allowCommands), roleIds: [], sessionIds: [] })
         }
       }
       for (const g of groups.values()) loadGroupData(g)
@@ -328,7 +324,7 @@ export function createGroupChatService(ctx: Context): GroupChatService {
       }
     }
     if (groups.size === 0) {
-      const g: GroupRecord = { id: nid('grp'), name: '默认群组', workspaceDir: '', roleIds: [], sessionIds: [] }
+      const g: GroupRecord = { id: nid('grp'), name: '默认群组', workspaceDir: '', permissionTier: 'view_only', roleIds: [], sessionIds: [] }
       groups.set(g.id, g)
       const s = newSession(g.id, '会话 1')
       sessions.set(s.id, s)
@@ -369,7 +365,7 @@ export function createGroupChatService(ctx: Context): GroupChatService {
     revision,
     run: { running: run.running, sessionId: run.sessionId, currentRoleId: run.currentRoleId, partial: run.partial, partialReasoning: run.partialReasoning, pendingConfirm: run.pendingConfirm },
     lastCreated,
-    groups: [...groups.values()].map((g) => ({ id: g.id, name: g.name, workspaceDir: g.workspaceDir, allowCommands: g.allowCommands === true, roleIds: g.roleIds.slice(), sessionIds: g.sessionIds.slice() })),
+    groups: [...groups.values()].map((g) => ({ id: g.id, name: g.name, workspaceDir: g.workspaceDir, permissionTier: g.permissionTier, roleIds: g.roleIds.slice(), sessionIds: g.sessionIds.slice() })),
     sessions: [...sessions.values()].map((s) => ({ id: s.id, groupId: s.groupId, name: s.name, topic: s.topic, messageIds: s.messageIds.slice(), createdAt: s.createdAt })),
     roles: [...roles.values()].map((r) => ({ id: r.id, groupId: r.groupId, name: r.name, color: r.color, persona: r.persona, provider: r.provider, model: r.model, temperature: r.temperature, reasoningEffort: r.reasoningEffort, enabled: r.enabled, thinking: r.thinking === true })),
     messages: [...messages.values()].map((m) => ({ id: m.id, sessionId: m.sessionId, seq: m.seq, speaker: m.speaker, text: m.text, reasoning: m.reasoning, model: m.model, error: m.error, toolCalls: m.toolCalls, ts: m.ts })),
@@ -677,13 +673,15 @@ export function createGroupChatService(ctx: Context): GroupChatService {
     if (tc.name === 'read_file') res = toolReadFile(root, args)
     else if (tc.name === 'list_dir') res = toolListDir(root, args)
     else if (tc.name === 'run_command') {
-      if (g.allowCommands !== true) {
-        res = { status: 'error', output: '群组未开启命令执行，该命令未被运行' }
-      } else {
+      if (g.permissionTier === 'view_only') {
+        res = { status: 'error', output: '群组权限为「仅可查看」，该命令未被运行' }
+      } else if (g.permissionTier === 'workspace_write') {
         const allowed = await requestConfirmation(tc.id, args)
         if (run.stopping) res = { status: 'error', output: '对话已被用户停止，命令未执行' }
         else if (!allowed) res = { status: 'denied', output: '用户拒绝了这次命令执行' }
         else res = await runCommandTool(root, String(args.command || ''))
+      } else {
+        res = await runCommandTool(root, String(args.command || ''))
       }
     } else {
       res = { status: 'error', output: '未知工具：' + tc.name }
@@ -693,7 +691,7 @@ export function createGroupChatService(ctx: Context): GroupChatService {
 
   const buildToolSchemas = (g: GroupRecord) => {
     if (!g.workspaceDir) return []
-    return TOOL_SCHEMAS.filter((t) => t.name !== 'run_command' || g.allowCommands === true)
+    return TOOL_SCHEMAS.filter((t) => t.name !== 'run_command' || g.permissionTier !== 'view_only')
   }
 
   const speak = async (g: GroupRecord, sess: SessionRecord, role: RoleRecord): Promise<SpeakResult> => {
@@ -709,7 +707,11 @@ export function createGroupChatService(ctx: Context): GroupChatService {
       materialBlock(parts, ws.dir),
       ws.dir
         ? '\n# 可用工具\n你可以调用工具在群组工作区目录（' + ws.dir + '）内查看文件与目录' +
-          (g.allowCommands === true ? '、执行 shell 命令（命令需用户逐条确认，请优先用于运行测试）' : '') +
+          (g.permissionTier === 'workspace_write'
+            ? '、执行 shell 命令（命令需用户逐条确认，请优先用于运行测试）'
+            : g.permissionTier === 'full_access'
+              ? '、执行 shell 命令（命令将直接执行、无需确认，请谨慎并优先用于运行测试）'
+              : '') +
           '。需要事实依据时优先用工具查看，不要凭空猜测。'
         : '',
       '\n# 发言要求',
@@ -927,7 +929,7 @@ export function createGroupChatService(ctx: Context): GroupChatService {
   const mutate = (args: MutateArgs): Snapshot => {
     const op = args && args.op
     if (op === 'createGroup') {
-      const g: GroupRecord = { id: nid('grp'), name: String(args.name || '').trim() || '群组 ' + (groups.size + 1), workspaceDir: '', roleIds: [], sessionIds: [] }
+      const g: GroupRecord = { id: nid('grp'), name: String(args.name || '').trim() || '群组 ' + (groups.size + 1), workspaceDir: '', permissionTier: 'view_only', roleIds: [], sessionIds: [] }
       groups.set(g.id, g)
       const sess = newSession(g.id)
       g.sessionIds.push(sess.id)
@@ -1069,10 +1071,18 @@ export function createGroupChatService(ctx: Context): GroupChatService {
         schedulePersist({ workspace: g.id })
         touch()
       }
-    } else if (op === 'setAllowCommands') {
+    } else if (op === 'setPermissionTier') {
+      const tier = asPermissionTier(args.tier)
+      if (!tier) return { ...snapshot(), error: '未知权限档位' }
       const g = groups.get(args.groupId!)
       if (g) {
-        g.allowCommands = args.allowed === true
+        g.permissionTier = tier
+        // 降到仅可查看时若该群挂着待确认命令，自动拒绝（安全侧倾斜）；
+        // 升档不自动放行已排队的待确认命令，仍需用户手动确认
+        if (tier === 'view_only' && run.pendingConfirm) {
+          const runSession = run.sessionId ? sessions.get(run.sessionId) : null
+          if (runSession && runSession.groupId === g.id) wakeConfirm()
+        }
         schedulePersist({ ledger: true })
         touch()
       }

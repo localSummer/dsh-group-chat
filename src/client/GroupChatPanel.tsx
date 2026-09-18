@@ -13,6 +13,7 @@ import { api } from './api.ts'
 import { Bubble } from './Bubble.tsx'
 import { ThinkRow } from './ThinkRow.tsx'
 import { RoleDrawer } from './RoleDrawer.tsx'
+import { PermissionSelect } from './PermissionSelect.tsx'
 import { draftFromRole, blankDraft, escapeRegExp, groupById, roleById, sessById, type ClientSnapshot, type ModelsResponse, type RoleDraft, type SnapshotRole } from './model.ts'
 import { MD_LABELS } from './model.ts'
 
@@ -664,27 +665,6 @@ export function GroupChatPanel(): ReactNode {
             ? <div className="dsgc-err">工作区指向整个主目录/根目录：角色的只读工具将可读取该范围下的所有文件，请谨慎</div>
             : null}
         </div>
-        <div className="dsgc-field">
-          <div className="dsgc-wsrow" style={{ alignItems: 'center' }}>
-            <span
-              style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--dsw-alias-label-secondary,inherit)' }}
-              title="开启后角色可请求在工作区目录内执行 shell 命令（如运行测试），每条命令需你在会话中逐条确认"
-            >
-              允许角色执行命令（逐条确认）
-            </span>
-            <P.Switch
-              checked={group!.allowCommands === true}
-              onChange={(v: boolean) => { void mutate({ op: 'setAllowCommands', groupId: group!.id, allowed: v === true }) }}
-              label="允许角色执行命令"
-              aria-label="允许角色执行命令"
-            />
-          </div>
-          <div className="dsgc-hint">
-            {group!.allowCommands === true
-              ? '角色可请求在工作区内执行 shell 命令（cwd 固定为工作区）；每条命令执行前需在会话中确认，超时 120 秒'
-              : '开启后角色可在讨论中请求运行测试等命令；默认关闭'}
-          </div>
-        </div>
         {fileBrowser && fileBrowser.open
           ? (
             <div className="dsgc-fb">
@@ -849,6 +829,10 @@ export function GroupChatPanel(): ReactNode {
           />
         </div>
         <div className="dsgc-sendrow">
+          <PermissionSelect
+            tier={group!.permissionTier}
+            onSelect={(tier) => { void mutate({ op: 'setPermissionTier', groupId: group!.id, tier }) }}
+          />
           <span style={{ flex: 1 }} />
           <div className="dsgc-rounds" title="自由讨论的轮数（1–10）：一轮 = 全体参与角色按顺序各发言一次">
             <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>

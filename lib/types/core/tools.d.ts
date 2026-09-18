@@ -46,7 +46,7 @@ export declare const TOOL_SCHEMAS: readonly [{
     };
 }, {
     readonly name: "run_command";
-    readonly description: "在群组工作区目录内执行 shell 命令（如运行测试、git 操作；需要用户逐条确认，超时 120 秒）";
+    readonly description: "在群组工作区目录内执行 shell 命令（如运行测试、git 操作；超时 120 秒；是否需要确认取决于群组权限档位）";
     readonly parameters: {
         readonly type: "object";
         readonly properties: {

