@@ -50,7 +50,7 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
             <div className="dsgc-msghead">
               <span className="dsgc-msgname">{lr.name}</span>
               <span className="dsgc-msgmodel">{lr.provider} / {lr.model}</span>
-              <span className="dsgc-msgtime dsgc-typing">正在输入…</span>
+              <span className="dsgc-msgtime dsgc-typing">深度求索...</span>
             </div>
             <div className="dsgc-msgtext live">
               {snap.run.partialReasoning ? <ThinkRow text={snap.run.partialReasoning} running /> : null}

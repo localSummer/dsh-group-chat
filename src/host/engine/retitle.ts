@@ -100,10 +100,15 @@ export function createRetitle(core: HostState, deps: { touch: () => void, schedu
         provider: dm.provider,
         model: dm.model,
         system: sys,
-        // 不设 maxTokens：思考模型的 reasoning 与正文共享输出预算，任何小上限
-        // 都可能被思考耗尽（finish=max-tokens、正文空、静默无变更）；跟随
-        // provider 默认输出上限（与角色发言 speak 同一先例），正文侧由
-        // acc 2000 字符截断兜底
+        // 命名任务关闭思考、直接生成：purpose 'session-title' 是 DSH 为辅助
+        // 命名调用定义的专用语义（主会话标题生成同款）——deepseek 协议
+        // adapter 据此 thinking: disabled，无 reasoning、秒级返回；不识别
+        // 该字段的 adapter 安全忽略（可选字段，无错误面，退回模型默认行为）。
+        // 不设 maxTokens：思考模型的 reasoning 与正文共享输出预算，任何小
+        // 上限都可能被思考耗尽（finish=max-tokens、正文空、静默无变更）；
+        // 跟随 provider 默认输出上限（与角色发言 speak 同一先例），正文侧
+        // 由 acc 2000 字符截断兜底
+        purpose: 'session-title',
         messages: [{ id: ('g' + core.revision + '-t0') as Message['id'], role: 'user', content: [{ type: 'text', text: '群聊记录（从旧到新）：\n\n' + transcript }], source: { kind: 'user' } }],
       } as GenerateOptions)) {
         if (chunk.type === 'text-delta') {

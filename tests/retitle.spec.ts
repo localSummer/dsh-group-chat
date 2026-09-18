@@ -31,8 +31,8 @@ interface Env {
   svc: Service
   storeDir: string
   calls: number
-  /** 最近一次 llm stream 调用的 opts（maxTokens 预算等断言用）。 */
-  lastOpts: { maxTokens?: number, provider?: string, model?: string } | null
+  /** 最近一次 llm stream 调用的 opts（maxTokens/purpose 等断言用）。 */
+  lastOpts: { maxTokens?: number, provider?: string, model?: string, purpose?: string } | null
   setDefaultModel: (sel: { provider: string, model: string } | null) => void
   pushPlan: (rounds: StreamChunk[]) => void
 }
@@ -51,12 +51,12 @@ beforeAll(async () => {
   let defaultModel: { provider: string, model: string } | null = null
   let calls = 0
   /** 最近一次 stream 调用的 opts（命名调用断言用）。 */
-  let lastOpts: { maxTokens?: number, provider?: string, model?: string } | null = null
+  let lastOpts: { maxTokens?: number, provider?: string, model?: string, purpose?: string } | null = null
   const llm = {
     listProviders: async () => [],
     listModels: async () => [],
     resolveModelInfo: async () => null,
-    stream: async function* (opts?: { maxTokens?: number, provider?: string, model?: string }): AsyncGenerator<StreamChunk> {
+    stream: async function* (opts?: { maxTokens?: number, provider?: string, model?: string, purpose?: string }): AsyncGenerator<StreamChunk> {
       calls++
       lastOpts = opts || null
       const plan = queue.shift() || [{ type: 'text-delta', text: '好的' }, { type: 'finish', reason: { kind: 'stop' } }]
@@ -132,6 +132,8 @@ describe('会话标题/主题自动整理', () => {
     // 命名调用不设 maxTokens：思考模型的 reasoning 与正文共享输出预算，
     // 任何小上限都可能被思考耗尽（finish=max-tokens、正文空、静默无变更）
     expect(e.lastOpts && e.lastOpts.maxTokens).toBeUndefined()
+    // 命名调用携带 session-title purpose：deepseek 协议 adapter 据此关闭思考
+    expect(e.lastOpts && e.lastOpts.purpose).toBe('session-title')
     expect(e.lastOpts && e.lastOpts.provider).toBe('dp')
     expect(e.lastOpts && e.lastOpts.model).toBe('dm')
     // 落盘（schedulePersist 微任务 flush）

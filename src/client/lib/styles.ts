@@ -85,7 +85,7 @@ export const CSS = [
   '.dsgc-msgname{font-weight:600;color:var(--dsw-alias-label-primary,inherit);white-space:nowrap}',
   '.dsgc-msgmodel{background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.12));border-radius:999px;padding:0 7px;font-size:10.5px;font-weight:500;line-height:16px;color:var(--dsw-alias-label-secondary,inherit);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}',
   '.dsgc-msgtime{font-size:10.5px;color:var(--dsw-alias-label-tertiary,inherit);white-space:nowrap}',
-  /* 流式「正在输入…」（对标宿主 TurnStatus「深度求索中...」签名动画）：DeepSeek
+  /* 流式「深度求索...」（对标宿主 TurnStatus「深度求索中...」签名动画）：DeepSeek
      品牌蓝渐变带扫过文字的微光——background-clip:text + background-position
      1.8s linear 无限扫动；令牌取宿主静态品牌色 --dsw-static-deepseek-*（非主题
      别名，回退为品牌字面值），贯穿首轮 token 前与流式全程 */
