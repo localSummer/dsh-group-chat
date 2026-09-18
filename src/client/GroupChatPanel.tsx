@@ -228,11 +228,6 @@ export function GroupChatPanel(): ReactNode {
         applyMention(mentionCandidates[mentionIdx])
         return
       }
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        setMention(null)
-        return
-      }
     }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -826,7 +821,7 @@ export function GroupChatPanel(): ReactNode {
                       <span className="dsgc-mentionmodel">{r.provider} / {r.model}</span>
                     </button>
                   ))}
-                  <span className="dsgc-mentionhint">↑↓ 选择 · Enter/Tab 插入 · Esc 关闭</span>
+                  <span className="dsgc-mentionhint">↑↓ 选择 · Enter/Tab 插入</span>
                 </div>
                 )
               : null}

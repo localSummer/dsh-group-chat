@@ -271,7 +271,7 @@ components:
 P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「思考」+ 折叠摘要（剥离 markdown 标记的纯文本，44ch 截断，11.5px）；展开体为 pre-wrap 纯文本 12.5px/1.7，左缘 2px `border-l2` 规线，max-height 320px 滚动。
 
 ### Composer（签名组件）
-纵列：参与角色 chips 行（卡外，配置不入卡）→ **输入卡**（对标主会话 composer 卡：22px 圆角独立卡、`input-major` 实底、`elevation-soft` 软影【输入面豁免】、卡内无边框 textarea 36px 起自适应，左缩进 14px）→ 卡内底部**附件行**（权限芯片居左 + 轮数步进器 −/数字/+（数字 26px 宽 tabular-nums + 「轮」）紧邻 P.Button primary「发送」/ 覆写 danger「停止」，全部 white-space:nowrap——发送参数与主操作同组）。composer 区无 `border-top` 硬分隔，输入卡直接浮在消息流下方（上缘留 12px 呼吸）。@弹层（卡内锚定、向上溢出卡片）：layer-3 + `border-l2` + 圆角 10 + `shadow-lv3`，候选项 = 色点 + 名字（500）+ 模型（11px），键盘 ↑↓/Enter/Tab/Esc；底部操作提示行。
+纵列：参与角色 chips 行（卡外，配置不入卡）→ **输入卡**（对标主会话 composer 卡：22px 圆角独立卡、`input-major` 实底、`elevation-soft` 软影【输入面豁免】、卡内无边框 textarea 36px 起自适应，左缩进 14px）→ 卡内底部**附件行**（权限芯片居左 + 轮数步进器 −/数字/+（数字 26px 宽 tabular-nums + 「轮」）紧邻 P.Button primary「发送」/ 覆写 danger「停止」，全部 white-space:nowrap——发送参数与主操作同组）。composer 区无 `border-top` 硬分隔，输入卡直接浮在消息流下方（上缘留 12px 呼吸）。@弹层（卡内锚定、向上溢出卡片）：layer-3 + `border-l2` + 圆角 10 + `shadow-lv3`，候选项 = 色点 + 名字（500）+ 模型（11px），键盘 ↑↓/Enter/Tab（Esc 不参与——输入法组合下行为不稳，明确不做）；底部操作提示行。
 
 ### 角色抽屉
 右侧滑出 380px：`bg-layer-2` + 左缘 `border-l2` + 向左投影 + `.18s ease-out` 入场动画（translateX 24px + 淡入）；头（标题 + ghost 关闭）/ 体（滚动，12px 间距表单：名称、标识色调色盘、人设 textarea、提供方/模型 select、温度、深度思考 P.Switch）/ 脚（取消 outline + 保存 primary）。Escape 关闭。
