@@ -3,6 +3,8 @@
  * @module dsh-group-chat/client/model
  */
 import type { RoleRecord, Snapshot, ToolCallRecord } from '../../core/types.ts';
+/** 会话列表状态派生与文案（core 纯函数，供 NavPanel 渲染）。 */
+export { sessStatus, SESS_STATUS_LABEL, type SessStatus } from '../../core/status.ts';
 /** 角色标识色调色板（与宿主半一致）。 */
 export declare const PALETTE: string[];
 /** Host HTTP API 前缀。 */

@@ -93,6 +93,11 @@ export interface LastCreated {
     groupId: string;
     sessionId: string;
 }
+/** run 结束后的「输出完毕」标记（内存态不持久化，重启即清；reason 取 ok/error）。 */
+export interface RunFinished {
+    sessionId: string;
+    reason: 'ok' | 'error';
+}
 /** 对话进行时状态（run）。 */
 export interface RunState {
     running: boolean;
@@ -107,6 +112,8 @@ export interface RunState {
         resolve: (allowed: boolean) => void;
     } | null;
     childProc: import('node:child_process').ChildProcess | null;
+    /** 最近一次 run 的结束标记：会话列表「已完成/已出错」状态的数据源。 */
+    finished: RunFinished | null;
 }
 /** 角色发言的引擎产物。 */
 export interface SpeakResult {
@@ -168,6 +175,7 @@ export interface Snapshot {
         partial: string;
         partialReasoning: string;
         pendingConfirm: PendingConfirm | null;
+        finished: RunFinished | null;
     };
     lastCreated: LastCreated | null;
     groups: {

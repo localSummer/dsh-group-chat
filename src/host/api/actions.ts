@@ -97,6 +97,8 @@ export function createActions(core: HostState, deps: {
       const g = groups.get(sess.groupId)
       if (g && g.sessionIds.length <= 1) return { ...snapshot(), error: '每个群组至少保留一个会话' }
       if (run.running && run.sessionId === sess.id) return { ...snapshot(), error: '对话进行中，无法删除会话' }
+      // 「输出完毕」标记随会话一并清理（悬空指向已删除会话无消费方）
+      if (run.finished && run.finished.sessionId === sess.id) run.finished = null
       for (const mid of sess.messageIds) messages.delete(mid)
       sessions.delete(sess.id)
       dropDirty({ session: sess.id })
@@ -193,6 +195,12 @@ export function createActions(core: HostState, deps: {
         schedulePersist({ ledger: true })
         touch()
       }
+    } else if (op === 'ackFinish') {
+      // 查看即清：客户端选中 lastFinished 会话时确认已读（幂等；无标记不广播）
+      if (run.finished) {
+        run.finished = null
+        touch()
+      }
     } else if (op === 'clearMessages') {
       const sess = sessions.get(args.sessionId!)
       if (sess) {
@@ -231,6 +239,7 @@ export function createActions(core: HostState, deps: {
     run.sessionId = sess.id
     run.queue = queue
     run.stopping = false
+    run.finished = null // 新 run 覆盖旧的「输出完毕」未读标记
     touch()
     void runLoop(sess).catch((e) => console.error('group-chat run failed', e))
     return { ok: true }

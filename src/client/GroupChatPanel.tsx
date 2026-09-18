@@ -7,7 +7,7 @@
  * @module dsh-group-chat/client/panel
  */
 
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Icon, P } from './lib/ui.ts'
 import { api } from './lib/api.ts'
 import { RoleDrawer } from './components/RoleDrawer.tsx'
@@ -87,13 +87,23 @@ export function GroupChatPanel(): ReactNode {
   let group = snap && gid ? groupById(snap, gid) : null
   if (!group && snap && snap.groups.length) group = snap.groups[0]
   let sess = snap && sid ? sessById(snap, sid) : null
-  if (sess && group && snap && sess.groupId !== group.id) {
+  // 有效会话统一兜底（与渲染体一致）：sid 未建立/未命中/跨群不匹配时取当前群组
+  // 最后一个会话——必须在 busyNow 等 run 派生值之前完成，否则流式行/停止按钮
+  // 在兜底视图（典型：host 重启后 lastCreated 为空、选中态从未建立）下永远失活
+  if ((!sess || sess.groupId !== group?.id) && group && snap) {
     sess = group.sessionIds.length ? sessById(snap, group.sessionIds[group.sessionIds.length - 1]) : null
   }
 
   const enabledRoles = group ? group.roleIds.map((id) => roleById(snap!, id)).filter((r): r is SnapshotRole => !!r && r.enabled) : []
   const participants = partsSel || enabledRoles.map((r) => r.id)
   const busyNow = !!(sess && snap && snap.run.running && snap.run.sessionId === sess.id)
+
+  // 查看即清：当前选中会话即 run.finished 所指会话 → 发 ackFinish 确认已读
+  // （host 幂等清除 + 广播；覆盖点击/键盘/重挂恢复/lastCreated 定位全部选中路径）
+  const finishedRun = snap ? snap.run.finished : null
+  useEffect(() => {
+    if (finishedRun && sess && finishedRun.sessionId === sess.id) void mutate({ op: 'ackFinish' })
+  }, [finishedRun, sess])
 
   // @成员：候选与插入
   const mentionCandidates = mention !== null
@@ -147,11 +157,6 @@ export function GroupChatPanel(): ReactNode {
         <div className="dsgc-loading">暂无群组</div>
       </div>
     )
-  }
-
-  // 确保 sess 有值
-  if (!sess || sess.groupId !== group.id) {
-    sess = group.sessionIds.length ? sessById(snap, group.sessionIds[group.sessionIds.length - 1]) : null
   }
 
   const msgById: Record<string, ClientSnapshot['messages'][number]> = {}

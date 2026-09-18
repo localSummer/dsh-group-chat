@@ -5,6 +5,9 @@
 
 import type { RoleRecord, Snapshot, ToolCallRecord } from '../../core/types.ts'
 
+/** 会话列表状态派生与文案（core 纯函数，供 NavPanel 渲染）。 */
+export { sessStatus, SESS_STATUS_LABEL, type SessStatus } from '../../core/status.ts'
+
 /** 角色标识色调色板（与宿主半一致）。 */
 export const PALETTE = ['#5b8def', '#22a06b', '#e8912d', '#c678dd', '#e05661', '#56b6c2', '#98c379', '#d19a66']
 

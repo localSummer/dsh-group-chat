@@ -109,6 +109,12 @@ export interface LastCreated {
   sessionId: string
 }
 
+/** run 结束后的「输出完毕」标记（内存态不持久化，重启即清；reason 取 ok/error）。 */
+export interface RunFinished {
+  sessionId: string
+  reason: 'ok' | 'error'
+}
+
 /** 对话进行时状态（run）。 */
 export interface RunState {
   running: boolean
@@ -121,6 +127,8 @@ export interface RunState {
   pendingConfirm: PendingConfirm | null
   confirmSignal: { resolve: (allowed: boolean) => void } | null
   childProc: import('node:child_process').ChildProcess | null
+  /** 最近一次 run 的结束标记：会话列表「已完成/已出错」状态的数据源。 */
+  finished: RunFinished | null
 }
 
 /** 角色发言的引擎产物。 */
@@ -165,7 +173,7 @@ export interface BrowseResult {
 /** 发到客户端的全量快照（wire 形态）。 */
 export interface Snapshot {
   revision: number
-  run: { running: boolean, sessionId: string | null, currentRoleId: string | null, partial: string, partialReasoning: string, pendingConfirm: PendingConfirm | null }
+  run: { running: boolean, sessionId: string | null, currentRoleId: string | null, partial: string, partialReasoning: string, pendingConfirm: PendingConfirm | null, finished: RunFinished | null }
   lastCreated: LastCreated | null
   groups: { id: string, name: string, workspaceDir: string, permissionTier: PermissionTier, roleIds: string[], sessionIds: string[] }[]
   sessions: { id: string, groupId: string, name: string, topic: string, messageIds: string[], createdAt: number }[]

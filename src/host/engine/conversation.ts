@@ -284,6 +284,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
   const runLoop = async (sess: SessionRecord): Promise<void> => {
     const g = groups.get(sess.groupId)
     const startCount = sess.messageIds.length
+    let failed = false // 发言失败 → 会话列表「已出错」标记
     try {
       while (run.queue.length > 0 && !run.stopping) {
         const roleId = run.queue.shift()!
@@ -300,12 +301,16 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
             appendMessage(sess, role.id, out.text, { model: role.provider + ' / ' + role.model, reasoning: out.reasoning, toolCalls: out.toolCalls })
           }
         } catch (e) {
+          failed = true
           appendMessage(sess, 'system', '角色「' + role.name + '」发言失败：' + String((e && (e as Error).message) || e), { error: true })
           break
         }
       }
       if (run.stopping) appendMessage(sess, 'system', '已停止本次对话', {})
     } finally {
+      // 「输出完毕」标记：正常跑完/用户停止 → ok，发言失败 → error；
+      // 内存态（不持久化），新 run 启动或客户端查看（ackFinish）时清除
+      run.finished = { sessionId: sess.id, reason: failed ? 'error' : 'ok' }
       run.running = false
       run.sessionId = null
       run.currentRoleId = null

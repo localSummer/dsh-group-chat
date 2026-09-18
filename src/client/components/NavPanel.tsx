@@ -5,7 +5,7 @@
 
 import type { ReactNode, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Icon, P } from '../lib/ui.ts'
-import { groupById, sessById, type ClientSnapshot } from '../lib/model.ts'
+import { groupById, sessById, sessStatus, SESS_STATUS_LABEL, type ClientSnapshot } from '../lib/model.ts'
 
 interface NavPanelProps {
   snap: ClientSnapshot
@@ -85,7 +85,9 @@ export function NavPanel(props: NavPanelProps): ReactNode {
         const isActive = sess && s.id === sess.id && g.id === group?.id
         const isRenameSess = renameDraft && renameDraft.kind === 'session' && renameDraft.id === s.id
         const isConfirm = confirmDel && confirmDel.kind === 'session' && confirmDel.id === s.id
-        
+        // 会话状态（对齐主 GUI StateDot：idle 不渲染点）
+        const st = sessStatus(snap.run, s.id)
+
         groupChildren.push(
           <div
             key={s.id}
@@ -100,7 +102,16 @@ export function NavPanel(props: NavPanelProps): ReactNode {
               }
             }}
           >
-            <span className="dsgc-sess-dot" />
+            {/* 固定宽度状态槽（对齐主 GUI：槽恒在、点按状态渲染——行间文案对齐） */}
+            <span className="dsgc-sess-status">
+              {st !== 'idle'
+                ? (
+                  <span role="img" title={SESS_STATUS_LABEL[st]} aria-label={SESS_STATUS_LABEL[st]}>
+                    <P.StateDot state={st} size={8} />
+                  </span>
+                )
+                : null}
+            </span>
             {isRenameSess
               ? (
                 <input

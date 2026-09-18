@@ -1,10 +1,11 @@
 /**
- * core 纯逻辑冒烟测试：JSON 序列化契约与参数安全化。
+ * core 纯逻辑冒烟测试：JSON 序列化契约、参数安全化与会话状态派生。
  */
 import { describe, expect, it } from 'vitest'
 import { messageJson, roleJson } from '../src/core/json.ts'
 import { asEffort, asNumber, asPermissionTier, migrateTier, PERMISSION_TIERS } from '../src/core/types.ts'
 import { TOOL_SCHEMAS } from '../src/core/tools.ts'
+import { SESS_STATUS_LABEL, sessStatus } from '../src/core/status.ts'
 
 describe('messageJson', () => {
   it('必填字段齐全且可选字段缺省时省略', () => {
@@ -85,5 +86,36 @@ describe('权限档位', () => {
     expect(migrateTier(undefined, undefined)).toBe('view_only')
     expect(migrateTier('bogus', true)).toBe('workspace_write')
     expect(migrateTier('bogus', undefined)).toBe('view_only')
+  })
+})
+
+describe('会话状态派生（sessStatus）', () => {
+  /** run 视图的最小构造（sessStatus 只读 running/sessionId/pendingConfirm/finished）。 */
+  const run = (o: Partial<import('../src/core/types.ts').Snapshot['run']>): import('../src/core/types.ts').Snapshot['run'] => ({
+    running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', pendingConfirm: null, finished: null, ...o,
+  })
+
+  it('优先级：等待确认 > 进行中 > 已完成/已出错 > 默认无点', () => {
+    // run 会话：确认闸门挂起 → warning；否则 → ongoing
+    expect(sessStatus(run({ running: true, sessionId: 's1', pendingConfirm: { toolCallId: 'c1', tool: 'run_command', args: { command: 'x' } } }), 's1')).toBe('warning')
+    expect(sessStatus(run({ running: true, sessionId: 's1' }), 's1')).toBe('ongoing')
+    // 结束标记：ok → done，error → error
+    expect(sessStatus(run({ finished: { sessionId: 's1', reason: 'ok' } }), 's1')).toBe('done')
+    expect(sessStatus(run({ finished: { sessionId: 's1', reason: 'error' } }), 's1')).toBe('error')
+    // 无任何活动 → idle
+    expect(sessStatus(run({}), 's1')).toBe('idle')
+  })
+
+  it('状态只落在对应会话上：其他会话不受 run/finished 影响', () => {
+    expect(sessStatus(run({ running: true, sessionId: 's1' }), 's2')).toBe('idle')
+    expect(sessStatus(run({ finished: { sessionId: 's1', reason: 'ok' } }), 's2')).toBe('idle')
+  })
+
+  it('文案齐全（idle 无点无文案，其余四态有悬停文案）', () => {
+    expect(SESS_STATUS_LABEL.idle).toBe('')
+    expect(SESS_STATUS_LABEL.ongoing).toBe('进行中')
+    expect(SESS_STATUS_LABEL.warning).toBe('等待确认')
+    expect(SESS_STATUS_LABEL.done).toBe('已完成')
+    expect(SESS_STATUS_LABEL.error).toBe('已出错')
   })
 })

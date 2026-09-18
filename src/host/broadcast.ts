@@ -41,7 +41,7 @@ export function createBroadcast(core: HostState): Broadcast {
 
   const snapshot = (): Snapshot => ({
     revision: core.revision,
-    run: { running: core.run.running, sessionId: core.run.sessionId, currentRoleId: core.run.currentRoleId, partial: core.run.partial, partialReasoning: core.run.partialReasoning, pendingConfirm: core.run.pendingConfirm },
+    run: { running: core.run.running, sessionId: core.run.sessionId, currentRoleId: core.run.currentRoleId, partial: core.run.partial, partialReasoning: core.run.partialReasoning, pendingConfirm: core.run.pendingConfirm, finished: core.run.finished },
     lastCreated: core.lastCreated,
     groups: [...core.groups.values()].map((g) => ({ id: g.id, name: g.name, workspaceDir: g.workspaceDir, permissionTier: g.permissionTier, roleIds: g.roleIds.slice(), sessionIds: g.sessionIds.slice() })),
     sessions: [...core.sessions.values()].map((s) => ({ id: s.id, groupId: s.groupId, name: s.name, topic: s.topic, messageIds: s.messageIds.slice(), createdAt: s.createdAt })),
