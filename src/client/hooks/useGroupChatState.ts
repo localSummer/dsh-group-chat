@@ -19,13 +19,42 @@ export interface ActionOk {
   error?: string
 }
 
+/**
+ * 面板切换缓存（模块级，跨挂载存活）：main 为 keyed 槽，主会话⇄群聊切换会
+ * 整体卸载重挂面板组件；缓存最近快照与选中项让重挂载瞬时恢复上次视图，
+ * 挂载后的 state 拉取 / SSE 首帧再行校正（本机回路往返仅数毫秒）。
+ */
+let cachedSnap: ClientSnapshot | null = null
+let cachedGid: string | null = null
+let cachedSid: string | null = null
+
 export function useGroupChatState() {
-  // 核心数据快照
-  const [snap, setSnap] = useState<ClientSnapshot | null>(null)
-  
+  // 核心数据快照（重挂载时从缓存瞬时恢复，消除切换闪现的加载态）
+  const [snap, setSnap] = useState<ClientSnapshot | null>(() => cachedSnap)
+
   // 选中状态
-  const [gid, setGid] = useState<string | null>(null)
-  const [sid, setSid] = useState<string | null>(null)
+  const [gid, setGid] = useState<string | null>(() => cachedGid)
+  const [sid, setSid] = useState<string | null>(() => cachedSid)
+
+  /** 已应用过的 lastCreated 会话标记：只在标记变化（真正的新建）时跟随选中，
+      而不是每帧都把视图拽回「最近创建的会话」（流式期间每 120ms 一帧）。 */
+  const appliedCreatedRef = useRef<string | null>(cachedSnap?.lastCreated?.sessionId ?? null)
+
+  /** 快照落地统一口：写状态 + 写切换缓存。 */
+  const applySnap = useCallback((s: ClientSnapshot): void => {
+    cachedSnap = s
+    setSnap(s)
+  }, [])
+
+  /** 选中项统一口：写状态 + 写切换缓存（重挂载恢复到用户离开时的位置）。 */
+  const selectGroup = useCallback((v: string): void => {
+    cachedGid = v
+    setGid(v)
+  }, [])
+  const selectSession = useCallback((v: string): void => {
+    cachedSid = v
+    setSid(v)
+  }, [])
   
   // UI 状态
   const [search, setSearch] = useState('')
@@ -71,27 +100,29 @@ export function useGroupChatState() {
   useEffect(() => {
     let live = true
     api.state().then((s) => {
-      if (live && s && (s as ClientSnapshot).ok) setSnap(s as ClientSnapshot)
+      if (live && s && (s as ClientSnapshot).ok) applySnap(s as ClientSnapshot)
     }).catch(() => { /* SSE 会重试 */ })
     const events = new EventSource('/api/group-chat/events')
     events.onmessage = (message) => {
       try {
         const s = JSON.parse(message.data) as ClientSnapshot
         if (!live || !s || !s.ok) return
-        const created = s.lastCreated
-        if (created && created.sessionId) {
-          setGid(created.groupId)
-          setSid(created.sessionId)
+        // lastCreated 仅在变化时跟随选中（新建群组/会话的定位信号）；
+        // 帧里重复携带的旧标记不再反复重置视图
+        if (s.lastCreated && s.lastCreated.sessionId && s.lastCreated.sessionId !== appliedCreatedRef.current) {
+          appliedCreatedRef.current = s.lastCreated.sessionId
+          selectGroup(s.lastCreated.groupId)
+          selectSession(s.lastCreated.sessionId)
           setPartsSel(null)
         }
-        setSnap(s)
+        applySnap(s)
       } catch { /* ignore malformed frame */ }
     }
     return () => {
       live = false
       events.close()
     }
-  }, [])
+  }, [applySnap, selectGroup, selectSession])
 
   // API 操作封装
   const action = async (payload: Record<string, unknown>): Promise<unknown> => {
@@ -107,12 +138,15 @@ export function useGroupChatState() {
     setErr('')
     const res = await action(Object.assign({ kind: 'mutate' }, args)) as MutateResponse | null
     if (res && res.ok && res.snapshot) {
-      if (res.lastCreated && res.lastCreated.sessionId) {
-        setGid(res.lastCreated.groupId)
-        setSid(res.lastCreated.sessionId)
+      // 响应里的 lastCreated 是服务端当前值（未必由本次调用产生）——同样只在
+      // 变化时跟随选中，避免改名/改配置等普通 mutate 把视图拽走
+      if (res.lastCreated && res.lastCreated.sessionId && res.lastCreated.sessionId !== appliedCreatedRef.current) {
+        appliedCreatedRef.current = res.lastCreated.sessionId
+        selectGroup(res.lastCreated.groupId)
+        selectSession(res.lastCreated.sessionId)
         setPartsSel(null)
       }
-      setSnap(res.snapshot)
+      applySnap(res.snapshot)
       if (res.snapshot.error) setErr(res.snapshot.error)
     }
     return res
@@ -121,11 +155,11 @@ export function useGroupChatState() {
   return {
     // 状态
     snap,
-    setSnap,
+    setSnap: applySnap,
     gid,
-    setGid,
+    setGid: selectGroup,
     sid,
-    setSid,
+    setSid: selectSession,
     search,
     setSearch,
     collapsedGroups,

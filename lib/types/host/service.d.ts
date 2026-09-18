@@ -1,12 +1,13 @@
 /**
- * 群聊宿主服务：状态机 + 持久化调度 + 对话引擎（llm 流式 + 工具执行）。
- *
- * 状态机：groups / sessions / roles / messages 四张表 + run（对话进行时
- * 状态）；变更后 touch()（revision++ + 节流广播）。持久化走脏标记合并
- * 落盘（PERSISTENCE.md v2.1，见 host/store.ts）。
- *
- * 动作分发（handleAction，POST /api/group-chat/action 的载荷）：
- *   mutate | send | stop | confirmCommand | models | efforts | browse
+ * 群聊宿主服务（组合根）：装配各层模块并暴露对路由/入口的面。
+ * 目录分层（对齐 src/client 的分层模式：每层一目录 + index.ts barrel）：
+ *   state.ts       共享状态容器（四张表 + run + 可变槽位；kernel，根级）
+ *   broadcast.ts   SSE 广播（节流）+ touch + 全量快照（kernel 读模型，根级）
+ *   persistence/   持久化（store 文件原语 + 脏标记合并落盘 + 启动恢复）
+ *   materials/     资料读取与路径解析 + 目录浏览器
+ *   tools/         工具执行（沙箱 + 确认闸门）
+ *   engine/        对话引擎（conversation：speak/runLoop；retitle：标题整理）
+ *   api/           HTTP 传输（http 护栏 + routes 路由）与动作分发（actions）
  * @module dsh-group-chat/host/service
  */
 import type { Context } from '@deepseek-ai/cordis';
@@ -22,6 +23,6 @@ export interface GroupChatService {
     dispose(): void;
 }
 /**
- * 创建群聊宿主服务。锁失败/写失败时降级为内存态运行（console 告警）。
+ * 创建群聊宿主服务（装配各模块；持久化锁失败时降级内存态运行）。
  */
 export declare function createGroupChatService(ctx: Context): GroupChatService;

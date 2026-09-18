@@ -35,6 +35,10 @@ export interface SessionRecord {
     groupId: string;
     name: string;
     topic: string;
+    /** 名称已被手动编辑：自动命名永久跳过（隐式固定）。 */
+    namePinned?: boolean;
+    /** 主题已被手动编辑：自动整理永久跳过（隐式固定）。 */
+    topicPinned?: boolean;
     messageIds: string[];
     createdAt: number;
 }

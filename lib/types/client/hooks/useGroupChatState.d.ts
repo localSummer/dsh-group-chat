@@ -15,11 +15,11 @@ export interface ActionOk {
 }
 export declare function useGroupChatState(): {
     snap: ClientSnapshot | null;
-    setSnap: import("react").Dispatch<import("react").SetStateAction<ClientSnapshot | null>>;
+    setSnap: (s: ClientSnapshot) => void;
     gid: string | null;
-    setGid: import("react").Dispatch<import("react").SetStateAction<string | null>>;
+    setGid: (v: string) => void;
     sid: string | null;
-    setSid: import("react").Dispatch<import("react").SetStateAction<string | null>>;
+    setSid: (v: string) => void;
     search: string;
     setSearch: import("react").Dispatch<import("react").SetStateAction<string>>;
     collapsedGroups: Set<string>;

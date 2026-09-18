@@ -9,15 +9,15 @@
  *
  * 原子写 tmp+fsync+rename（每目录一次 fsync）；单实例 .lock；损坏隔离重建；
  * 写失败保留脏标记；v1 自动迁移。
- * @module dsh-group-chat/host/store
+ * @module dsh-group-chat/host/persistence/store
  */
 
 import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
-import { messageJson, roleJson } from '../core/json.ts'
-import type { GroupRecord } from '../core/types.ts'
+import { messageJson, roleJson } from '../../core/json.ts'
+import type { GroupRecord } from '../../core/types.ts'
 
 /** DSH 主目录；DSH_GROUP_CHAT_STORE 供测试覆盖存储位置。 */
 export const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh')

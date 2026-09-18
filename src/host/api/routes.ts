@@ -3,12 +3,12 @@
  *   GET  /api/group-chat/state   全量快照
  *   POST /api/group-chat/action   { kind: mutate|send|stop|models|preview, ... }
  *   GET  /api/group-chat/events   SSE，状态变化时推送节流后的全量快照
- * @module dsh-group-chat/host/routes
+ * @module dsh-group-chat/host/api/routes
  */
 
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import { isTrustedRequest, readBody, writeJson } from './http.ts'
-import type { GroupChatService } from './service.ts'
+import type { GroupChatService } from '../service.ts'
 
 const API_PREFIX = '/api/group-chat'
 

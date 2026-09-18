@@ -29,8 +29,7 @@ import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-settings'
 import z from 'schemastery'
 import { mountOnce } from './mount-once.ts'
-import { createGroupChatService } from './host/service.ts'
-import { makeGroupChatRoutes } from './host/routes.ts'
+import { createGroupChatService, makeGroupChatRoutes } from './host/index.ts'
 
 export const name = 'group-chat'
 

@@ -17,7 +17,7 @@ grill-me 确认项：
 | 5 | 原子写策略 | 群组目录级共享的 `atomicWriteGroup()`，按 flush 批量合并 |
 | 6 | 损坏恢复 | 每个会话文件损坏时就地隔离 `.corrupt-*`，仅丢该会话消息 |
 | 7 | 客户端读取 | 不新增 API：全量快照 + 客户端按 `sessionId` 本地过滤 |
-| 8 | 会话文件结构 | 自包含完整版（schema/savedAt/id/name/groupId/topic/createdAt/messages） |
+| 8 | 会话文件结构 | 自包含完整版（schema/savedAt/id/name/groupId/topic/createdAt/messages + 可选 namePinned/topicPinned，手动编辑标记=true 时写入，自动整理跳过该字段） |
 | 9 | setWorkspaceDir | 仅更新值，无额外处理 |
 | 10 | messages 字段 | 推荐结构（对标 DSH 本地会话 session.v3 的消息形态） |
 

@@ -12,7 +12,10 @@ const TAG_ID = 'dsh-group-chat/styles.css'
 export const CSS = [
   /* ===== 布局骨架：三区工作台；卡片只用于内容单元，导航用平铺行 ===== */
   '.dsgc-root{display:flex;height:100%;min-height:0;background:var(--dsw-alias-bg-base,transparent);color:var(--dsw-alias-label-primary,inherit);font-size:var(--dsh-content-font-size,14px);container-type:inline-size;position:relative}',
-  '.dsgc-loading{padding:24px;color:var(--dsw-alias-label-tertiary,inherit);display:flex;gap:8px;align-items:center}',
+  '.dsgc-loading{padding:24px;color:var(--dsw-alias-label-tertiary,inherit);display:flex;gap:8px;align-items:center;opacity:0;animation:dsgc-loading-in .18s ease-out .15s forwards}',
+  /* 首开加载态延迟 150ms 淡入：本机回路通常数毫秒内数据即达并卸载本元素，
+     快路径完全不可见（无闪现，等同移除）；慢路径才出现反馈，空白面板不再是唯一信号 */
+  '@keyframes dsgc-loading-in{to{opacity:1}}',
   '.dsgc-loading svg{animation:dsgc-spin 1s linear infinite}',
   '@keyframes dsgc-spin{to{transform:rotate(360deg)}}',
   /* ===== 左导航栏（可收起，收合动画与右栏同款配方） ===== */

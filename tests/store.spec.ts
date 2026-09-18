@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, readdi
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Store, scanGroupIds, scanSessionIds } from '../src/host/store.ts'
+import { Store, scanGroupIds, scanSessionIds } from '../src/host/persistence/store.ts'
 
 const dirs: string[] = []
 

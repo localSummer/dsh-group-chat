@@ -1,7 +1,7 @@
 /**
  * Host HTTP 工具：回环信任栏（对齐 dsh-web shared/host/loopback.ts 语义 +
  * 浏览器同源标记栏）、有界 JSON 请求体读取、JSON 响应写出。
- * @module dsh-group-chat/host/http
+ * @module dsh-group-chat/host/api/http
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
