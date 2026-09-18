@@ -26,7 +26,11 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
   if (sess) {
     for (const mid of sess.messageIds) {
       const m = msgById[mid]
-      if (m) bubbles.push(<Bubble key={m.id} snap={snap} m={m} />)
+      if (!m) continue
+      // 角色在父级解析：Bubble 按值 memo（不依赖 snap identity），流式帧
+      // 不再触发已完成消息的全量重渲（每帧仅 live 行与派生列表变化）
+      const role = m.speaker !== 'user' && m.speaker !== 'system' ? roleById(snap, m.speaker) : null
+      bubbles.push(<Bubble key={m.id} m={m} role={role} />)
     }
   }
   
