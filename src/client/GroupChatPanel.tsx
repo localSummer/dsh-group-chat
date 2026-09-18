@@ -56,6 +56,7 @@ export function GroupChatPanel(): ReactNode {
   const [mention, setMention] = useState<{ query: string, caret: number } | null>(null)
   const [mentionIdx, setMentionIdx] = useState(0)
   const [asideOpen, setAsideOpen] = useState(true)
+  const [navOpen, setNavOpen] = useState(true)
   const [atBottom, setAtBottom] = useState(true)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -101,7 +102,7 @@ export function GroupChatPanel(): ReactNode {
     const el = inputRef.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = Math.min(180, Math.max(40, el.scrollHeight)) + 'px'
+    el.style.height = Math.min(180, Math.max(36, el.scrollHeight)) + 'px'
   }, [input])
 
   const action = async (payload: Record<string, unknown>): Promise<unknown> => {
@@ -544,7 +545,7 @@ export function GroupChatPanel(): ReactNode {
   }
 
   const navPanel = (
-    <div className="dsgc-nav">
+    <div className={'dsgc-nav' + (navOpen ? '' : ' closed')} aria-hidden={navOpen ? undefined : 'true'}>
       <P.Input
         icon={Icon(P.IconSearchOutline16, 16)}
         className="dsgc-search"
@@ -720,6 +721,27 @@ export function GroupChatPanel(): ReactNode {
   // ---- 中栏：当前会话 ----
   const chatPanel = (
     <section className="dsgc-chat">
+      {/* 接缝收合钮：钉在会话区两缘、各控其侧；面板收展时随接缝滑行 */}
+      <button
+        type="button"
+        className={'dsgc-seambtn left' + (navOpen ? '' : ' closed')}
+        aria-label={navOpen ? '收起群组导航栏' : '展开群组导航栏'}
+        title={navOpen ? '收起群组导航栏' : '展开群组导航栏'}
+        aria-expanded={navOpen}
+        onClick={() => { setNavOpen(!navOpen) }}
+      >
+        {Icon(P.IconChevronLeftOutline14, 14)}
+      </button>
+      <button
+        type="button"
+        className={'dsgc-seambtn right' + (asideOpen ? '' : ' closed')}
+        aria-label={asideOpen ? '收起成员与工作区栏' : '展开成员与工作区栏'}
+        title={asideOpen ? '收起成员与工作区栏' : '展开成员与工作区栏'}
+        aria-expanded={asideOpen}
+        onClick={() => { setAsideOpen(!asideOpen) }}
+      >
+        {Icon(P.IconChevronRightOutline14, 14)}
+      </button>
       <div className="dsgc-chathead">
         {sess ? <span className="dsgc-sess-title" title={'当前会话：' + sess.name}>{sess.name}</span> : null}
         <input
@@ -732,16 +754,6 @@ export function GroupChatPanel(): ReactNode {
         />
         <P.Button variant="ghost" size="sm" title="清空当前会话的消息记录" onClick={() => { if (sess) void mutate({ op: 'clearMessages', sessionId: sess.id }) }}>
           清空
-        </P.Button>
-        <P.Button
-          variant="ghost"
-          size="sm"
-          title={asideOpen ? '收起成员与工作区栏' : '展开成员与工作区栏'}
-          aria-label={asideOpen ? '收起上下文栏' : '展开上下文栏'}
-          onClick={() => { setAsideOpen(!asideOpen) }}
-          style={{ transform: 'scaleX(-1)' } as CSSProperties}
-        >
-          {Icon(P.IconPanelLeftOutline16, 16)}
         </P.Button>
       </div>
       <div className="dsgc-msgs" ref={scrollRef} onScroll={onMsgsScroll}>
@@ -763,13 +775,13 @@ export function GroupChatPanel(): ReactNode {
         {!atBottom && bubbles.length
           ? (
             <div className="dsgc-tobottom">
-              <P.Button
-                variant="outline"
-                size="sm"
+              <button
+                type="button"
+                className="dsgc-tobtn"
                 onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }) }}
               >
                 {Icon(P.IconChevronDownOutline14, 14)}回到底部
-              </P.Button>
+              </button>
             </div>
             )
           : null}
@@ -794,67 +806,69 @@ export function GroupChatPanel(): ReactNode {
                 ))
               : <span className="dsgc-hint">还没有启用的角色，请在右侧添加</span>}
         </div>
-        <div className="dsgc-mentionwrap">
-          {mention && mentionCandidates.length > 0
-            ? (
-              <div className="dsgc-mention" role="listbox">
-                {mentionCandidates.map((r, i) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    className={'dsgc-mentionitem' + (i === mentionIdx ? ' on' : '')}
-                    role="option"
-                    aria-selected={i === mentionIdx ? 'true' : 'false'}
-                    onClick={() => applyMention(r)}
-                    onMouseEnter={() => setMentionIdx(i)}
-                  >
-                    <span className="dsgc-chipdot" style={{ background: r.color || '#888' }} />
-                    <span className="dsgc-mentionname">{r.name}</span>
-                    <span className="dsgc-mentionmodel">{r.provider} / {r.model}</span>
-                  </button>
-                ))}
-                <span className="dsgc-mentionhint">↑↓ 选择 · Enter/Tab 插入 · Esc 关闭</span>
-              </div>
-              )
-            : null}
-          <textarea
-            className="dsgc-textarea"
-            ref={inputRef}
-            rows={2}
-            placeholder="发消息给全群，@成员 点名让其回应（留空则让角色自由讨论）…"
-            value={input}
-            onChange={onInputChange}
-            onKeyDown={onInputKeyDown}
-            style={{ resize: 'none', minHeight: '40px', maxHeight: '180px', boxSizing: 'border-box' }}
-          />
-        </div>
-        <div className="dsgc-sendrow">
-          <PermissionSelect
-            tier={group!.permissionTier}
-            onSelect={(tier) => { void mutate({ op: 'setPermissionTier', groupId: group!.id, tier }) }}
-          />
-          <span style={{ flex: 1 }} />
-          <div className="dsgc-rounds" title="自由讨论的轮数（1–10）：一轮 = 全体参与角色按顺序各发言一次">
-            <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
-              {Icon(P.IconChevronLeftOutline14, 12)}
-            </button>
-            <span className="dsgc-roundnum" title="轮数">{rounds}</span>
-            <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
-              {Icon(P.IconChevronRightOutline14, 12)}
-            </button>
-            <span style={{ padding: '0 6px 0 2px' }}>轮</span>
+        <div className="dsgc-card">
+          <div className="dsgc-mentionwrap">
+            {mention && mentionCandidates.length > 0
+              ? (
+                <div className="dsgc-mention" role="listbox">
+                  {mentionCandidates.map((r, i) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className={'dsgc-mentionitem' + (i === mentionIdx ? ' on' : '')}
+                      role="option"
+                      aria-selected={i === mentionIdx ? 'true' : 'false'}
+                      onClick={() => applyMention(r)}
+                      onMouseEnter={() => setMentionIdx(i)}
+                    >
+                      <span className="dsgc-chipdot" style={{ background: r.color || '#888' }} />
+                      <span className="dsgc-mentionname">{r.name}</span>
+                      <span className="dsgc-mentionmodel">{r.provider} / {r.model}</span>
+                    </button>
+                  ))}
+                  <span className="dsgc-mentionhint">↑↓ 选择 · Enter/Tab 插入 · Esc 关闭</span>
+                </div>
+                )
+              : null}
+            <textarea
+              className="dsgc-textarea"
+              ref={inputRef}
+              rows={1}
+              placeholder="发消息给全群，@成员 点名让其回应（留空则让角色自由讨论）…"
+              value={input}
+              onChange={onInputChange}
+              onKeyDown={onInputKeyDown}
+              style={{ resize: 'none', minHeight: '36px', maxHeight: '180px', boxSizing: 'border-box' }}
+            />
           </div>
-          {busyNow
-            ? (
-              <P.Button variant="outline" className="dsgc-stopbtn" onClick={() => { void stopRun() }}>
-                {Icon(P.IconStopFill16, 16)}停止
-              </P.Button>
-              )
-            : (
-              <P.Button variant="primary" onClick={() => { void sendMsg() }} disabled={(!participants.length && !mentionedRoles.length) || !sess}>
-                {Icon(P.IconSendOutline16, 16)}发送
-              </P.Button>
-              )}
+          <div className="dsgc-sendrow">
+            <PermissionSelect
+              tier={group!.permissionTier}
+              onSelect={(tier) => { void mutate({ op: 'setPermissionTier', groupId: group!.id, tier }) }}
+            />
+            <span style={{ flex: 1 }} />
+            <div className="dsgc-rounds" title="自由讨论的轮数（1–10）：一轮 = 全体参与角色按顺序各发言一次">
+              <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
+                {Icon(P.IconChevronLeftOutline14, 12)}
+              </button>
+              <span className="dsgc-roundnum" title="轮数">{rounds}</span>
+              <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
+                {Icon(P.IconChevronRightOutline14, 12)}
+              </button>
+              <span style={{ padding: '0 6px 0 2px' }}>轮</span>
+            </div>
+            {busyNow
+              ? (
+                <P.Button variant="outline" className="dsgc-stopbtn" onClick={() => { void stopRun() }}>
+                  {Icon(P.IconStopFill16, 16)}停止
+                </P.Button>
+                )
+              : (
+                <P.Button variant="primary" onClick={() => { void sendMsg() }} disabled={(!participants.length && !mentionedRoles.length) || !sess}>
+                  {Icon(P.IconSendOutline16, 16)}发送
+                </P.Button>
+                )}
+          </div>
         </div>
       </div>
     </section>

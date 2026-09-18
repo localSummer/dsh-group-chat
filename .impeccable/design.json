@@ -365,6 +365,21 @@
         "name": "aside-overlay-left",
         "value": "-12px 0 32px rgba(0,0,0,.16)",
         "purpose": "≤880px 容器下右栏的覆盖态，向左投。"
+      },
+      {
+        "name": "input-card-soft",
+        "value": "var(--dsw-elevation-soft, 0 1px 3px rgba(0,0,0,.08))",
+        "purpose": "composer 输入卡（输入面豁免，宿主输入面语言），向下投。"
+      },
+      {
+        "name": "seam-tab-left",
+        "value": "3px 0 10px rgba(0,0,0,.07)",
+        "purpose": "左接缝收合钮（竖向页签），向右投。"
+      },
+      {
+        "name": "seam-tab-right",
+        "value": "-3px 0 10px rgba(0,0,0,.07)",
+        "purpose": "右接缝收合钮（竖向页签），向左投，与左钮镜像。"
       }
     ],
     "motion": [

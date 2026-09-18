@@ -1,6 +1,6 @@
 {
   "name": "dsh-group-chat",
-  "description": "DSH 模型群聊：多模型角色群组对话面板。角色绑定不同 provider/model，群内共享对话记录与共享资料空间（文本笔记 + 文件路径）；设置页支持启用/停用。",
+  "description": "DSH 模型群聊：多模型角色群组对话面板。角色绑定不同 provider/model，群内共享对话记录；设置页支持启用/停用。",
   "version": "0.2.0",
   "type": "module",
   "packageManager": "pnpm@11.1.0",
