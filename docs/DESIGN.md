@@ -180,7 +180,7 @@ components:
 
 ### Named Rules
 **唯一个性源规则。** 角色颜色只以环和点的形式出现（头像环、色点），永不染指文字色或边框。唯一例外：**@提及芯片**——角色身份在输入区内的直接引用，允许「色点 + 该色 color-mix 15% 淡底胶囊」，仍不染文字色、不做满饱和底、不进消息流渲染。其余任何屏里的彩色面积以个位数像素计。
-**令牌纪律规则。** 每个颜色引用都是 `var(--dsw-alias-*, 灰阶回退)` 的完整对；PALETTE 8 色 + `#888` 回退 + danger 上的 `#fff` 是代码里仅有的字面色。新样式不得绕过这对结构。
+**令牌纪律规则。** 每个颜色引用都是 `var(--dsw-alias-*, 灰阶回退)` 的完整对；PALETTE 8 色 + `#888` 回退 + danger 上的 `#fff` 是代码里仅有的字面色。新样式不得绕过这对结构。**例外（记录在案）**：流式「正在输入…」微光扫动使用宿主静态品牌令牌 `--dsw-static-deepseek-500/200`（回退 `#4176e6`/`#d3e2ff`）——对标宿主 TurnStatus「深度求索中...」的品牌签名动画，非主题别名（品牌色不随明暗主题反转）。
 
 ## Typography
 
@@ -265,7 +265,7 @@ components:
 左侧目录树全平铺行：群组行（继承字号，选中仅 600 + primary，无底色）+ 会话行（12.5px / 行高 1.5，行距 2px、行内边距 6px 8px，5px 点，选中 = `active-fill` + 600）；群组块间距 6px，会话列表与群组行间 4px 呼吸；hover 换 `hover-fill`；`.12s` 过渡。折叠 chevron 旋转 -90°（`.16s ease`）。节点操作钮 hover 才显现；重命名走内联输入；删除 = 两次点击确认（第一次变 danger 红并提示「再次点击确认删除」）。「新会话」为弱化矮行（12px / 行高 1.5 / 内边距 5px 8px）。整行 `role="button"` + `tabIndex` + Enter/Space 键控。
 
 ### 消息流（签名组件）
-角色消息 = 28px 圆头像（2px 角色色环，无角色时 `border-l3`/用户头像 info 填充透明环）+ 头部行（名字 600 + 模型徽章 10.5px + 相对时间）+ layer-3 卡内 MarkdownText（宿主同源渲染，labels 冻结对象：复制/已复制/脚注）。用户消息 = info 填充行反转气泡，纯文本 pre-wrap。系统通知 = 居中 `bg-module` 胶囊（11.5px，错误态换错误色文字）。**流式行**：时间槽显示「正在输入…」+ streaming MarkdownText（opacity .92）+ 运行中的思考折叠（摘要实时跟随最新一行）；首个 delta 到达前卡内渲染「思考中」占位行（ThinkRow 同语言：思考图标 + 次要色 12px + 三点交错呼吸 1.2s，`dsgc-dot-breathe`；深度思考模型首字节可能等数秒到数十秒，空白气泡会被感知为卡死）。空态 = 居中 40ch（20px 描边图标 50% 透明度 + 13px/600 标题 + 提示）。
+角色消息 = 28px 圆头像（2px 角色色环，无角色时 `border-l3`/用户头像 info 填充透明环）+ 头部行（名字 600 + 模型徽章 10.5px + 相对时间）+ layer-3 卡内 MarkdownText（宿主同源渲染，labels 冻结对象：复制/已复制/脚注）。用户消息 = info 填充行反转气泡，纯文本 pre-wrap。系统通知 = 居中 `bg-module` 胶囊（11.5px，错误态换错误色文字）。**流式行**：时间槽显示「正在输入…」（`dsgc-typing`——DeepSeek 品牌蓝微光扫动，见 Motion 签名循环）+ streaming MarkdownText（opacity .92）+ 运行中的思考折叠（摘要实时跟随最新一行）；首个 delta 到达前卡内渲染「思考中」占位行（ThinkRow 同语言：思考图标 + 次要色 12px + 三点交错呼吸 1.2s，`dsgc-dot-breathe`；深度思考模型首字节可能等数秒到数十秒，空白气泡会被感知为卡死）。空态 = 居中 40ch（20px 描边图标 50% 透明度 + 13px/600 标题 + 提示）。
 
 ### 思考折叠行（签名组件）
 P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「思考」+ 折叠摘要（剥离 markdown 标记的纯文本，44ch 截断，11.5px）；展开体为 pre-wrap 纯文本 12.5px/1.7，左缘 2px `border-l2` 规线，max-height 320px 滚动。
@@ -283,7 +283,7 @@ P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「�
 
 动效只为反馈、状态与连续性服务；流式正文零逐帧动画（SSE 120ms 高频更新不叠加效果）。统一到达曲线 `cubic-bezier(0.16,1,.3,1)`，退场恒短于入场（ease-in 出）。
 
-- **签名循环（唯一）**：`dsgc-presence` 1.8s ease-in-out infinite——正在流式发言的角色头像以 `--role-color`（color-mix 22%）呼吸 4px 光环；随 live 行卸载即停。
+- **签名循环**：`dsgc-presence` 1.8s ease-in-out infinite——正在流式发言的角色头像以 `--role-color`（color-mix 22%）呼吸 4px 光环；随 live 行卸载即停。`dsgc-typing-shimmer` 1.8s linear infinite——live 行「正在输入…」时间槽的品牌蓝微光扫动（对标宿主 TurnStatus「深度求索中...」：`--dsw-static-deepseek-500/200` 渐变带 + `background-clip:text` + `background-position` 扫动；reduced-motion 降级为静态渐变）。`dsgc-dot-breathe` 1.2s（0/.2/.4s 交错）——首个 delta 前「思考中」占位行的三点呼吸。
 - **出现确认**（fade + 轻微位移）：消息 `.22s`（6px 上浮）、@弹层 `.16s`（4px）、回到底部 `.18s`（6px，保留 translateX(-50%) 定位）、思考正文 `.2s`（3px）、错误 `.18s` / 文件浏览器 `.2s` / 空状态 `.3s`（纯 fade）、系统消息 `.24s`（scale .96）。
 - **布局连续性（唯一的 layout 动画，左右对称两处）**：左右栏折叠，同一配方。宽模式 `width →0` + opacity（开 `.28s` 曲线到 / 合 `.24s` ease-in），子元素固定宽防内容重排（左栏 212 / 右栏 280），`visibility` 延迟 `.22s` 切换（关闭时键盘焦点安全）；窄容器（≤880px）右栏覆盖层 `translateX` 滑行（开 `.3s` / 合 `.26s`），左栏在 ≤640px 下子元素改 `width:auto` 适配 200px 窄宽。**接缝收合钮随接缝滑行**：宽模式由布局驱动（中栏连续变宽，贴缘绝对定位的钮自动同步，无自有动画）；窄模式右钮以同曲线 `right` 过渡（`.3s`）跟踪覆盖层左缘。
 - **抽屉**：入 `.22s`（32px 滑入 + 淡入）；出 `.14s` ease-in + `pointer-events:none`——取消/Esc 走 140ms 退场后卸载，保存成功为即时确认。
@@ -306,6 +306,6 @@ P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「�
 - **Don't** 在 PALETTE 之外引入字面色（danger 上的 `#fff` 与令牌回退值除外）；也不要把 PALETTE 用在环/点之外的任何地方。
 - **Don't** 给静止表面加阴影——阴影只属于弹层/浮动按钮/抽屉/覆盖式右栏，以及输入面豁免（composer 输入卡的宿主输入面语言）。
 - **Don't** 开辟第四栏或把表单塞进会话区；管理进右栏，临时走抽屉/弹层。
-- **Don't** 使用 Unicode 图形符或伪造光标（如 `▍`）——图标一律取 Icon*Outline 原语，流式态用「正在输入…」时间槽 + opacity .92 表达。
+- **Don't** 使用 Unicode 图形符或伪造光标（如 `▍`）——图标一律取 Icon*Outline 原语，流式态用「正在输入…」时间槽（品牌蓝微光扫动）+ opacity .92 表达。
 - **Don't** 把侧边栏入口的对齐 hack（`panelRow :has(.dsgc-entryOverlay)` 系列规则与 `newSession` 类名钩子）复制到新表面——那是外壳插槽的度量对齐权宜，由 `client.js` 文件头注释持有，不属于本设计系统。
 - **Don't** 在本文件记录产品事实（用户、用途、能力约束）——归 PRODUCT.md；设计文档只管视觉。
