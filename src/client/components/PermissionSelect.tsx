@@ -6,9 +6,9 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { Icon, P } from './ui.ts'
-import type { PermissionTier } from '../core/types.ts'
-import { asPermissionTier, PERMISSION_TIERS } from '../core/types.ts'
+import { Icon, P } from '../lib/ui.ts'
+import type { PermissionTier } from '../../core/types.ts'
+import { asPermissionTier, PERMISSION_TIERS } from '../../core/types.ts'
 
 export interface PermissionSelectProps {
   tier: PermissionTier

@@ -4,8 +4,8 @@
  */
 
 import type { ReactNode } from 'react'
-import { P } from './ui.ts'
-import { fmtTime, MD_LABELS, roleById, type ClientSnapshot } from './model.ts'
+import { P } from '../lib/ui.ts'
+import { fmtTime, MD_LABELS, roleById, type ClientSnapshot } from '../lib/model.ts'
 import { ThinkRow } from './ThinkRow.tsx'
 import { ToolRow } from './ToolRow.tsx'
 

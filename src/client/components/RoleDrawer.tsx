@@ -4,9 +4,9 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { Icon, P } from './ui.ts'
-import { api } from './api.ts'
-import { PALETTE, type EffortsResponse, type ModelsResponse, type RoleDraft } from './model.ts'
+import { Icon, P } from '../lib/ui.ts'
+import { api } from '../lib/api.ts'
+import { PALETTE, type EffortsResponse, type ModelsResponse, type RoleDraft } from '../lib/model.ts'
 
 export interface RoleDrawerProps {
   draft: RoleDraft

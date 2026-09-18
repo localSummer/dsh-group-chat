@@ -4,8 +4,8 @@
  */
 
 import { useState, type ReactNode } from 'react'
-import { Icon, P, pickPrimitive } from './ui.ts'
-import type { ToolCallView } from './model.ts'
+import { Icon, P, pickPrimitive } from '../lib/ui.ts'
+import type { ToolCallView } from '../lib/model.ts'
 
 const TOOL_ICONS: Record<string, string> = { read_file: 'IconBrowseOutline16', list_dir: 'IconFolderOpenOutline16', run_command: 'IconCodeOutline16' }
 

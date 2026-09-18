@@ -25,10 +25,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Type-only：拉入 ctx.slots 合并（renderer 自 0.1.2 起拥有槽位注册表）。
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { createElement as h } from 'react'
-import { injectStyles } from './styles.ts'
+import { injectStyles } from './lib/styles.ts'
 import { GroupChatPanel } from './GroupChatPanel.tsx'
-import { GroupChatSettingsSection } from './GroupChatSettingsSection.tsx'
-import { Glyph } from './Glyph.tsx'
+import { GroupChatSettingsSection } from './components/GroupChatSettingsSection.tsx'
+import { Glyph } from './components/Glyph.tsx'
 
 /** Host 侧注册的设置命名空间 shape 与命名名（与宿主半拼写同一值，两边不共享代码）。 */
 interface GroupChatSettings {

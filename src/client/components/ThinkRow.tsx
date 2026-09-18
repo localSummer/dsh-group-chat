@@ -4,8 +4,8 @@
  */
 
 import { useState, type ReactNode } from 'react'
-import { P } from './ui.ts'
-import { firstLine, latestLine } from './model.ts'
+import { P } from '../lib/ui.ts'
+import { firstLine, latestLine } from '../lib/model.ts'
 
 export function ThinkRow(props: { text: string, running?: boolean }): ReactNode {
   const text = props.text || ''

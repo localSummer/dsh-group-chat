@@ -6,7 +6,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { P } from './ui.ts'
+import { P } from '../lib/ui.ts'
 
 /** Host 侧注册的设置命名空间 shape。 */
 interface GroupChatSettings {
