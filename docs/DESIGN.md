@@ -209,7 +209,7 @@ components:
 三区工作台（`.dsgc-root` 为 `container-type:inline-size` 容器，响应式全部走容器查询而非媒体查询）：
 
 - **左导航 232px**（`flex:none`，右缘 1px `border-l1`，**可收起**——左接缝收合钮触发，收合动画与右栏同款配方）：搜索框（P.Input，13px）→ 目录树（`flex:1` 滚动）→「新建群组」（P.Button outline）。群组块间距 6px；群组行（继承 14px）展开后会话列表带上缘 4px 呼吸 + 1px `border-l1` 左规线 + 12px 缩进，会话行距 2px、行内边距 6px 8px（12.5px 字号、行高 1.5）。
-- **中央会话区流体**（`flex:1;min-width:0;position:relative`）：会话头（12px 16px，标题 + 主题输入框 + 清空 ghost 钮——收合控制不在头部，见接缝收合钮；主题输入框为透明无边框内联输入，hover 露出 border-b2 下划线、focus 变 business-primary 下划线——无方框 outline）→ 消息流（padding 20px 24px 16px，行距 16px，贴底跟随，离底 60px 即出「回到底部」浮动药丸，锚在 composer 上方 `bottom:calc(100% + 8px)`）→ composer（钉底，无分隔线 + padding 12px 16px 14px，列间 10px，输入卡见签名组件）。
+- **中央会话区流体**（`flex:1;min-width:0;position:relative`）：会话头（12px 16px，标题 + 主题输入框 + 清空 ghost 钮——清空经确认弹窗（P.Modal：说明删除范围〔会话名 + 消息条数〕、不可恢复后果、不受影响项，busy 时禁用确认），收合控制不在头部，见接缝收合钮；主题输入框为透明无边框内联输入，hover 露出 border-b2 下划线、focus 变 business-primary 下划线——无方框 outline）→ 消息流（padding 20px 24px 16px，行距 16px，贴底跟随，离底 60px 即出「回到底部」浮动药丸，锚在 composer 上方 `bottom:calc(100% + 8px)`）→ composer（钉底，无分隔线 + padding 12px 16px 14px，列间 10px，输入卡见签名组件）。
 - **右上下文栏 304px**（`flex:none`，左缘 1px `border-l1`，整体滚动）：「群成员」角色卡列 + 「工作区目录」（`.dsgc-wsrow` 弹性行：输入 flex:1 + min-width:0，按钮 flex:none + nowrap，杜绝「浏览」文字折行；内联文件浏览器）。
 - **容器查询降级**：≤880px 右栏转绝对定位覆盖层（z-index 15，带投影与 `border-l2`）；≤640px 左栏收窄 200px、消息体 max-width 放宽到 88%（常态 76%）。
 - **角色抽屉**：右侧滑出 380px（`max-width:calc(100% - 40px)`），覆盖在右栏之上（z-index 20）。
@@ -298,7 +298,7 @@ P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「�
 - **Do** 角色颜色只画环和点；头像环 2px、角色点 10px、chip 点 8px。@提及芯片是唯一带色底的例外（色点 + 15% 淡底胶囊，见唯一个性源规则）。
 - **Do** 响应式用容器查询（880px / 640px 两级），新面板不依赖视口媒体查询。
 - **Do** 所有滚动容器给 `scrollbar-width:thin` + `scrollbar` 色；所有自有可交互控件给 `focus-visible` 2px 品牌描边 + offset 1px。
-- **Do** 破坏性操作用两次点击确认（第一次变 danger 红），Esc 关闭临时层，键盘可达（Enter/Space/↑↓/Tab）。
+- **Do** 破坏性操作二次确认，两档形态：树删除用两次点击（第一次变 danger 红）；清空会话用确认弹窗（体量大且不可恢复，需说明范围与后果）。Esc 关闭临时层，键盘可达（Enter/Space/↑↓/Tab）。
 - **Do** `prefers-reduced-motion:reduce` 下关闭全部过渡与动画（含 presence 光环、右栏折叠、抽屉与加载旋转）。
 - **Do** 时间显示用相对时间（刚刚 / N 分钟前 / N 小时前 / M月D日）。
 

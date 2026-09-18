@@ -40,6 +40,19 @@ function escapeHtml(v: string): string {
 }
 
 /**
+ * execCommand 集中封装。它已被 Web 平台标记 @deprecated（ts 6387 编辑器提示），
+ * 但仍是唯一能让 contenteditable 的 DOM 编辑进入浏览器原生 undo 栈的同步 API
+ * （自研 undo 栈或引入 Lexical/ProseMirror 类框架代价更大；取舍见 DESIGN.md
+ * Composer 契约）。经中间别名擦除废弃标记，全部调用走本封装，不在调用处散布提示。
+ */
+type ExecCommandFn = (commandId: string, showUI?: boolean, value?: string) => boolean
+let execCommandFn: ExecCommandFn | undefined
+function execCommand(commandId: 'delete' | 'insertHTML' | 'insertText' | 'insertLineBreak', value?: string): boolean {
+  execCommandFn ??= (document as unknown as { execCommand: ExecCommandFn }).execCommand
+  return execCommandFn.call(document, commandId, false, value)
+}
+
+/**
  * contenteditable 输入区 → 纯文本序列化（发送/参与判定的唯一事实源）：
  * 文本节点原样；<br> → 换行；@提及芯片（.dsgc-chipin）展开回「@名字␠」；
  * DIV/P 块前补换行（防粘贴残留的块级包裹）。手打纯文本 @名字 与芯片展开
@@ -73,6 +86,8 @@ export function GroupChatPanel(): ReactNode {
   const [collapsedGroups, setCollapsedGroups] = useToggle()
   const [renameDraft, setRenameDraft] = useState<{ kind: 'group' | 'session', id: string, value: string } | null>(null)
   const [confirmDel, setConfirmDel] = useState<{ kind: 'group' | 'session', id: string } | null>(null)
+  /** 清空当前会话的确认弹窗（破坏性且不可恢复，需说明范围与后果） */
+  const [confirmClear, setConfirmClear] = useState(false)
   const [roleDraft, setRoleDraft] = useState<RoleDraft | null>(null)
   const [roleFormError, setRoleFormError] = useState('')
   const [models, setModels] = useState<ModelsResponse | null>(null)
@@ -260,12 +275,12 @@ export function GroupChatPanel(): ReactNode {
           range.setEnd(node, off)
           sel.removeAllRanges()
           sel.addRange(range)
-          document.execCommand('delete')
+          execCommand('delete')
         }
       }
     }
     // 2. 插入芯片（带临时 data-new 标记，供下一步定位刚插入的节点）
-    document.execCommand('insertHTML', false, chipHtml(role).replace('class="dsgc-chipin"', 'class="dsgc-chipin" data-new=""'))
+    execCommand('insertHTML', chipHtml(role).replace('class="dsgc-chipin"', 'class="dsgc-chipin" data-new=""'))
     const chip = el.querySelector<HTMLElement>('.dsgc-chipin[data-new]')
     if (!chip) return
     // 3. 选区显式钉到芯片之后，再补尾随空格（insertText 后光标自然落在空格后）
@@ -274,7 +289,7 @@ export function GroupChatPanel(): ReactNode {
     after.collapse(true)
     sel.removeAllRanges()
     sel.addRange(after)
-    document.execCommand('insertText', false, ' ')
+    execCommand('insertText', ' ')
     chip.removeAttribute('data-new')
     setMention(null)
     setMentionIdx(0)
@@ -287,7 +302,7 @@ export function GroupChatPanel(): ReactNode {
   const onPasteCE = (e: ReactClipboardEvent<HTMLDivElement>): void => {
     e.preventDefault()
     const text = e.clipboardData.getData('text/plain')
-    if (text) document.execCommand('insertText', false, text)
+    if (text) execCommand('insertText', text)
   }
   const onDragOverCE = (e: ReactDragEvent<HTMLDivElement>): void => {
     e.preventDefault() // 允许 drop 落点，实际插入交给 onDropCE 纯文本化
@@ -295,7 +310,7 @@ export function GroupChatPanel(): ReactNode {
   const onDropCE = (e: ReactDragEvent<HTMLDivElement>): void => {
     e.preventDefault()
     const text = e.dataTransfer.getData('text/plain')
-    if (text) document.execCommand('insertText', false, text)
+    if (text) execCommand('insertText', text)
   }
 
   const mentionedRoles = enabledRoles.filter((r) => new RegExp('(^|\\s)@' + escapeRegExp(r.name) + '(?=\\s|$)').test(input))
@@ -325,6 +340,13 @@ export function GroupChatPanel(): ReactNode {
       sendingRef.current = false
     }
   }
+
+  /** 确认弹窗后的清空执行；成功（无 snapshot.error）才关弹窗，失败走 err 横幅 */
+  const doClear = async (): Promise<void> => {
+    if (!sess) return
+    const res = await mutate({ op: 'clearMessages', sessionId: sess.id })
+    if (res && res.ok && res.snapshot && !res.snapshot.error) setConfirmClear(false)
+  }
   const onInputKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
     // IME 组合中的按键（含 Enter 选词）不参与任何快捷逻辑；
     // keyCode 229 兜底 Safari 提交组合时 isComposing 为假的历史坑
@@ -351,7 +373,7 @@ export function GroupChatPanel(): ReactNode {
     if (e.key === 'Enter' && e.shiftKey) {
       // 换行统一走 insertLineBreak（<br>），防浏览器默认插 DIV 块
       e.preventDefault()
-      document.execCommand('insertLineBreak')
+      execCommand('insertLineBreak')
       return
     }
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -872,7 +894,7 @@ export function GroupChatPanel(): ReactNode {
           onBlur={commitTopic}
           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
         />
-        <P.Button variant="ghost" size="sm" title="清空当前会话的消息记录" onClick={() => { if (sess) void mutate({ op: 'clearMessages', sessionId: sess.id }) }}>
+        <P.Button variant="ghost" size="sm" title="清空当前会话的消息记录" onClick={() => { if (sess) setConfirmClear(true) }}>
           清空
         </P.Button>
       </div>
@@ -1018,6 +1040,30 @@ export function GroupChatPanel(): ReactNode {
       {navPanel}
       {chatPanel}
       {asidePanel}
+      {sess && confirmClear
+        ? (
+          <P.Modal
+            open
+            onClose={() => { setConfirmClear(false) }}
+            title="清空本会话的消息记录？"
+            closeLabel="关闭"
+            description={'会话「' + sess.name + '」的全部 ' + sess.messageIds.length + ' 条消息将被永久删除'}
+            footer={(
+              <>
+                <P.Button variant="outline" size="sm" onClick={() => { setConfirmClear(false) }}>取消</P.Button>
+                <P.Button variant="outline" size="sm" className="dsgc-stopbtn" disabled={busyNow} onClick={() => { void doClear() }}>清空</P.Button>
+              </>
+            )}
+          >
+            <ul className="dsgc-clearnotes">
+              <li>删除内容：本会话的用户消息与角色发言（含思考、工具调用记录），确认后立即落盘</li>
+              <li>不可恢复：此操作没有回收站，也没有撤销</li>
+              <li>不受影响：会话本身与主题、群成员角色、工作区目录、权限档位</li>
+              {busyNow ? <li className="dsgc-err">对话进行中，需先停止才能清空</li> : null}
+            </ul>
+          </P.Modal>
+        )
+        : null}
       {roleDraft
         ? (
           <RoleDrawer

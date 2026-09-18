@@ -94,6 +94,9 @@ export const CSS = [
   '.dsgc-confirmcmd{font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));border-radius:8px;padding:8px 10px;background:var(--dsw-alias-bg-layer-2,transparent);color:var(--dsw-alias-label-primary,inherit);max-height:240px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent}',
   '.dsgc-confirmops{display:flex;gap:8px;justify-content:flex-end}',
   '.dsgc-sysmsg.err{color:var(--dsw-alias-state-error-primary,#e5484d)}',
+  /* 清空确认弹窗内的说明列表 */
+  '.dsgc-clearnotes{margin:0;padding-left:18px;font-size:13px;line-height:1.8;color:var(--dsw-alias-label-secondary,inherit);display:flex;flex-direction:column;gap:2px}',
+  '.dsgc-clearnotes .dsgc-err{list-style:none}',
   '.dsgc-err{font-size:12px;color:var(--dsw-alias-state-error-primary,#e5484d);animation:dsgc-fade-in .18s ease-out}',
   '.dsgc-empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--dsw-alias-label-tertiary,inherit);text-align:center;max-width:40ch;padding:24px;animation:dsgc-fade-in .3s ease-out}',
   '.dsgc-empty svg{opacity:.5}',
