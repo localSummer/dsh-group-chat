@@ -7,7 +7,7 @@
  * @module dsh-group-chat/client/panel
  */
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import { Icon, P } from './ui.ts'
 import { api } from './api.ts'
 import { Bubble } from './Bubble.tsx'
@@ -34,6 +34,37 @@ function useToggle() {
   return useState<Set<string>>(() => new Set())
 }
 
+/** HTML 转义（芯片以 execCommand('insertHTML') 注入，角色名需转义）。 */
+function escapeHtml(v: string): string {
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+/**
+ * contenteditable 输入区 → 纯文本序列化（发送/参与判定的唯一事实源）：
+ * 文本节点原样；<br> → 换行；@提及芯片（.dsgc-chipin）展开回「@名字␠」；
+ * DIV/P 块前补换行（防粘贴残留的块级包裹）。手打纯文本 @名字 与芯片展开
+ * 结果同形——语义统一由 mentionedRoles 正则承载（芯片=糖，正则=真）。
+ */
+function serializeInput(root: HTMLElement): string {
+  const walk = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || ''
+    if (node.nodeType !== Node.ELEMENT_NODE) return ''
+    const el = node as HTMLElement
+    if (el.tagName === 'BR') return '\n'
+    if (el.classList.contains('dsgc-chipin')) return '@' + (el.dataset.name || '') + ' '
+    const sep = /^(DIV|P)$/.test(el.tagName) ? '\n' : ''
+    return sep + Array.from(el.childNodes).map(walk).join('')
+  }
+  return Array.from(root.childNodes).map(walk).join('')
+}
+
+/** @提及芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删）。 */
+function chipHtml(role: { id: string, name: string, color?: string }): string {
+  const c = escapeHtml(role.color || '#888')
+  return '<span class="dsgc-chipin" data-role-id="' + escapeHtml(role.id) + '" data-name="' + escapeHtml(role.name) + '" style="--role-color:' + c + '" contenteditable="false" draggable="true">' +
+    '<span class="dsgc-chipdot" style="background:' + c + '"></span>' + escapeHtml(role.name) + '</span>'
+}
+
 export function GroupChatPanel(): ReactNode {
   const [snap, setSnap] = useState<ClientSnapshot | null>(null)
   const [gid, setGid] = useState<string | null>(null)
@@ -53,12 +84,13 @@ export function GroupChatPanel(): ReactNode {
   const [input, setInput] = useState('')
   const [err, setErr] = useState('')
   const [topicDraft, setTopicDraft] = useState<string | null>(null)
-  const [mention, setMention] = useState<{ query: string, caret: number } | null>(null)
+  /** @ 弹层的当前查询串（光标前未闭合的 @词）；null = 弹层关闭 */
+  const [mention, setMention] = useState<string | null>(null)
   const [mentionIdx, setMentionIdx] = useState(0)
   const [asideOpen, setAsideOpen] = useState(true)
   const [navOpen, setNavOpen] = useState(true)
   const [atBottom, setAtBottom] = useState(true)
-  const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  const inputRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   // 初始加载 + SSE 订阅；Host 新建群组/会话后自动选中新项
@@ -128,6 +160,14 @@ export function GroupChatPanel(): ReactNode {
     return res
   }
 
+  /** 从 DOM 同步 input 状态（序列化）；占位符类由 input 状态派生（React 渲染），不走命令式 toggle。
+   *  钩子必须在早退（if (!snap)）之前声明，否则首帧与数据帧 hook 数不一致 → React #310 */
+  const syncFromDOM = useCallback((): void => {
+    const el = inputRef.current
+    if (!el) return
+    setInput(serializeInput(el))
+  }, [])
+
   if (!snap) {
     return (
       <div className="dsgc-root">
@@ -162,36 +202,85 @@ export function GroupChatPanel(): ReactNode {
     setPartsSel(has ? participants.filter((x) => x !== rid) : participants.concat([rid]))
   }
 
-  // ---- @成员：候选与插入 ----
-  const mentionCandidates = mention
-    ? enabledRoles.filter((r) => r.name.toLowerCase().includes((mention.query || '').toLowerCase()))
+  // ---- @成员：候选与插入（contenteditable 芯片） ----
+  // 注意 query 为空串（刚敲 @）时也必须出全部候选：判 null 不判真值
+  const mentionCandidates = mention !== null
+    ? enabledRoles.filter((r) => r.name.toLowerCase().includes(mention.toLowerCase()))
     : []
-  const onInputChange = (e: { target: { value: string }, selectionStart?: number | null }): void => {
-    const v = e.target.value
-    const caret = e.selectionStart == null ? v.length : e.selectionStart
-    setInput(v)
-    const before = v.slice(0, caret)
+
+  /** 光标前未闭合的 @词（弹层触发判定）；无返回 null */
+  const queryAtCaret = (): string | null => {
+    const sel = window.getSelection()
+    if (!sel || !sel.isCollapsed || sel.rangeCount === 0) return null
+    const node = sel.anchorNode
+    if (!node || node.nodeType !== Node.TEXT_NODE) return null
+    const before = (node.nodeValue || '').slice(0, sel.anchorOffset)
     const m = /(?:^|\s)@([^\s@]*)$/.exec(before)
-    setMention(m ? { query: m[1], caret } : null)
+    return m ? m[1] : null
+  }
+
+  const onInputCE = (): void => {
+    syncFromDOM()
+    setMention(queryAtCaret())
     setMentionIdx(0)
   }
-  const applyMention = (role: SnapshotRole): void => {
-    if (!mention || !role) return
-    const v = input
-    const before = v.slice(0, mention.caret)
-    const after = v.slice(mention.caret)
-    const replaced = before.replace(/@([^\s@]*)$/, '@' + role.name + ' ')
-    const next = replaced + after
-    const caretPos = replaced.length
-    setInput(next)
+
+  /** 弹层候选 → 删掉光标前的 @词、插入原子芯片 + 尾随空格，并把光标钉在空格后。
+   *  芯片经 Range 直插而非 execCommand('insertHTML')——后者插入 contenteditable=false
+   *  节点后，部分浏览器把选区落进芯片内部（不可编辑处），导致后续 insertText 失灵
+   *  （空格丢失）且光标不可见；@词删除仍走 execCommand('delete') 保 undo。
+   *  尾随空格必须是 U+0020 普通空格（序列化与正则边界依赖它）。 */
+  const insertChip = (role: SnapshotRole): void => {
+    const el = inputRef.current
+    const sel = window.getSelection()
+    if (!el || !sel) return
+    el.focus({ preventScroll: true })
+    // 1. 删除光标前的 @词（在锚文本节点内按区间删）
+    const node = sel.anchorNode
+    if (node && node.nodeType === Node.TEXT_NODE) {
+      const text = node.nodeValue || ''
+      const off = sel.anchorOffset
+      const m = /(?:^|\s)@([^\s@]*)$/.exec(text.slice(0, off))
+      if (m) {
+        const start = off - m[1].length - 1
+        if (start >= 0) {
+          const range = document.createRange()
+          range.setStart(node, start)
+          range.setEnd(node, off)
+          sel.removeAllRanges()
+          sel.addRange(range)
+          document.execCommand('delete')
+        }
+      }
+    }
+    // 2. 在（删除后塌缩的）选区处直插「芯片 + 尾随空格」片段
+    if (sel.rangeCount === 0) return
+    const at = sel.getRangeAt(0)
+    at.collapse(true)
+    const frag = at.createContextualFragment(chipHtml(role) + ' ')
+    const last = frag.lastChild
+    at.insertNode(frag)
+    // 3. 光标显式钉到尾随空格之后并保持聚焦
+    if (last) {
+      const caret = document.createRange()
+      caret.setStartAfter(last)
+      caret.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(caret)
+    }
+    el.focus({ preventScroll: true })
     setMention(null)
     setMentionIdx(0)
-    const el = inputRef.current
-    if (el) {
-      el.focus()
-      el.setSelectionRange(caretPos, caretPos)
-    }
+    syncFromDOM()
   }
+
+  /** 粘贴强制纯文本：取 text/plain 经 insertText 注入，杜绝富文本/HTML 进输入区 */
+  const onPasteCE = (e: ReactClipboardEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    const text = e.clipboardData.getData('text/plain')
+    if (text) document.execCommand('insertText', false, text)
+  }
+
   const mentionedRoles = enabledRoles.filter((r) => new RegExp('(^|\\s)@' + escapeRegExp(r.name) + '(?=\\s|$)').test(input))
 
   const sendMsg = async (): Promise<void> => {
@@ -205,14 +294,19 @@ export function GroupChatPanel(): ReactNode {
     const res = await action({ kind: 'send', sessionId: sess!.id, text: input, participantRoleIds: parts, rounds }) as ActionOk | null
     if (res && !res.ok && res.error) setErr(res.error)
     else if (res && res.ok) {
+      const el = inputRef.current
+      if (el) el.innerHTML = ''
       setInput('')
       setMention(null)
       setErr('')
       setAtBottom(true)
+      syncFromDOM()
     }
   }
-  const onInputKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>): void => {
-    if (mention && mentionCandidates.length) {
+  const onInputKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
+    // IME 组合中的按键（含 Enter 选词）不参与任何快捷逻辑
+    if (e.nativeEvent.isComposing) return
+    if (mention !== null && mentionCandidates.length) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         setMentionIdx((mentionIdx + 1) % mentionCandidates.length)
@@ -225,9 +319,15 @@ export function GroupChatPanel(): ReactNode {
       }
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
-        applyMention(mentionCandidates[mentionIdx])
+        insertChip(mentionCandidates[mentionIdx])
         return
       }
+    }
+    if (e.key === 'Enter' && e.shiftKey) {
+      // 换行统一走 insertLineBreak（<br>），防浏览器默认插 DIV 块
+      e.preventDefault()
+      document.execCommand('insertLineBreak')
+      return
     }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -803,7 +903,7 @@ export function GroupChatPanel(): ReactNode {
         </div>
         <div className="dsgc-card">
           <div className="dsgc-mentionwrap">
-            {mention && mentionCandidates.length > 0
+            {mention !== null && mentionCandidates.length > 0
               ? (
                 <div className="dsgc-mention" role="listbox">
                   {mentionCandidates.map((r, i) => (
@@ -813,7 +913,9 @@ export function GroupChatPanel(): ReactNode {
                       className={'dsgc-mentionitem' + (i === mentionIdx ? ' on' : '')}
                       role="option"
                       aria-selected={i === mentionIdx ? 'true' : 'false'}
-                      onClick={() => applyMention(r)}
+                      // 阻止 mousedown 抢走输入区焦点/选区——点击候选时插入芯片依赖原光标
+                      onMouseDown={(e) => { e.preventDefault() }}
+                      onClick={() => { insertChip(r) }}
                       onMouseEnter={() => setMentionIdx(i)}
                     >
                       <span className="dsgc-chipdot" style={{ background: r.color || '#888' }} />
@@ -825,15 +927,27 @@ export function GroupChatPanel(): ReactNode {
                 </div>
                 )
               : null}
-            <textarea
-              className="dsgc-textarea"
+            {/* 非受控 contenteditable（React 不管理其子节点）：
+                @成员插入为原子芯片（.dsgc-chipin），序列化展开回纯文本 @名字␠；
+                IME 组合期只读不写 DOM */}
+            {/* 占位符 = 独立覆盖层（对齐主会话）：::before 生成内容会把聚焦光标
+                顶到占位文字之后，覆盖层不参与光标布局。
+                判空用 trim：全删后浏览器会残留一个占位 <br>（序列化出 '\n'），
+                严格 === '' 会让占位符不再出现 */}
+            {!input.trim()
+              ? <div className="dsgc-ph" aria-hidden="true">发消息给全群，@成员 点名让其回应（留空则让角色自由讨论）…</div>
+              : null}
+            <div
+              className="dsgc-edit"
               ref={inputRef}
-              rows={1}
-              placeholder="发消息给全群，@成员 点名让其回应（留空则让角色自由讨论）…"
-              value={input}
-              onChange={onInputChange}
+              contentEditable
+              suppressContentEditableWarning
+              role="textbox"
+              aria-multiline="true"
+              aria-label="群聊消息输入框"
+              onInput={onInputCE}
               onKeyDown={onInputKeyDown}
-              style={{ resize: 'none', minHeight: '36px', maxHeight: '180px', boxSizing: 'border-box' }}
+              onPaste={onPasteCE}
             />
           </div>
           <div className="dsgc-sendrow">

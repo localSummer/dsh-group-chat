@@ -109,12 +109,20 @@ export const CSS = [
      elevation-soft 软影（DESIGN.md 输入面豁免——输入面遵循宿主输入面语言，
      其余静止表面仍零阴影）；chips 等配置行留卡外 */
   '.dsgc-card{background:var(--dsw-specific-input-major,var(--dsw-alias-bg-layer-3,transparent));--dsw-elevation-stroke-color:var(--dsw-alias-border-l2,rgba(128,128,128,.3));box-shadow:var(--dsw-elevation-soft,0 1px 3px rgba(0,0,0,.08));border-radius:22px;padding:8px 0 0;display:flex;flex-direction:column;gap:8px;position:relative}',
-  '.dsgc-card .dsgc-textarea{border:none;background:transparent;padding:6px 8px 0 14px;min-height:36px}',
-  '.dsgc-card .dsgc-textarea::placeholder{color:var(--dsw-alias-label-tertiary,inherit)}',
+  /* 输入区：非受控 contenteditable（React 不管子节点）；白空间与换行规则
+     与序列化契约对齐（pre-wrap + <br>→\n） */
+  '.dsgc-edit{display:block;box-sizing:border-box;width:100%;min-height:36px;max-height:180px;overflow-y:auto;outline:none;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font:inherit;font-size:13px;line-height:24px;color:var(--dsw-alias-label-primary,inherit);caret-color:var(--dsw-alias-state-business-primary,#4f6ef7);scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent;position:relative;z-index:1}',
+  '.dsgc-card .dsgc-edit{padding:6px 8px 0 14px}',
+  /* 占位符 = 独立覆盖层（对齐主会话）：不用 ::before——生成内容会把聚焦光标
+     顶到占位文字之后；覆盖层 pointer-events:none 不参与光标布局，
+     与输入区同 padding 基准（左 14 / 上 6） */
+  '.dsgc-ph{position:absolute;left:14px;top:6px;max-width:calc(100% - 22px);color:var(--dsw-alias-label-tertiary,inherit);pointer-events:none;user-select:none;font-size:13px;line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+  /* @提及芯片（输入区内原子元素）：色点 + 角色色淡底胶囊——弹层候选行同语言 */
+  '.dsgc-chipin{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--role-color,#888) 15%,transparent);border-radius:999px;padding:1px 7px 1px 5px;margin:0 1px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,inherit);white-space:nowrap;user-select:all}',
   '.dsgc-card .dsgc-sendrow{padding:0 12px 10px}',
   '.dsgc-stopbtn{background:var(--dsw-alias-state-error-primary,#e5484d);border-color:transparent;color:#fff;font-weight:600}',
   '.dsgc-stopbtn:hover:not(:disabled){filter:brightness(1.08);color:#fff}',
-  '.dsgc-parts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;row-gap:4px}',
+  '.dsgc-parts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;row-gap:4px;height:24px}',
   '.dsgc-partslabel{font-size:12px;color:var(--dsw-alias-label-tertiary,inherit);flex:none}',
   '.dsgc-partchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:transparent;color:var(--dsw-alias-label-secondary,inherit);border-radius:999px;padding:2px 10px;font-size:12px;line-height:1.5;cursor:pointer;transition:background-color .12s,color .12s,border-color .12s;font-family:inherit}',
   '.dsgc-partchip:hover{color:var(--dsw-alias-label-primary,inherit)}',
