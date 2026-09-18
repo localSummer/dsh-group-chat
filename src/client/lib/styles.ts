@@ -62,6 +62,12 @@ export const CSS = [
   '.dsgc-topic:hover{border-bottom-color:var(--dsw-alias-border-l2,rgba(128,128,128,.3))}',
   '.dsgc-topic:focus{color:var(--dsw-alias-label-primary,inherit);border-bottom-color:var(--dsw-alias-state-business-primary,#4f6ef7)}',
   '.dsgc-topic::placeholder{color:var(--dsw-alias-label-tertiary,inherit)}',
+  /* 清空按钮：破坏性操作的 hover/active 反馈——宿主 ghost hover 是低强度灰底（在本
+     面板底色上近透明、无感知），改为 danger 色文字 + 淡红底，与弹窗内 danger 确认
+     按钮同语言；特异性高于原语 .ghost:hover:not(:disabled) */
+  '.dsgc-chathead .dsgc-clearbtn{transition:background-color .12s,color .12s}',
+  '.dsgc-chathead .dsgc-clearbtn:hover:not(:disabled){background:color-mix(in srgb,var(--dsw-alias-state-error-primary,#e5484d) 10%,transparent);color:var(--dsw-alias-state-error-primary,#e5484d)}',
+  '.dsgc-chathead .dsgc-clearbtn:active:not(:disabled){background:color-mix(in srgb,var(--dsw-alias-state-error-primary,#e5484d) 16%,transparent)}',
   '.dsgc-msgs{flex:1;overflow-y:auto;padding:20px 24px 16px;display:flex;flex-direction:column;gap:16px;min-height:0;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent}',
   '.dsgc-msg{display:flex;gap:10px;align-items:flex-start;max-width:100%;animation:dsgc-msg-in .22s cubic-bezier(.16,1,.3,1)}',
   '.dsgc-msg.mine{flex-direction:row-reverse}',
@@ -96,7 +102,6 @@ export const CSS = [
   '.dsgc-sysmsg.err{color:var(--dsw-alias-state-error-primary,#e5484d)}',
   /* 清空确认弹窗内的说明列表 */
   '.dsgc-clearnotes{margin:0;padding-left:18px;font-size:13px;line-height:1.8;color:var(--dsw-alias-label-secondary,inherit);display:flex;flex-direction:column;gap:2px}',
-  '.dsgc-clearnotes .dsgc-err{list-style:none}',
   '.dsgc-err{font-size:12px;color:var(--dsw-alias-state-error-primary,#e5484d);animation:dsgc-fade-in .18s ease-out}',
   '.dsgc-empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--dsw-alias-label-tertiary,inherit);text-align:center;max-width:40ch;padding:24px;animation:dsgc-fade-in .3s ease-out}',
   '.dsgc-empty svg{opacity:.5}',
@@ -231,15 +236,18 @@ export const CSS = [
   '@container (max-width: 640px){.dsgc-nav{width:200px}.dsgc-nav>*{width:auto}.dsgc-msgbody{max-width:88%}}',
   /* ===== 侧边栏入口对齐（外壳将插槽内容包在 panelGlyph span 内，必须用后代 :has） ===== */
   '[class*="panelList"]:has(.dsgc-entryOverlay){margin-top:4px}',
-  '[class*="panelRow"]:has(.dsgc-entryOverlay){position:relative;box-sizing:border-box;height:36px;min-height:36px;padding:0 10px;font-size:13px}',
+  '[class*="panelRow"]:has(.dsgc-entryOverlay){position:relative;box-sizing:border-box;height:36px;min-height:36px;padding:0 10px;font-size:13px;transition:background-color .12s,color .12s}',
   '[class*="panelRow"][class*="panelActive"]:has(.dsgc-entryOverlay){font-weight:600}',
+  /* 入口 hover：宿主 panelRow:hover 只给灰底、不变文字色（低强度到近无感）；
+     对齐任务看板入口行——hover 灰底 + 文字/图标转 label-primary */
+  '[class*="panelRow"]:has(.dsgc-entryOverlay):hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit)}',
   '[class*="panelRow"]:has(.dsgc-entryOverlay) > [class*="panelTitle"]{padding-left:24px}',
   '.dsgc-entryOverlay{position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;box-sizing:border-box}',
   '.dsgc-entryIcon{flex:none;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}',
   '.dsgc-entryIcon svg{width:18px;height:18px;display:block}',
   '[data-sidebar-collapsed] .dsgc-entryOverlay,[class*="collapsed"] .dsgc-entryOverlay{justify-content:center;padding:0}',
   '[data-sidebar-collapsed] [class*="panelRow"]:has(.dsgc-entryOverlay),[class*="collapsed"] [class*="panelRow"]:has(.dsgc-entryOverlay){margin:0 auto}',
-  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed{transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-think .dsgc-thinkbody,.dsgc-msg.live .dsgc-avatar,.dsgc-loading svg{animation:none}}',
+  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-think .dsgc-thinkbody,.dsgc-msg.live .dsgc-avatar,.dsgc-loading svg{animation:none}}',
   /* ===== 设置页（同一卡片语言） ===== */
   '.dgcs-page{display:flex;flex-direction:column;gap:14px;padding:4px 0}',
   '.dgcs-head{display:flex;flex-direction:column;gap:6px}',

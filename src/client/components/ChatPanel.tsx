@@ -143,7 +143,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
           onBlur={commitTopic}
           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
         />
-        <P.Button variant="ghost" size="sm" title="清空当前会话的消息记录" onClick={() => { if (sess) setConfirmClear(true) }}>
+        <P.Button variant="ghost" size="sm" className="dsgc-clearbtn" title="清空当前会话的消息记录" onClick={() => { if (sess) setConfirmClear(true) }}>
           清空
         </P.Button>
       </div>

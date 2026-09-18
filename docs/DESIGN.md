@@ -164,7 +164,7 @@ components:
 - **焦点品牌色**（`var(--dsw-alias-brand-primary, …#4f6ef7)`）：全部自有控件 `focus-visible` 的 2px 描边（offset 1px），回退链落到 state-business-primary。
 
 ### Secondary
-- **错误色**（`var(--dsw-alias-state-error-primary, #e5484d)`）：停止按钮（自定义 danger 覆写）、错误文字、删除确认态的 danger 操作按钮、系统通知错误态。
+- **错误色**（`var(--dsw-alias-state-error-primary, #e5484d)`）：停止按钮（自定义 danger 覆写）、错误文字、删除确认态的 danger 操作按钮、系统通知错误态、会话头「清空」按钮的 danger hover/active（淡红底 + 错误色文字，`color-mix` 10%/16%）；清空被拒（对话进行中）经宿主 Toast 原语提示。
 - **输入焦点色**（`var(--dsw-alias-state-business-primary, #4f6ef7)`）：所有输入控件统一的 focus 边框——自有 input/select/textarea 的 focus 边框、宿主 P.Input 搜索框的 `:focus-within` 边框（`.dsgc-search:focus-within` 覆写，与面板一致而非宿主默认 brand 色）、主题输入框的下划线变体。
 
 ### Tertiary（角色色板，PALETTE 8 色）

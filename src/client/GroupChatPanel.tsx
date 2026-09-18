@@ -7,7 +7,7 @@
  * @module dsh-group-chat/client/panel
  */
 
-import { useCallback, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { Icon, P } from './lib/ui.ts'
 import { api } from './lib/api.ts'
 import { RoleDrawer } from './components/RoleDrawer.tsx'
@@ -74,6 +74,9 @@ export function GroupChatPanel(): ReactNode {
     action,
     mutate,
   } = state
+
+  // 瞬时通知（toast）：key 为展示序号，同文案重复触发也会重启动画
+  const [toast, setToast] = useState<{ text: string, seq: number } | null>(null)
 
   // ---- 所有 Hooks 必须在条件返回之前调用 ----
   // Composer effects
@@ -159,10 +162,19 @@ export function GroupChatPanel(): ReactNode {
     setPartsSel(has ? participants.filter((x) => x !== rid) : participants.concat([rid]))
   }
 
+  // 清空确认：不可清空（对话进行中）走 toast 提示，不再落到输入框上方的红字
   const doClear = async (): Promise<void> => {
     if (!sess) return
+    if (busyNow) {
+      setToast({ text: '对话进行中，需先停止才能清空', seq: Date.now() })
+      return
+    }
     const res = await mutate({ op: 'clearMessages', sessionId: sess.id })
     if (res && res.ok && res.snapshot && !res.snapshot.error) setConfirmClear(false)
+    else if (res && res.snapshot && res.snapshot.error) {
+      setErr('')
+      setToast({ text: res.snapshot.error, seq: Date.now() })
+    }
   }
 
   // ---- 动作 ----
@@ -235,8 +247,8 @@ export function GroupChatPanel(): ReactNode {
         setSearch={setSearch}
         collapsedGroups={collapsedGroups}
         setCollapsedGroups={setCollapsedGroups}
-        gid={gid}
-        sid={sid}
+        gid={group.id}
+        sid={sess ? sess.id : sid}
         setGid={setGid}
         setSid={setSid}
         setPartsSel={setPartsSel}
@@ -315,7 +327,7 @@ export function GroupChatPanel(): ReactNode {
             footer={(
               <>
                 <P.Button variant="outline" size="sm" onClick={() => { setConfirmClear(false) }}>取消</P.Button>
-                <P.Button variant="outline" size="sm" className="dsgc-stopbtn" disabled={busyNow} onClick={() => { void doClear() }}>清空</P.Button>
+                <P.Button variant="outline" size="sm" className="dsgc-stopbtn" onClick={() => { void doClear() }}>清空</P.Button>
               </>
             )}
           >
@@ -323,9 +335,19 @@ export function GroupChatPanel(): ReactNode {
               <li>删除内容：本会话的用户消息与角色发言（含思考、工具调用记录），确认后立即落盘</li>
               <li>不可恢复：此操作没有回收站，也没有撤销</li>
               <li>不受影响：会话本身与主题、群成员角色、工作区目录、权限档位</li>
-              {busyNow ? <li className="dsgc-err">对话进行中，需先停止才能清空</li> : null}
             </ul>
           </P.Modal>
+        )
+        : null}
+      {toast
+        ? (
+          <P.Toast
+            key={toast.seq}
+            text={toast.text}
+            icon={Icon(P.IconWarningOutline16, 16)}
+            anchor={inputRef.current}
+            onDone={() => { setToast(null) }}
+          />
         )
         : null}
       {roleDraft
