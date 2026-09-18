@@ -730,7 +730,7 @@ export function GroupChatPanel(): ReactNode {
         aria-expanded={navOpen}
         onClick={() => { setNavOpen(!navOpen) }}
       >
-        {Icon(P.IconChevronLeftOutline14, 14)}
+        {Icon(P.IconChevronLeftOutline14, 16)}
       </button>
       <button
         type="button"
@@ -740,7 +740,7 @@ export function GroupChatPanel(): ReactNode {
         aria-expanded={asideOpen}
         onClick={() => { setAsideOpen(!asideOpen) }}
       >
-        {Icon(P.IconChevronRightOutline14, 14)}
+        {Icon(P.IconChevronRightOutline14, 16)}
       </button>
       <div className="dsgc-chathead">
         {sess ? <span className="dsgc-sess-title" title={'当前会话：' + sess.name}>{sess.name}</span> : null}

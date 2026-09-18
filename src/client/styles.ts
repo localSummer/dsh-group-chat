@@ -52,7 +52,7 @@ export const CSS = [
   /* 接缝收合钮：钉在会话区两缘、垂直居中、各控其侧（图标方向相反的 chevron）。
      宽模式下面板宽度过渡 → 中栏连续变宽，绝对定位的钮贴缘自动随接缝滑行（布局驱动）；
      窄模式右栏为覆盖层，钮用同曲线 right 过渡跟踪其左缘。浮层配方：实底 + border-l2 + 轻方向性软影 */
-  '.dsgc-seambtn{position:absolute;top:50%;transform:translateY(-50%);z-index:14;width:20px;height:52px;display:flex;align-items:center;justify-content:center;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:var(--dsw-alias-bg-layer-3,#fff);color:var(--dsw-alias-label-tertiary,inherit);cursor:pointer;transition:background-color .12s,color .12s,border-color .12s,right .3s cubic-bezier(.16,1,.3,1)}',
+  '.dsgc-seambtn{position:absolute;top:50%;transform:translateY(-50%);z-index:14;width:24px;height:56px;display:flex;align-items:center;justify-content:center;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:var(--dsw-alias-bg-layer-3,#fff);color:var(--dsw-alias-label-secondary,inherit);cursor:pointer;transition:background-color .12s,color .12s,border-color .12s,right .3s cubic-bezier(.16,1,.3,1)}',
   '.dsgc-seambtn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15));color:var(--dsw-alias-label-primary,inherit);border-color:var(--dsw-alias-border-l3,rgba(128,128,128,.4))}',
   '.dsgc-seambtn.left{left:0;border-left:none;border-radius:0 8px 8px 0;box-shadow:3px 0 10px rgba(0,0,0,.07)}',
   '.dsgc-seambtn.right{right:0;border-right:none;border-radius:8px 0 0 8px;box-shadow:-3px 0 10px rgba(0,0,0,.07)}',

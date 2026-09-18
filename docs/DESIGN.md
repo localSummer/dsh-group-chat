@@ -247,7 +247,7 @@ components:
 宿主 P.Button 三变体 + 两处定制：**ghost**（聊天头「清空」、抽屉关闭、文件浏览器关闭）；**outline**（「新建群组」「浏览」上一步/主目录）；**primary**（「发送」「选定此目录」、抽屉「保存」，info 填充 + 前景白 + 600）。**停止按钮** = outline 基座 + 自定义 `.dsgc-stopbtn` 覆写（错误色底 + 白字 + 600，hover `brightness(1.08)`）。**回到底部药丸** = 自有 `.dsgc-tobtn`（实底 `bg-layer-3` + `border-l2` + 999px 胶囊 + `shadow-lv3`，图标 + 12px 文字，不用宿主变体——透明底 outline 会与消息内容相互透底）。尺寸走原语 `size:"sm"`。
 
 ### Seam handles（左右栏收合钮）
-钉在会话区两缘的竖向页签（`position:absolute`，垂直居中 `translateY(-50%)`，20×52px）：**钮在哪一侧就控制哪一侧的面板**——位置即语义，取代原先挤在会话头部的两枚翻转同款图标钮。左钮 IconChevronLeftOutline14、右钮 IconChevronRightOutline14（方向相反、各指其侧，不再用 scaleX 翻转）。半页签形状：靠接缝一侧无边框、另一侧 8px 圆角（左钮 `0 8px 8px 0`、右钮镜像）；实底 `bg-layer-3` + `border-l2` + 轻方向性软影（见影调词表）。z-index 14（低于 ≤880px 覆盖式右栏的 15——窄模式滑行时钮藏于面板下、到位后在接缝处露出）。状态经 `aria-expanded` + 动态 title/aria-label（收起/展开·其侧栏名）；hover 换 `hover-fill` 提色。
+钉在会话区两缘的竖向页签（`position:absolute`，垂直居中 `translateY(-50%)`，24×56px）：**钮在哪一侧就控制哪一侧的面板**——位置即语义，取代原先挤在会话头部的两枚翻转同款图标钮。左钮 IconChevronLeftOutline14、右钮 IconChevronRightOutline14（16px 渲染，方向相反、各指其侧，不再用 scaleX 翻转）。半页签形状：靠接缝一侧无边框、另一侧 8px 圆角（左钮 `0 8px 8px 0`、右钮镜像）；实底 `bg-layer-3` + `border-l2` + 轻方向性软影（见影调词表）。z-index 14（低于 ≤880px 覆盖式右栏的 15——窄模式滑行时钮藏于面板下、到位后在接缝处露出）。状态经 `aria-expanded` + 动态 title/aria-label（收起/展开·其侧栏名）；hover 换 `hover-fill` 提色。
 
 ### Chips
 参与角色 chip 为自有件：胶囊（999px）+ `border-l2` + 透明底 + 8px 角色色点，12px；选中态换 `active-fill` 底（边框不变）；hover 只提字色；对话中禁用（opacity .5）。被 @ 时 chips 让位给一行说明文字。
