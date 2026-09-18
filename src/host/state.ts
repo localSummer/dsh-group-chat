@@ -17,6 +17,8 @@ import type { GroupRecord, LastCreated, MessageRecord, RoleRecord, RunState, Ses
 
 // 可选类型镜像：DSH 默认模型选择服务（宿主 agent 栈提供）。不硬依赖该包、
 // 不加入 inject（服务缺位时插件照常加载），运行时缺位则自动命名静默跳过。
+// 消费必须经 ctx.reflect.get（见 engine/retitle.ts）：cordis 对未 inject 的
+// 属性访问直接抛错（"cannot get property without inject"），`?.` 接不住。
 declare module '@deepseek-ai/cordis' {
   interface Context {
     agentDefaultModel?: { currentSelection(): { provider: string, model: string } }

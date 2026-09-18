@@ -3,6 +3,8 @@
  *  - 每轮结束后用 DSH 默认模型后台生成「emoji 对象｜目标」名称 + 演进式主题
  *  - 手动编辑过的字段（renameSession / setTopic）永久跳过（隐式固定）
  *  - 默认模型服务缺位时静默跳过
+ *  - ctx 以 Proxy 模拟 cordis 语义（未 inject 属性访问抛错），可选服务只能
+ *    经 reflect.get 读取——回归「直接属性访问被吞、标题从不生成」的 bug
  * stub llm（chunk 计划队列）+ stub fs + 可开关的 agentDefaultModel。
  */
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -29,6 +31,8 @@ interface Env {
   svc: Service
   storeDir: string
   calls: number
+  /** 最近一次 llm stream 调用的 opts（maxTokens 预算等断言用）。 */
+  lastOpts: { maxTokens?: number, provider?: string, model?: string } | null
   setDefaultModel: (sel: { provider: string, model: string } | null) => void
   pushPlan: (rounds: StreamChunk[]) => void
 }
@@ -46,12 +50,15 @@ beforeAll(async () => {
   const queue: StreamChunk[][] = []
   let defaultModel: { provider: string, model: string } | null = null
   let calls = 0
+  /** 最近一次 stream 调用的 opts（命名调用断言用）。 */
+  let lastOpts: { maxTokens?: number, provider?: string, model?: string } | null = null
   const llm = {
     listProviders: async () => [],
     listModels: async () => [],
     resolveModelInfo: async () => null,
-    stream: async function* (): AsyncGenerator<StreamChunk> {
+    stream: async function* (opts?: { maxTokens?: number, provider?: string, model?: string }): AsyncGenerator<StreamChunk> {
       calls++
+      lastOpts = opts || null
       const plan = queue.shift() || [{ type: 'text-delta', text: '好的' }, { type: 'finish', reason: { kind: 'stop' } }]
       for (const chunk of plan) yield chunk
     },
@@ -63,20 +70,34 @@ beforeAll(async () => {
     readText: async () => '',
     processPath: (p: string) => p,
   }
-  const ctx = {
+  const ctx = new Proxy({
     llm,
     fs,
     workspaceRegistry: { list: async () => [] },
-    get agentDefaultModel() {
-      return defaultModel ? { currentSelection: () => defaultModel } : undefined
+    // 可选服务经 reflect.get 读取（cordis 正规可选消费面）
+    reflect: {
+      get: (name: string): unknown =>
+        name === 'agentDefaultModel'
+          ? (defaultModel ? { currentSelection: () => defaultModel } : undefined)
+          : undefined,
     },
-  } as unknown as import('@deepseek-ai/cordis').Context
+  }, {
+    // 模拟 cordis 代理语义：未 inject 的服务直接属性访问抛错（生产环境真实
+    // 行为）——回归「ctx.agentDefaultModel?. 被吞、retitle 静默跳过」的 bug
+    get(t, prop) {
+      if (prop === 'agentDefaultModel') throw new Error('cannot get property "agentDefaultModel" without inject')
+      const v = Reflect.get(t, prop)
+      return typeof v === 'function' ? v.bind(t) : v
+    },
+  }) as unknown as import('@deepseek-ai/cordis').Context
   const svc = createGroupChatService(ctx)
   await svc.handleAction({ kind: 'mutate', op: 'upsertRole', groupId: 'grp-a', role: { name: '工程师', provider: 'p', model: 'm' } })
   env = {
     svc,
     storeDir,
     get calls() { return calls },
+    /** 最近一次 llm stream 调用的 opts（maxTokens 预算等断言用）。 */
+    get lastOpts() { return lastOpts },
     setDefaultModel: (sel) => { defaultModel = sel },
     pushPlan: (rounds) => { queue.push(rounds) },
   }
@@ -108,6 +129,11 @@ describe('会话标题/主题自动整理', () => {
     await until(() => e.calls >= before + 2)
     await until(() => sessionOf(e).name === '🔎 缓存选型｜Redis 对比')
     expect(sessionOf(e).topic).toBe('围绕缓存选型讨论，聚焦 Redis 与本地 KV 的成本对比')
+    // 命名调用不设 maxTokens：思考模型的 reasoning 与正文共享输出预算，
+    // 任何小上限都可能被思考耗尽（finish=max-tokens、正文空、静默无变更）
+    expect(e.lastOpts && e.lastOpts.maxTokens).toBeUndefined()
+    expect(e.lastOpts && e.lastOpts.provider).toBe('dp')
+    expect(e.lastOpts && e.lastOpts.model).toBe('dm')
     // 落盘（schedulePersist 微任务 flush）
     await sleep(60)
     const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { name: string, topic: string }

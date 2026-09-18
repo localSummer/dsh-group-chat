@@ -12,7 +12,11 @@ import type { HostState } from '../state.ts'
 /** DSH 默认模型（agentDefaultModel 服务缺位或未配置时返回 null，调用方静默跳过）。 */
 const defaultModel = (core: HostState): { provider: string, model: string } | null => {
   try {
-    const sel = core.ctx.agentDefaultModel?.currentSelection()
+    // cordis 语义：未 inject 的 ctx 属性访问会抛错（"cannot get property without
+    // inject"），`?.` 接不住——可选消费必须走 reflect.get（读全局注册表，缺位返回
+    // undefined）。直接属性访问曾致 retitle 被静默跳过（标题/主题从不生成）。
+    const svc = core.ctx.reflect.get('agentDefaultModel')
+    const sel = svc ? svc.currentSelection() : null
     return sel && typeof sel.provider === 'string' && typeof sel.model === 'string' && sel.provider && sel.model
       ? { provider: sel.provider, model: sel.model }
       : null
@@ -96,7 +100,10 @@ export function createRetitle(core: HostState, deps: { touch: () => void, schedu
         provider: dm.provider,
         model: dm.model,
         system: sys,
-        maxTokens: 400,
+        // 不设 maxTokens：思考模型的 reasoning 与正文共享输出预算，任何小上限
+        // 都可能被思考耗尽（finish=max-tokens、正文空、静默无变更）；跟随
+        // provider 默认输出上限（与角色发言 speak 同一先例），正文侧由
+        // acc 2000 字符截断兜底
         messages: [{ id: ('g' + core.revision + '-t0') as Message['id'], role: 'user', content: [{ type: 'text', text: '群聊记录（从旧到新）：\n\n' + transcript }], source: { kind: 'user' } }],
       } as GenerateOptions)) {
         if (chunk.type === 'text-delta') {
