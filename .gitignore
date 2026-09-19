@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# build output (regenerated from src via tsdown)
+lib/**/*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
