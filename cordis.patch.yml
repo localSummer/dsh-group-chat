@@ -9,4 +9,4 @@
 # /plugins/<id>/client.js) load in the web GUI.
 - insert:
     - id: group-chat
-      name: dsh-group-chat
+      name: @roaming-ai/dsh-group-chat
