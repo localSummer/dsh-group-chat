@@ -1,5 +1,5 @@
 /**
- * 会话头第二行：只读约束备忘（超过 4 条默认露 3 条）。
+ * 会话流折点处：只读结论备忘卡（超过 4 条默认露 3 条）。
  * @module dsh-group-chat/client/components
  */
 import { type ReactNode } from 'react';

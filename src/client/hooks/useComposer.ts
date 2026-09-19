@@ -3,8 +3,9 @@
  * @module dsh-group-chat/client/hooks
  */
 
-import { useCallback, useEffect, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { execCommand, queryAtCaret, serializeInput, chipHtml, fileChipHtml } from '../utils/utils.ts'
+import { readComposerDraft, writeComposerDraft } from '../lib/composer-draft.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 import type { SnapshotRole } from '../lib/model.ts'
 
@@ -44,12 +45,18 @@ export function useComposerInput(
   setInput: (val: string) => void,
   setMention: (val: AtToken | null) => void,
   setMentionIdx: (val: number) => void,
+  sessionId?: string | null,
 ) {
-  /** 从 DOM 同步 input 状态（序列化） */
+  const sessionIdRef = useRef(sessionId)
+  sessionIdRef.current = sessionId
+
+  /** 从 DOM 同步 input 状态（序列化），并写入当前会话草稿槽。 */
   const syncFromDOM = useCallback((): void => {
     const el = inputRef.current
     if (!el) return
-    setInput(serializeInput(el))
+    const text = serializeInput(el)
+    setInput(text)
+    writeComposerDraft(sessionIdRef.current, el.innerHTML, text)
   }, [inputRef, setInput])
 
   const onInputCE = useCallback((): void => {
@@ -82,6 +89,36 @@ export function useComposerInput(
     onDragOverCE,
     onDropCE,
   }
+}
+
+/**
+ * 按会话恢复草稿：切会话时先把当前 HTML 写入旧槽，再灌入新槽；
+ * 面板重挂载（主会话⇄群聊）时 editor 是新节点，从模块缓存灌回。
+ */
+export function useComposerDraft(
+  sessionId: string | null | undefined,
+  inputRef: React.RefObject<HTMLDivElement>,
+  setInput: (val: string) => void,
+  setMention: (val: AtToken | null) => void,
+): void {
+  const prevIdRef = useRef<string | null>(null)
+  useLayoutEffect(() => {
+    const el = inputRef.current
+    const prev = prevIdRef.current
+    const next = sessionId || null
+    if (el && prev && prev !== next) writeComposerDraft(prev, el.innerHTML, serializeInput(el))
+    prevIdRef.current = next
+    if (!next) return
+    const draft = readComposerDraft(next)
+    if (el) el.innerHTML = draft.html
+    setInput(draft.text)
+    setMention(null)
+    return () => {
+      const node = inputRef.current
+      const id = prevIdRef.current
+      if (node && id) writeComposerDraft(id, node.innerHTML, serializeInput(node))
+    }
+  }, [sessionId, inputRef, setInput, setMention])
 }
 
 export function useMentionChip(

@@ -7,7 +7,6 @@ import type { ReactNode } from 'react'
 import { Icon, P } from '../lib/ui.ts'
 import { MessageFlow } from './MessageFlow.tsx'
 import { Composer } from './Composer.tsx'
-import { ConstraintList } from './ConstraintList.tsx'
 import type { ClientSnapshot, SnapshotRole } from '../lib/model.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
@@ -55,6 +54,7 @@ interface ChatPanelProps {
   action: (payload: Record<string, unknown>) => Promise<unknown>
   mutate: (args: Record<string, unknown>) => Promise<unknown>
   setMention: (val: AtToken | null) => void
+  onRetrySpeak: (messageId: string) => void
 }
 
 export function ChatPanel(props: ChatPanelProps): ReactNode {
@@ -102,6 +102,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
     action,
     mutate,
     setMention,
+    onRetrySpeak,
   } = props
 
   const commitTopic = (): void => {
@@ -116,6 +117,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
       busyNow={busyNow}
       msgById={msgById}
       action={action}
+      onRetrySpeak={onRetrySpeak}
     />
   )
 
@@ -158,9 +160,6 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
             清空
           </P.Button>
         </div>
-        {sess && sess.constraints && sess.constraints.length
-          ? <ConstraintList key={sess.id} items={sess.constraints} />
-          : null}
       </div>
       
       <div className="dsgc-msgs" ref={scrollRef} onScroll={onMsgsScroll}>

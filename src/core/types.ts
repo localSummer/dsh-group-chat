@@ -112,6 +112,8 @@ export interface MessageRecord {
   thinkingSummary?: string
   model?: string
   error?: boolean
+  /** 发言失败时的角色 id；刷新后仍可对该条点重试。角色消息 speaker 即角色 id，此字段冗余兼容旧系统错误行。 */
+  failedRoleId?: string
   toolCalls?: ToolCallRecord[]
   ts: number
 }
@@ -150,6 +152,8 @@ export interface RunState {
   childProc: import('node:child_process').ChildProcess | null
   /** 最近一次 run 的结束标记：会话列表「已完成/已出错」状态的数据源。 */
   finished: RunFinished | null
+  /** 原地重试时被覆盖的失败消息 id；普通 send 为 null。 */
+  replaceMessageId: string | null
 }
 
 /** 角色发言的引擎产物。 */
@@ -201,12 +205,12 @@ export interface FileSearchResult {
 /** 发到客户端的全量快照（wire 形态）。 */
 export interface Snapshot {
   revision: number
-  run: { running: boolean, sessionId: string | null, currentRoleId: string | null, partial: string, partialReasoning: string, pendingConfirm: PendingConfirm | null, finished: RunFinished | null }
+  run: { running: boolean, sessionId: string | null, currentRoleId: string | null, partial: string, partialReasoning: string, pendingConfirm: PendingConfirm | null, finished: RunFinished | null, replaceMessageId: string | null }
   lastCreated: LastCreated | null
   groups: { id: string, name: string, workspaceDir: string, permissionTier: PermissionTier, roleIds: string[], sessionIds: string[] }[]
   sessions: { id: string, groupId: string, name: string, topic: string, constraints?: SessionConstraint[], messageIds: string[], createdAt: number }[]
   roles: { id: string, groupId: string, name: string, color?: string, persona: string, provider: string, model: string, temperature?: number, reasoningEffort?: string, enabled: boolean, thinking: boolean }[]
-  messages: { id: string, sessionId: string, seq: number, speaker: string, text: string, reasoning?: string, model?: string, error?: boolean, toolCalls?: ToolCallRecord[], ts: number }[]
+  messages: { id: string, sessionId: string, seq: number, speaker: string, text: string, reasoning?: string, model?: string, error?: boolean, failedRoleId?: string, toolCalls?: ToolCallRecord[], ts: number }[]
   error?: string
 }
 

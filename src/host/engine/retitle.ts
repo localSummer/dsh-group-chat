@@ -1,13 +1,17 @@
 /**
  * 会话标题/主题自动整理（参照 oil-codex-title）：每轮结束后用 DSH 默认模型
- * 后台生成「类别 emoji + 对象｜目标」名称与演进式主题；手动编辑过的字段
+ * 后台生成。名称只在仍为默认占位时写一次；主题每轮演进。手动编辑过的字段
  * 永久跳过（隐式固定）。
  * @module dsh-group-chat/host/engine/retitle
  */
 
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import type { SessionRecord } from '../../core/types.ts'
-import type { HostState } from '../state.ts'
+import { DEFAULT_SESSION_NAME, type HostState } from '../state.ts'
+
+/** 仍是新建占位名（含改名之前的「会话 N」存量），自动标题尚未落地。 */
+const isPlaceholderName = (name: string): boolean =>
+  name === DEFAULT_SESSION_NAME || /^会话 \d+$/.test(name)
 
 /** DSH 默认模型（agentDefaultModel 服务缺位或未配置时返回 null，调用方静默跳过）。 */
 const defaultModel = (core: HostState): { provider: string, model: string } | null => {
@@ -30,7 +34,7 @@ const titleTranscript = (core: HostState, sess: SessionRecord): string => {
   const out: string[] = []
   for (const mid of sess.messageIds.slice(-40)) {
     const m = core.messages.get(mid)
-    if (!m || m.speaker === 'system' || !m.text) continue
+    if (!m || m.speaker === 'system' || m.error || !m.text) continue
     const name = m.speaker === 'user' ? '用户' : (core.roles.get(m.speaker) || { name: undefined }).name || '成员'
     out.push('【' + name + '】' + m.text.replace(/\s+/g, ' ').slice(0, 500))
   }
@@ -55,9 +59,9 @@ const parseRetitle = (raw: string): { name?: string, topic?: string } => {
 
 /**
  * 每轮结束后根据聊天内容整理会话名称与主题：后台 fire-and-forget、不产生
- * 消息、静默失败。名称 =「类别 emoji + 对象｜目标」（类别固定、对象稳定、
- * 目标实质变化才改）；主题 = 演进式一句话摘要（对象+目标+当前焦点），注入
- * 后续轮次的角色上下文。手动编辑过的字段永久跳过（隐式固定，apply 时复查）。
+ * 消息、静默失败。名称只在仍为默认占位时生成一次（「类别 emoji + 对象｜目标」）；
+ * 主题 = 演进式一句话摘要（对象+目标+当前焦点），每轮更新，注入后续角色上下文。
+ * 手动编辑过的字段永久跳过（隐式固定，apply 时复查）。
  */
 export function createRetitle(core: HostState, deps: { touch: () => void, schedulePersist: (targets?: { session?: string | null }) => void }): (sess: SessionRecord) => Promise<void> {
   const { llm } = core
@@ -69,7 +73,8 @@ export function createRetitle(core: HostState, deps: { touch: () => void, schedu
   return async (sess: SessionRecord): Promise<void> => {
     if (retitling.has(sess.id)) return
     const dm = defaultModel(core)
-    if (!dm || (sess.namePinned && sess.topicPinned)) return
+    const nameFrozen = !!sess.namePinned || !isPlaceholderName(sess.name)
+    if (!dm || (nameFrozen && sess.topicPinned)) return
     const transcript = titleTranscript(core, sess)
     if (!transcript) return
     retitling.add(sess.id)
@@ -80,9 +85,9 @@ export function createRetitle(core: HostState, deps: { touch: () => void, schedu
         '# 名称规则',
         '- 格式：「类别 emoji + 对象｜目标」，例如「🔎 缓存选型｜Redis 与本地 KV 对比」',
         '- 类别固定六选一：🔎 调研对比（多方案/多观点比较）、💡 头脑风暴（创意发散）、⚖️ 方案评审（评审已有方案或产物）、🛠️ 排查修复（定位与解决问题）、📝 方法整理（总结沉淀方法与知识）、🗣️ 通用讨论（其余兜底）',
-        '- 对象在前且稳定：把辨识度最高的讨论对象放最前；省略群组名（外层已展示）；除非讨论对象实质变化，沿用当前名称里的对象名；「继续」「追问」等不改变主线',
+        '- 对象在前：把辨识度最高的讨论对象放最前；省略群组名（外层已展示）',
         '- 目标 = 当前正在做的事，动宾短语，保持简洁',
-        '- 名称总长不超过 16 个字',
+        '- 名称总长不超过 16 个字；名称只生成一次，不要为了追问/继续而改名',
         '',
         '# 主题规则',
         '- 一句话演进式摘要：讨论对象 + 当前目标 + 当前焦点/分歧点',
@@ -92,7 +97,7 @@ export function createRetitle(core: HostState, deps: { touch: () => void, schedu
         '- 语言跟随用户消息的主要语言；保留产品名与技术名词',
         '- 只输出一行 JSON：{"name": "…", "topic": "…"}，不要输出其他内容',
         '',
-        '当前名称：' + (sess.namePinned ? '（已手动固定，本次不要输出 name 字段）' : sess.name),
+        '当前名称：' + (nameFrozen ? '（已固定，本次不要输出 name 字段）' : sess.name),
         '当前主题：' + (sess.topicPinned ? '（已手动固定，本次不要输出 topic 字段）' : (sess.topic || '（空）')),
       ].join('\n')
       let acc = ''
@@ -120,7 +125,7 @@ export function createRetitle(core: HostState, deps: { touch: () => void, schedu
       }
       const parsed = parseRetitle(acc)
       let changed = false
-      if (parsed.name && !sess.namePinned) { sess.name = parsed.name; changed = true }
+      if (parsed.name && !sess.namePinned && isPlaceholderName(sess.name)) { sess.name = parsed.name; changed = true }
       if (parsed.topic && !sess.topicPinned) { sess.topic = parsed.topic; changed = true }
       if (changed) {
         schedulePersist({ session: sess.id })

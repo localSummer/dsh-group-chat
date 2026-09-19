@@ -6,6 +6,7 @@
 import { useState, type ReactNode } from 'react'
 import { P } from '../lib/ui.ts'
 import { firstLine, latestLine } from '../lib/model.ts'
+import { ClipWell, Fold } from './Fold.tsx'
 
 export function ThinkRow(props: { text: string, running?: boolean }): ReactNode {
   const text = props.text || ''
@@ -24,9 +25,12 @@ export function ThinkRow(props: { text: string, running?: boolean }): ReactNode 
         expandOnRowClick
         onToggle={() => { setExpanded((v) => !v) }}
         collapsedContent={text ? <span className="dsgc-thinksummary">{summary}</span> : null}
-      >
-        <div className="dsgc-thinkbody">{text}</div>
-      </P.DisclosureRow>
+      />
+      <Fold open={expanded}>
+        <ClipWell maxHeight={320} watch={text}>
+          <div className="dsgc-thinkbody">{text}</div>
+        </ClipWell>
+      </Fold>
     </div>
   )
 }

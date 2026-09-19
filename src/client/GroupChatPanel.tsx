@@ -15,9 +15,10 @@ import { NavPanel } from './components/NavPanel.tsx'
 import { AsidePanel } from './components/AsidePanel.tsx'
 import { ChatPanel } from './components/ChatPanel.tsx'
 import { useGroupChatState, type ActionOk } from './hooks/useGroupChatState.ts'
-import { useComposerEffects, useComposerInput, useMentionChip, useInputKeyboard } from './hooks/useComposer.ts'
+import { useComposerEffects, useComposerInput, useComposerDraft, useMentionChip, useInputKeyboard } from './hooks/useComposer.ts'
 import { useFileSearch } from './hooks/useFileSearch.ts'
 import { useMentionCandidates, useMentionedRoles, useSafeMentionIndex } from './hooks/useMentionState.ts'
+import { clearComposerDraft } from './lib/composer-draft.ts'
 import { draftFromRole, blankDraft, groupById, roleById, sessById, type ClientSnapshot, type ModelsResponse, type SnapshotRole } from './lib/model.ts'
 
 export function GroupChatPanel(): ReactNode {
@@ -83,7 +84,6 @@ export function GroupChatPanel(): ReactNode {
   // ---- 所有 Hooks 必须在条件返回之前调用 ----
   // Composer effects
   const { onMsgsScroll } = useComposerEffects(inputRef, scrollRef, input, atBottom, snap)
-  const { syncFromDOM, onInputCE, onPasteCE, onDragOverCE, onDropCE } = useComposerInput(inputRef, setInput, setMention, setMentionIdx)
 
   // 选中群组/会话解析（用于 hooks 依赖）
   let group = snap && gid ? groupById(snap, gid) : null
@@ -95,6 +95,9 @@ export function GroupChatPanel(): ReactNode {
   if ((!sess || sess.groupId !== group?.id) && group && snap) {
     sess = group.sessionIds.length ? sessById(snap, group.sessionIds[group.sessionIds.length - 1]) : null
   }
+
+  const { syncFromDOM, onInputCE, onPasteCE, onDragOverCE, onDropCE } = useComposerInput(inputRef, setInput, setMention, setMentionIdx, sess ? sess.id : null)
+  useComposerDraft(sess ? sess.id : null, inputRef, setInput, setMention)
 
   const enabledRoles = group ? group.roleIds.map((id) => roleById(snap!, id)).filter((r): r is SnapshotRole => !!r && r.enabled) : []
   const participants = partsSel || enabledRoles.map((r) => r.id)
@@ -140,6 +143,7 @@ export function GroupChatPanel(): ReactNode {
         setMention(null)
         setErr('')
         setAtBottom(true)
+        clearComposerDraft(sess.id)
         syncFromDOM()
       }
     } finally {
@@ -172,6 +176,16 @@ export function GroupChatPanel(): ReactNode {
   const togglePart = (rid: string): void => {
     const has = participants.includes(rid)
     setPartsSel(has ? participants.filter((x) => x !== rid) : participants.concat([rid]))
+  }
+
+  const retrySpeak = async (messageId: string): Promise<void> => {
+    if (!sess) return
+    if (busyNow || (snap && snap.run.running)) {
+      setToast({ text: '已有对话进行中，请先停止', seq: Date.now() })
+      return
+    }
+    const res = await action({ kind: 'retrySpeak', sessionId: sess.id, messageId }) as ActionOk | null
+    if (res && !res.ok && res.error) setToast({ text: res.error, seq: Date.now() })
   }
 
   // 清空确认：不可清空（对话进行中）走 toast 提示，不再落到输入框上方的红字
@@ -318,6 +332,7 @@ export function GroupChatPanel(): ReactNode {
         action={action}
         mutate={mutate}
         setMention={setMention}
+        onRetrySpeak={(messageId) => { void retrySpeak(messageId) }}
       />
       <AsidePanel
         snap={snap}

@@ -6,7 +6,8 @@
 
 import { realpathSync } from 'node:fs'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
-import { constraintBlock, formatTranscriptLine, speakerLabel, squeezedMessages, tempTranscript, WINDOW_SIZE } from '../../core/constraints.ts'
+import { constraintBlock, formatTranscriptLine, prefixIds, speakerLabel, squeezedMessages, tempTranscript, WINDOW_SIZE } from '../../core/constraints.ts'
+import { unwrapSpeakFailure } from '../../core/errors.ts'
 import { TOOL_FLOOR_COST_CHARS, TOOL_REPEAT_LIMIT, TOOL_RESULTS_TOTAL_MAX, TRANSCRIPT_TOOL_SUMMARY } from '../../core/tools.ts'
 import type { GroupRecord, MessageRecord, RoleRecord, SessionRecord, SpeakResult, ToolCallRecord } from '../../core/types.ts'
 import { asEffort } from '../../core/types.ts'
@@ -32,8 +33,8 @@ interface StreamRound {
 export interface Conversation {
   /** 追加一条消息到会话（touch + 落盘调度）。 */
   appendMessage: (sess: SessionRecord, speaker: string, text: string, extra?: Partial<MessageRecord>) => MessageRecord
-  /** 多轮 round-robin 主循环（send 触发；finally 复位 run）。 */
-  runLoop: (sess: SessionRecord) => Promise<void>
+  /** 多轮 round-robin 主循环（send / retrySpeak 触发；finally 复位 run）。 */
+  runLoop: (sess: SessionRecord, opts?: { replaceMessageId?: string }) => Promise<void>
 }
 
 /** 创建对话引擎。 */
@@ -53,6 +54,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       if (extra.thinkingSummary !== undefined) msg.thinkingSummary = extra.thinkingSummary
       if (extra.model !== undefined) msg.model = extra.model
       if (extra.error !== undefined) msg.error = extra.error
+      if (extra.failedRoleId !== undefined) msg.failedRoleId = extra.failedRoleId
       if (Array.isArray(extra.toolCalls) && extra.toolCalls.length > 0) msg.toolCalls = extra.toolCalls
     }
     messages.set(msg.id, msg)
@@ -62,22 +64,75 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
     return msg
   }
 
-  /** 群聊记录 → 角色上下文块（最近 40 条 + 未折入临时原文）。 */
-  const transcriptBlock = (sess: SessionRecord): string => {
+  /** 把失败回合写成该角色的消息（speaker = 角色 id），不再用系统胶囊顶替。 */
+  const writeFailure = (sess: SessionRecord, role: RoleRecord, err: unknown, replaceId?: string): void => {
+    const raw = unwrapSpeakFailure(String((err && (err as Error).message) || err))
+    const extra: Partial<MessageRecord> = {
+      error: true,
+      failedRoleId: role.id,
+      model: role.provider + ' / ' + role.model,
+    }
+    if (replaceId) {
+      const existing = messages.get(replaceId)
+      if (existing && existing.sessionId === sess.id) {
+        existing.speaker = role.id
+        existing.text = raw
+        existing.error = true
+        existing.failedRoleId = role.id
+        existing.model = extra.model
+        existing.reasoning = undefined
+        existing.reasoningFull = undefined
+        existing.thinkingSummary = undefined
+        existing.toolCalls = undefined
+        existing.ts = Date.now()
+        touch()
+        schedulePersist({ session: sess.id })
+        return
+      }
+    }
+    appendMessage(sess, role.id, raw, extra)
+  }
+
+  /** 成功发言写入：replaceId 存在则原地覆盖失败卡。 */
+  const writeSuccess = (sess: SessionRecord, role: RoleRecord, out: SpeakResult, replaceId?: string): void => {
+    const extra: Partial<MessageRecord> = { model: role.provider + ' / ' + role.model, reasoning: out.reasoning, toolCalls: out.toolCalls }
+    if (replaceId) {
+      const existing = messages.get(replaceId)
+      if (existing && existing.sessionId === sess.id) {
+        existing.speaker = role.id
+        existing.text = out.text
+        existing.error = undefined
+        existing.failedRoleId = undefined
+        existing.model = extra.model
+        existing.reasoning = out.reasoning
+        existing.reasoningFull = undefined
+        existing.thinkingSummary = undefined
+        existing.toolCalls = Array.isArray(out.toolCalls) && out.toolCalls.length > 0 ? out.toolCalls : undefined
+        existing.ts = Date.now()
+        touch()
+        schedulePersist({ session: sess.id })
+        return
+      }
+    }
+    appendMessage(sess, role.id, out.text, extra)
+  }
+
+  /** 群聊记录 → 角色上下文块（最近 40 条 + 未折入临时原文）。失败卡不进上下文。重试截到该条之前。 */
+  const transcriptBlock = (sess: SessionRecord, skipId?: string): string => {
     const out: string[] = []
-    for (const mid of sess.messageIds.slice(-WINDOW_SIZE)) {
+    for (const mid of prefixIds(sess.messageIds, skipId).slice(-WINDOW_SIZE)) {
       const m = messages.get(mid)
-      if (!m) continue
+      if (!m || m.id === skipId || m.error) continue
       out.push(formatTranscriptLine(m, nameOf(m.speaker)))
     }
     const live = out.join('\n\n')
-    const temp = tempTranscript(squeezedMessages(messages, sess), (m) => nameOf(m.speaker))
+    const temp = tempTranscript(squeezedMessages(messages, sess, skipId), (m) => nameOf(m.speaker))
     if (!temp) return live
     if (!live) return temp
     return temp + '\n\n' + live
   }
 
-  const speak = async (g: GroupRecord, sess: SessionRecord, role: RoleRecord): Promise<SpeakResult> => {
+  const speak = async (g: GroupRecord, sess: SessionRecord, role: RoleRecord, skipId?: string): Promise<SpeakResult> => {
     const ws = await materials.loadWorkspaceFiles(g)
     const parts = ws.parts
     const sys = [
@@ -104,7 +159,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       '- 保持简洁，通常不超过 300 字',
     ].filter((s) => s !== '').join('\n')
 
-    const history = transcriptBlock(sess)
+    const history = transcriptBlock(sess, skipId)
     const intro = history
       ? '以下是本会话的群聊记录（从旧到新）：\n\n' + history
       : '本会话刚刚开始，请围绕主题做简短开场发言。'
@@ -270,10 +325,12 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
     return { text: texts.join('\n\n').trim(), reasoning: reasonings.join('\n\n').trim() || undefined, toolCalls }
   }
 
-  const runLoop = async (sess: SessionRecord): Promise<void> => {
+  const runLoop = async (sess: SessionRecord, opts?: { replaceMessageId?: string }): Promise<void> => {
     const g = groups.get(sess.groupId)
     const startCount = sess.messageIds.length
     let failed = false // 发言失败 → 会话列表「已出错」标记
+    let replaceId = opts && opts.replaceMessageId
+    run.replaceMessageId = replaceId || null
     try {
       while (run.queue.length > 0 && !run.stopping) {
         const roleId = run.queue.shift()!
@@ -283,15 +340,30 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
         run.partialReasoning = ''
         touch()
         if (!role) continue
+        const targetId = replaceId
+        replaceId = undefined
         try {
-          const out = await speak(g!, sess, role)
+          const out = await speak(g!, sess, role, targetId)
           // 停止后不落部分消息（已有「已停止本次对话」系统消息承接）
           if (!run.stopping && (out.text || (Array.isArray(out.toolCalls) && out.toolCalls.length > 0))) {
-            appendMessage(sess, role.id, out.text, { model: role.provider + ' / ' + role.model, reasoning: out.reasoning, toolCalls: out.toolCalls })
+            writeSuccess(sess, role, out, targetId)
+          } else if (!run.stopping && targetId) {
+            // 重试得到空输出：保留失败卡，避免成功覆盖成空白气泡
+            failed = true
+            run.currentRoleId = null
+            run.partial = ''
+            run.partialReasoning = ''
+            run.replaceMessageId = null
+            writeFailure(sess, role, '模型没有返回内容', targetId)
+            break
           }
         } catch (e) {
           failed = true
-          appendMessage(sess, 'system', '角色「' + role.name + '」发言失败：' + String((e && (e as Error).message) || e), { error: true })
+          run.currentRoleId = null
+          run.partial = ''
+          run.partialReasoning = ''
+          run.replaceMessageId = null
+          writeFailure(sess, role, e, targetId)
           break
         }
       }
@@ -310,10 +382,11 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       run.confirmSignal = null
       run.childProc = null
       run.stopping = false
+      run.replaceMessageId = null
       touch()
     }
-    // 本轮有新消息落盘 → 后台整理标题/主题 + 窗口外约束（fire-and-forget，不占用 run）
-    if (sess.messageIds.length > startCount) {
+    // 本轮有新消息落盘，或原地重试覆盖了失败卡 → 后台整理标题/主题 + 窗口外约束
+    if (sess.messageIds.length > startCount || (opts && opts.replaceMessageId)) {
       void retitle(sess)
       void fold(sess)
     }

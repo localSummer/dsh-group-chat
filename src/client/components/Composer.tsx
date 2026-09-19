@@ -6,6 +6,7 @@
 import type { ReactNode, KeyboardEvent as ReactKeyboardEvent, ClipboardEvent as ReactClipboardEvent, DragEvent as ReactDragEvent } from 'react'
 import { Icon, P } from '../lib/ui.ts'
 import { PermissionSelect } from './PermissionSelect.tsx'
+import { HoverTip } from './HoverTip.tsx'
 import { escapeRegExp, type ClientSnapshot, type SnapshotRole } from '../lib/model.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
@@ -215,18 +216,16 @@ export function Composer(props: ComposerProps): ReactNode {
             onSelect={(tier) => { void mutate({ op: 'setPermissionTier', groupId: group.id, tier }) }}
           />
           <span style={{ flex: 1 }} />
-          <P.Tooltip label={ROUNDS_HINT} side="top" delayMs={500} maxWidth={280}>
-            <div className="dsgc-rounds">
-              <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
-                {Icon(P.IconChevronLeftOutline14, 12)}
-              </button>
-              <span className="dsgc-roundnum">{rounds}</span>
-              <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
-                {Icon(P.IconChevronRightOutline14, 12)}
-              </button>
-              <span style={{ padding: '0 6px 0 2px' }}>轮</span>
-            </div>
-          </P.Tooltip>
+          <HoverTip label={ROUNDS_HINT} side="top" delayMs={500} maxWidth={280} className="dsgc-rounds">
+            <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
+              {Icon(P.IconChevronLeftOutline14, 12)}
+            </button>
+            <span className="dsgc-roundnum">{rounds}</span>
+            <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
+              {Icon(P.IconChevronRightOutline14, 12)}
+            </button>
+            <span style={{ padding: '0 6px 0 2px' }}>轮</span>
+          </HoverTip>
           {busyNow
             ? (
               <P.Button variant="outline" className="dsgc-stopbtn" onClick={() => { void stopRun() }}>

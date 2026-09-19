@@ -20,6 +20,8 @@ declare module '@deepseek-ai/cordis' {
 }
 /** 角色标识色板（新增角色依序取色）。 */
 export declare const PALETTE: string[];
+/** 新建会话默认名称（自动标题只在仍为此占位名时生成一次）。 */
+export declare const DEFAULT_SESSION_NAME = "\u65B0\u4F1A\u8BDD";
 /** 宿主服务共享状态容器（见模块注释；可变原始值一律经 core.* 访问）。 */
 export interface HostState {
     ctx: Context;

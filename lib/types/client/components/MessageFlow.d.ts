@@ -10,6 +10,7 @@ interface MessageFlowProps {
     busyNow: boolean;
     msgById: Record<string, ClientSnapshot['messages'][number]>;
     action: (payload: Record<string, unknown>) => Promise<unknown>;
+    onRetrySpeak: (messageId: string) => void;
 }
 export declare function MessageFlow(props: MessageFlowProps): ReactNode;
 export {};

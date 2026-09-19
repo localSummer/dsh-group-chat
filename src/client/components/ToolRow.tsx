@@ -6,6 +6,7 @@
 import { useState, type ReactNode } from 'react'
 import { Icon, P, pickPrimitive } from '../lib/ui.ts'
 import type { ToolCallView } from '../lib/model.ts'
+import { ClipWell, Fold } from './Fold.tsx'
 
 const TOOL_ICONS: Record<string, string> = { read_file: 'IconBrowseOutline16', list_dir: 'IconFolderOpenOutline16', run_command: 'IconCodeOutline16' }
 
@@ -43,9 +44,12 @@ export function ToolRow(props: { c: ToolCallView }): ReactNode {
             {statusText + (dur ? ' · ' + dur : '')}
           </span>
         }
-      >
-        <div className="dsgc-toolbody">{c.output || '（无输出）'}</div>
-      </P.DisclosureRow>
+      />
+      <Fold open={expanded}>
+        <ClipWell maxHeight={260} watch={c.output}>
+          <div className="dsgc-toolbody">{c.output || '（无输出）'}</div>
+        </ClipWell>
+      </Fold>
     </div>
   )
 }

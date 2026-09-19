@@ -8,12 +8,15 @@
  * @module dsh-group-chat/client/Bubble
  */
 import { type ReactNode } from 'react';
-import { type ClientSnapshot, type SnapshotRole } from '../lib/model.ts';
+import { type SnapshotRole } from '../lib/model.ts';
+import type { SnapshotMessage } from '../lib/model.ts';
 export interface BubbleProps {
-    m: ClientSnapshot['messages'][number];
+    m: SnapshotMessage;
     /** 父级解析好的发言角色（user/system 消息为 null）——避免 Bubble 依赖 snap identity。 */
     role: SnapshotRole | null;
+    busy?: boolean;
+    onRetry?: (messageId: string) => void;
 }
-declare function BubbleInner({ m, role }: BubbleProps): ReactNode;
+declare function BubbleInner({ m, role, busy, onRetry }: BubbleProps): ReactNode;
 export declare const Bubble: import("react").MemoExoticComponent<typeof BubbleInner>;
 export {};

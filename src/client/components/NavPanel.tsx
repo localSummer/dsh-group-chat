@@ -5,6 +5,7 @@
 
 import type { ReactNode, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Icon, P } from '../lib/ui.ts'
+import { HoverTip } from './HoverTip.tsx'
 import { groupById, sessById, sessStatus, SESS_STATUS_LABEL, type ClientSnapshot } from '../lib/model.ts'
 
 interface NavPanelProps {
@@ -124,7 +125,11 @@ export function NavPanel(props: NavPanelProps): ReactNode {
                   onClick={(e) => { e.stopPropagation() }}
                 />
                 )
-              : <span className="dsgc-sess-name">{s.name}</span>}
+              : (
+                <HoverTip label={s.name} side="right" delayMs={500} className="dsgc-sess-name">
+                  {s.name}
+                </HoverTip>
+                )}
             <span className="dsgc-nodeops">
               <button
                 className="dsgc-opbtn"

@@ -52,6 +52,7 @@ interface ChatPanelProps {
     action: (payload: Record<string, unknown>) => Promise<unknown>;
     mutate: (args: Record<string, unknown>) => Promise<unknown>;
     setMention: (val: AtToken | null) => void;
+    onRetrySpeak: (messageId: string) => void;
 }
 export declare function ChatPanel(props: ChatPanelProps): ReactNode;
 export {};

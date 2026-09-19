@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api.ts'
+import { readComposerDraft } from '../lib/composer-draft.ts'
 import type { ClientSnapshot, ModelsResponse, RoleDraft } from '../lib/model.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
@@ -22,8 +23,8 @@ export interface ActionOk {
 
 /**
  * 面板切换缓存（模块级，跨挂载存活）：main 为 keyed 槽，主会话⇄群聊切换会
- * 整体卸载重挂面板组件；缓存最近快照与选中项让重挂载瞬时恢复上次视图，
- * 挂载后的 state 拉取 / SSE 首帧再行校正（本机回路往返仅数毫秒）。
+ * 整体卸载重挂面板组件；缓存最近快照、选中项与按会话分槽的未发送草稿，
+ * 让重挂载瞬时恢复上次视图。挂载后的 state 拉取 / SSE 首帧再行校正。
  */
 let cachedSnap: ClientSnapshot | null = null
 let cachedGid: string | null = null
@@ -84,8 +85,8 @@ export function useGroupChatState() {
   const [partsSel, setPartsSel] = useState<string[] | null>(null)
   const [rounds, setRounds] = useState(1)
   
-  // 输入与 @提及
-  const [input, setInput] = useState('')
+  // 输入与 @提及（文本初值取当前选中会话草稿，HTML 由 useComposerDraft 灌回）
+  const [input, setInput] = useState(() => readComposerDraft(cachedSid).text)
   const [mention, setMention] = useState<AtToken | null>(null)
   const [mentionIdx, setMentionIdx] = useState(0)
   

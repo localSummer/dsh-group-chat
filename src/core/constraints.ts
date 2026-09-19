@@ -7,8 +7,7 @@ import { TRANSCRIPT_TOOL_SUMMARY } from './tools.ts'
 import { asConstraintKind, type MessageRecord, type SessionConstraint, type SessionRecord } from './types.ts'
 
 /** 当场原文窗口（含系统行）。 */
-// TODO(test-only): 测完改回 40。当前 3 = 第 4 条消息就会挤出并生成约束备忘。
-export const WINDOW_SIZE = 3
+export const WINDOW_SIZE = 40
 /** 折叠失败时临时原文条数上限。 */
 export const TEMP_MAX_MESSAGES = 20
 /** 折叠失败时临时原文总长上限。 */
@@ -35,14 +34,23 @@ export function constraintsWatermark(sess: SessionRecord): number {
   return typeof sess.constraintsUpToSeq === 'number' && sess.constraintsUpToSeq > 0 ? sess.constraintsUpToSeq : 0
 }
 
+/** 重试：只取失败卡之前的时间线；untilId 不在列表则原样。 */
+export function prefixIds(ids: string[], untilId?: string): string[] {
+  if (!untilId) return ids
+  const i = ids.indexOf(untilId)
+  return i >= 0 ? ids.slice(0, i) : ids
+}
+
 /**
  * 新挤出：seq > 水位 且不在最近 40 条。只扫窗口外前缀（旧→新）。
+ * untilId：重试时把窗口截到该消息之前，不带上后面已经发生的发言。
  */
 export function squeezedMessages(
   messages: Map<string, MessageRecord>,
   sess: SessionRecord,
+  untilId?: string,
 ): MessageRecord[] {
-  const ids = sess.messageIds
+  const ids = prefixIds(sess.messageIds, untilId)
   if (ids.length <= WINDOW_SIZE) return []
   const end = ids.length - WINDOW_SIZE
   const upTo = constraintsWatermark(sess)
@@ -89,7 +97,7 @@ export function formatTranscriptLine(m: MessageRecord, name: string): string {
 }
 
 /**
- * 单轮折叠消耗前缀：从最旧挤出起，最多 40 条 / 16k；系统行计入消耗但不进模型。
+ * 单轮折叠消耗前缀：从最旧挤出起，最多 40 条 / 16k；系统行与失败卡计入消耗但不进模型。
  * 水位只能推到 consumed 的 max seq，剩余留待下一轮。
  */
 export function takeFoldBatch(squeezed: MessageRecord[], nameOf: (m: MessageRecord) => string): {
@@ -103,7 +111,7 @@ export function takeFoldBatch(squeezed: MessageRecord[], nameOf: (m: MessageReco
   let hasUser = false
   let chars = 0
   for (const m of squeezed) {
-    if (m.speaker === 'system') {
+    if (m.speaker === 'system' || m.error) {
       consumed.push(m)
       if (consumed.length >= FOLD_MAX_MESSAGES) break
       continue
@@ -125,7 +133,9 @@ export function takeFoldBatch(squeezed: MessageRecord[], nameOf: (m: MessageReco
  */
 export function tempTranscript(squeezed: MessageRecord[], nameOf: (m: MessageRecord) => string): string {
   if (!squeezed.length) return ''
-  const batch = squeezed.length > TEMP_MAX_MESSAGES ? squeezed.slice(-TEMP_MAX_MESSAGES) : squeezed
+  const usable = squeezed.filter((m) => m.speaker !== 'system' && !m.error)
+  if (!usable.length) return ''
+  const batch = usable.length > TEMP_MAX_MESSAGES ? usable.slice(-TEMP_MAX_MESSAGES) : usable
   const lines = batch.map((m) => formatTranscriptLine(m, nameOf(m)))
   let start = 0
   let total = lines[0] ? lines[0].length : 0

@@ -4,7 +4,7 @@
  */
 import { type MessageRecord, type SessionConstraint, type SessionRecord } from './types.ts';
 /** 当场原文窗口（含系统行）。 */
-export declare const WINDOW_SIZE = 3;
+export declare const WINDOW_SIZE = 40;
 /** 折叠失败时临时原文条数上限。 */
 export declare const TEMP_MAX_MESSAGES = 20;
 /** 折叠失败时临时原文总长上限。 */
@@ -22,16 +22,19 @@ export declare const CONSTRAINT_ITEM_MAX_CHARS = 160;
 export declare const KIND_LABEL: Record<SessionConstraint['kind'], string>;
 /** 已折入水位（缺省 0）。 */
 export declare function constraintsWatermark(sess: SessionRecord): number;
+/** 重试：只取失败卡之前的时间线；untilId 不在列表则原样。 */
+export declare function prefixIds(ids: string[], untilId?: string): string[];
 /**
  * 新挤出：seq > 水位 且不在最近 40 条。只扫窗口外前缀（旧→新）。
+ * untilId：重试时把窗口截到该消息之前，不带上后面已经发生的发言。
  */
-export declare function squeezedMessages(messages: Map<string, MessageRecord>, sess: SessionRecord): MessageRecord[];
+export declare function squeezedMessages(messages: Map<string, MessageRecord>, sess: SessionRecord, untilId?: string): MessageRecord[];
 /** 说话人展示名（折叠输入 / transcript 共用）。 */
 export declare function speakerLabel(speaker: string, roleName?: string): string;
 /** 单条消息压成 transcript 行（正文 8k + 工具一行摘要）。 */
 export declare function formatTranscriptLine(m: MessageRecord, name: string): string;
 /**
- * 单轮折叠消耗前缀：从最旧挤出起，最多 40 条 / 16k；系统行计入消耗但不进模型。
+ * 单轮折叠消耗前缀：从最旧挤出起，最多 40 条 / 16k；系统行与失败卡计入消耗但不进模型。
  * 水位只能推到 consumed 的 max seq，剩余留待下一轮。
  */
 export declare function takeFoldBatch(squeezed: MessageRecord[], nameOf: (m: MessageRecord) => string): {

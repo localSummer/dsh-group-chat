@@ -29,6 +29,17 @@ export interface GroupRecord {
     roleIds: string[];
     sessionIds: string[];
 }
+/** 会话约束条目类型（窗口外结论/约束备忘）。 */
+export type ConstraintKind = 'decided' | 'rejected' | 'open';
+/** 全部合法约束类型。 */
+export declare const CONSTRAINT_KINDS: readonly ConstraintKind[];
+/** 合法 kind 原样，其余 undefined。 */
+export declare function asConstraintKind(value: unknown): ConstraintKind | undefined;
+/** 一条无主结论/约束（已定 / 否决 / 未决）。 */
+export interface SessionConstraint {
+    kind: ConstraintKind;
+    text: string;
+}
 /** 会话：消息挂在会话上。 */
 export interface SessionRecord {
     id: string;
@@ -39,6 +50,10 @@ export interface SessionRecord {
     namePinned?: boolean;
     /** 主题已被手动编辑：自动整理永久跳过（隐式固定）。 */
     topicPinned?: boolean;
+    /** 窗口外结论/约束备忘；空则省略。 */
+    constraints?: SessionConstraint[];
+    /** 已折入备忘的最大消息 seq；0/缺省 = 尚未折过。 */
+    constraintsUpToSeq?: number;
     messageIds: string[];
     createdAt: number;
 }
@@ -76,6 +91,8 @@ export interface MessageRecord {
     thinkingSummary?: string;
     model?: string;
     error?: boolean;
+    /** 发言失败时的角色 id；刷新后仍可对该条点重试。角色消息 speaker 即角色 id，此字段冗余兼容旧系统错误行。 */
+    failedRoleId?: string;
     toolCalls?: ToolCallRecord[];
     ts: number;
 }
@@ -114,6 +131,8 @@ export interface RunState {
     childProc: import('node:child_process').ChildProcess | null;
     /** 最近一次 run 的结束标记：会话列表「已完成/已出错」状态的数据源。 */
     finished: RunFinished | null;
+    /** 原地重试时被覆盖的失败消息 id；普通 send 为 null。 */
+    replaceMessageId: string | null;
 }
 /** 角色发言的引擎产物。 */
 export interface SpeakResult {
@@ -185,6 +204,7 @@ export interface Snapshot {
         partialReasoning: string;
         pendingConfirm: PendingConfirm | null;
         finished: RunFinished | null;
+        replaceMessageId: string | null;
     };
     lastCreated: LastCreated | null;
     groups: {
@@ -200,6 +220,7 @@ export interface Snapshot {
         groupId: string;
         name: string;
         topic: string;
+        constraints?: SessionConstraint[];
         messageIds: string[];
         createdAt: number;
     }[];
@@ -225,6 +246,7 @@ export interface Snapshot {
         reasoning?: string;
         model?: string;
         error?: boolean;
+        failedRoleId?: string;
         toolCalls?: ToolCallRecord[];
         ts: number;
     }[];

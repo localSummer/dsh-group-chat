@@ -5,6 +5,7 @@
  */
 
 import { existsSync } from 'node:fs'
+import { repairFailedMessage } from '../../core/errors.ts'
 import { messageJson, roleJson } from '../../core/json.ts'
 import { sanitizeConstraints } from '../../core/constraints.ts'
 import { asNumber, migrateTier } from '../../core/types.ts'
@@ -202,11 +203,19 @@ export function createPersistence(core: HostState): Persistence {
           thinkingSummary: m.thinkingSummary !== undefined ? String(m.thinkingSummary) : undefined,
           model: m.model,
           error: m.error,
+          failedRoleId: typeof m.failedRoleId === 'string' && m.failedRoleId ? m.failedRoleId : undefined,
           toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
           ts: typeof m.ts === 'number' ? m.ts : Date.now(),
         })
         sess.messageIds.push(m.id)
       }
+      const groupRoles = g.roleIds.map((rid) => core.roles.get(rid)).filter((r): r is RoleRecord => Boolean(r))
+      let repaired = false
+      for (const mid of sess.messageIds) {
+        const rec = core.messages.get(mid)
+        if (rec && repairFailedMessage(rec, groupRoles)) repaired = true
+      }
+      if (repaired) schedulePersist({ session: sid })
     }
     core.sessions.set(sid, sess)
     g.sessionIds.push(sid)
@@ -282,7 +291,7 @@ export function createPersistence(core: HostState): Persistence {
     if (core.groups.size === 0) {
       const g: GroupRecord = { id: core.nid('grp'), name: '默认群组', workspaceDir: '', permissionTier: 'view_only', roleIds: [], sessionIds: [] }
       core.groups.set(g.id, g)
-      const sess = core.newSession(g.id, '会话 1')
+      const sess = core.newSession(g.id)
       g.sessionIds.push(sess.id)
       autoSessions.push(sess.id)
     }

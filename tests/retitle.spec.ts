@@ -1,7 +1,7 @@
 /**
  * 会话标题/主题自动整理（retitle）冒烟测试：
- *  - 每轮结束后用 DSH 默认模型后台生成「emoji 对象｜目标」名称 + 演进式主题
- *  - 手动编辑过的字段（renameSession / setTopic）永久跳过（隐式固定）
+ *  - 第一轮结束后用 DSH 默认模型后台生成「emoji 对象｜目标」名称；主题每轮演进
+ *  - 自动标题只写一次；手动编辑过的字段（renameSession / setTopic）永久跳过
  *  - 默认模型服务缺位时静默跳过
  *  - ctx 以 Proxy 模拟 cordis 语义（未 inject 属性访问抛错），可选服务只能
  *    经 reflect.get 读取——回归「直接属性访问被吞、标题从不生成」的 bug
@@ -44,7 +44,7 @@ beforeAll(async () => {
   mkdirSync(join(storeDir, 'grp-a', 'sessions'), { recursive: true })
   writeFileSync(join(storeDir, 'grp-a', 'roles.json'), JSON.stringify({ schema: 1, roles: [] }))
   writeFileSync(join(storeDir, 'ledger.json'), JSON.stringify({ schema: 3, groups: [{ id: 'grp-a', name: 'A', sessionIds: ['s-a'] }], sessions: [{ id: 's-a', groupId: 'grp-a' }] }))
-  writeFileSync(join(storeDir, 'grp-a', 'sessions', 'session-s-a.json'), JSON.stringify({ schema: 1, name: 'SA', messages: [] }))
+  writeFileSync(join(storeDir, 'grp-a', 'sessions', 'session-s-a.json'), JSON.stringify({ schema: 1, name: '新会话', messages: [] }))
   process.env.DSH_GROUP_CHAT_STORE = storeDir
   const { createGroupChatService } = await import('../src/host/service.ts')
   const queue: StreamChunk[][] = []
@@ -117,7 +117,7 @@ const sessionOf = (e: Env): { name: string, topic: string } => {
 }
 
 describe('会话标题/主题自动整理', () => {
-  it('每轮结束后按默认模型输出更新名称与主题，并落盘', async () => {
+  it('第一轮结束后按默认模型输出更新名称与主题，并落盘', async () => {
     const e = env!
     e.setDefaultModel({ provider: 'dp', model: 'dm' })
     const before = e.calls
@@ -143,14 +143,29 @@ describe('会话标题/主题自动整理', () => {
     expect(doc.topic).toBe('围绕缓存选型讨论，聚焦 Redis 与本地 KV 的成本对比')
   })
 
-  it('手动编辑过的字段永久跳过（隐式固定），未固定字段仍演进', async () => {
+  it('名称只生成一次，后续轮次只演进主题', async () => {
     const e = env!
-    await e.svc.handleAction({ kind: 'mutate', op: 'renameSession', sessionId: 's-a', name: '我的手动会话名' })
     e.pushPlan([{ type: 'text-delta', text: '继续讨论持久化方案。' }, { type: 'finish', reason: { kind: 'stop' } }])
     e.pushPlan(titleRound('🛠️ 持久化｜修复', '持久化方案讨论，聚焦刷盘时机'))
     const send = await e.svc.handleAction({ kind: 'send', sessionId: 's-a', text: '继续' }) as { ok: boolean }
     expect(send.ok).toBe(true)
     await until(() => sessionOf(e).topic === '持久化方案讨论，聚焦刷盘时机')
+    expect(sessionOf(e).name).toBe('🔎 缓存选型｜Redis 对比')
+    await sleep(60)
+    const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { name: string, topic: string, namePinned?: boolean }
+    expect(doc.name).toBe('🔎 缓存选型｜Redis 对比')
+    expect(doc.topic).toBe('持久化方案讨论，聚焦刷盘时机')
+    expect(doc.namePinned).toBeUndefined()
+  })
+
+  it('手动编辑过的字段永久跳过（隐式固定），未固定字段仍演进', async () => {
+    const e = env!
+    await e.svc.handleAction({ kind: 'mutate', op: 'renameSession', sessionId: 's-a', name: '我的手动会话名' })
+    e.pushPlan([{ type: 'text-delta', text: '继续讨论持久化方案。' }, { type: 'finish', reason: { kind: 'stop' } }])
+    e.pushPlan(titleRound('🛠️ 持久化｜修复', '刷盘时机与 WAL 取舍'))
+    const send = await e.svc.handleAction({ kind: 'send', sessionId: 's-a', text: '再继续' }) as { ok: boolean }
+    expect(send.ok).toBe(true)
+    await until(() => sessionOf(e).topic === '刷盘时机与 WAL 取舍')
     expect(sessionOf(e).name).toBe('我的手动会话名')
     await sleep(60)
     const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { name: string, namePinned?: boolean, topicPinned?: boolean }

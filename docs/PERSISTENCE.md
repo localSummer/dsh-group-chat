@@ -134,6 +134,8 @@ grill-me 确认项：
 | `reasoning` | string | ✗ | 思考过程；无则整个字段省略（不写 null） |
 | `reasoningFull` | string | ✗ | 完整思考；省略同上 |
 | `thinkingSummary` | string | ✗ | 思考摘要；省略同上 |
+| `error` | boolean | ✗ | 发言失败卡；无则省略 |
+| `failedRoleId` | string | ✗ | 失败卡对应角色 id，刷新后可重试；无则省略 |
 
 会话级约束备忘（可选，schema 仍为 1）：
 
@@ -145,7 +147,7 @@ grill-me 确认项：
 实现注意：
 
 - 可选字段「无则省略」，不写 `null`（对齐 v1 的 undefined 序列化行为）
-- v1 的 `error: true`（系统错误行）不在确认结构内：作为兼容扩展字段保留（系统错误行 `speaker:"system"` + `error:true`，落盘保留该字段以不丢错误语义；读取时容忍缺失）
+- `error: true` 标记发言失败卡；现形态 `speaker` 为角色 id，并写可选 `failedRoleId`（刷新后可重试）。兼容读取旧系统错误行（`speaker:"system"` + `error:true`、文案「角色「名」发言失败：…」）：hydrate 时按群内恰好一名命中迁到该角色并补 `failedRoleId`、剥前缀；对不上则保留系统行。客户端同样按角色名解析，重试按钮不依赖重启。可选字段无则省略
 - `constraints` hydrate 走 `sanitizeConstraints`（非法 kind / 空 text 丢条目；最多 12 条、总长 1200）；快照只推 `constraints`，不推水位
 - `clearMessages` 同时清 `constraints` 与 `constraintsUpToSeq`
 

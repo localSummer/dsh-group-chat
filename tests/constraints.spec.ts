@@ -9,6 +9,7 @@ import {
   parseConstraints,
   sanitizeConstraints,
   FOLD_MAX_MESSAGES,
+  prefixIds,
   squeezedMaxSeq,
   squeezedMessages,
   takeFoldBatch,
@@ -67,6 +68,16 @@ describe('squeezedMessages', () => {
     const map = new Map(ids.map((id, i) => [id, msg(id, i + 1, 'user')]))
     expect(squeezedMessages(map, sess(ids, { constraintsUpToSeq: 3 })).map((m) => m.id)).toEqual(['m4', 'm5'])
   })
+
+  it('untilId 把窗口截到该条之前，后面的消息不进挤出集', () => {
+    const ids = Array.from({ length: 45 }, (_, i) => 'm' + (i + 1))
+    const map = new Map(ids.map((id, i) => [id, msg(id, i + 1, 'user')]))
+    expect(prefixIds(ids, 'm10')).toEqual(ids.slice(0, 9))
+    expect(squeezedMessages(map, sess(ids), 'm10')).toEqual([])
+    const squeezed = squeezedMessages(map, sess(ids), 'm45')
+    expect(squeezed.map((m) => m.id)).toEqual(['m1', 'm2', 'm3', 'm4'])
+    expect(squeezed.some((m) => m.id === 'm45')).toBe(false)
+  })
 })
 
 describe('takeFoldBatch / tempTranscript', () => {
@@ -77,6 +88,10 @@ describe('takeFoldBatch / tempTranscript', () => {
     expect(withUser.allSystem).toBe(false)
     expect(withUser.lines.join('\n')).not.toContain('err')
     expect(withUser.consumed.map((m) => m.id)).toEqual(['s1', 'u1', 'r1'])
+    const fail = { ...msg('f1', 4, 'role-1', '{"code":"AccountQuotaExceeded"}'), error: true, failedRoleId: 'role-1' }
+    const withFail = takeFoldBatch([fail, msg('u2', 5, 'user', '接着')], (m) => m.speaker)
+    expect(withFail.lines.join('\n')).not.toContain('AccountQuotaExceeded')
+    expect(withFail.consumed.map((m) => m.id)).toEqual(['f1', 'u2'])
     const sysOnly = takeFoldBatch([msg('s1', 1, 'system')], (m) => m.speaker)
     expect(sysOnly.allSystem).toBe(true)
     expect(sysOnly.lines).toEqual([])
@@ -89,6 +104,14 @@ describe('takeFoldBatch / tempTranscript', () => {
     expect(block).not.toContain('t0')
     expect(block).toContain('t24')
     expect(block.split('\n\n')).toHaveLength(TEMP_MAX_MESSAGES)
+  })
+
+  it('临时原文跳过系统行与失败卡', () => {
+    const fail = { ...msg('f1', 1, 'role-1', 'AccountQuotaExceeded'), error: true }
+    const block = tempTranscript([fail, msg('s1', 2, 'system', '已停止'), msg('u1', 3, 'user', '继续')], (m) => m.speaker)
+    expect(block).toContain('继续')
+    expect(block).not.toContain('AccountQuotaExceeded')
+    expect(block).not.toContain('已停止')
   })
 
   it('单轮折叠只吃前缀 40 条，水位停在已消耗 max seq', () => {

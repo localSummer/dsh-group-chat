@@ -6,7 +6,7 @@
  *   persistence/   持久化（store 文件原语 + 脏标记合并落盘 + 启动恢复）
  *   materials/     资料读取与路径解析 + 目录浏览器
  *   tools/         工具执行（沙箱 + 确认闸门）
- *   engine/        对话引擎（conversation：speak/runLoop；retitle：标题整理）
+ *   engine/        对话引擎（conversation：speak/runLoop；retitle：标题整理；fold：窗口外约束）
  *   api/           HTTP 传输（http 护栏 + routes 路由）与动作分发（actions）
  * @module dsh-group-chat/host/service
  */

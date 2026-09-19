@@ -28,6 +28,9 @@ declare module '@deepseek-ai/cordis' {
 /** 角色标识色板（新增角色依序取色）。 */
 export const PALETTE = ['#5b8def', '#22a06b', '#e8912d', '#c678dd', '#e05661', '#56b6c2', '#98c379', '#d19a66']
 
+/** 新建会话默认名称（自动标题只在仍为此占位名时生成一次）。 */
+export const DEFAULT_SESSION_NAME = '新会话'
+
 /** 宿主服务共享状态容器（见模块注释；可变原始值一律经 core.* 访问）。 */
 export interface HostState {
   ctx: Context
@@ -60,19 +63,17 @@ export function createHostState(ctx: Context): HostState {
     sessions: new Map(),
     roles: new Map(),
     messages: new Map(),
-    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, childProc: null, finished: null },
+    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, childProc: null, finished: null, replaceMessageId: null },
     store: null,
     revision: 1,
     idSeq: 1,
     nid: (p: string): string => p + '-' + (core.idSeq++),
     lastCreated: null,
     newSession: (groupId: string, name?: string): SessionRecord => {
-      let n = 0
-      for (const s of core.sessions.values()) if (s.groupId === groupId) n++
       const s: SessionRecord = {
         id: randomUUID(),
         groupId,
-        name: name || '会话 ' + (n + 1),
+        name: name || DEFAULT_SESSION_NAME,
         topic: '',
         messageIds: [],
         createdAt: Date.now(),

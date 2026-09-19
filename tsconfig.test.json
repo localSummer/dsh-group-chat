@@ -1,5 +1,5 @@
 {
-  "// purpose": "Type-checks the test files without emitting them into lib/. The main tsconfig only covers src; tests run under vitest (no type gate) and are checked here instead. Standalone project — no composite/references.",
+  "// purpose": "Type-checks src + tests without emitting them into lib/. Standalone project — no composite/references.",
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.test.tsbuildinfo"

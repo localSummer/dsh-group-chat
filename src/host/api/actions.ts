@@ -1,10 +1,11 @@
 /**
  * 动作分发（handleAction，POST /api/group-chat/action 的载荷）：
- * mutate（12 种 CRUD/配置操作）| send | stop | confirmCommand | models | efforts。
+ * mutate（12 种 CRUD/配置操作）| send | retrySpeak | stop | confirmCommand | models | efforts。
  * @module dsh-group-chat/host/api/actions
  */
 
 import { rmSync, unlinkSync } from 'node:fs'
+import { isSpeakFailure, repairFailedMessage } from '../../core/errors.ts'
 import type { BrowseResult, EffortOptions, GroupRecord, ModelCatalog, MutateArgs, RoleRecord, SendArgs, Snapshot } from '../../core/types.ts'
 import { asEffort, asNumber, asPermissionTier } from '../../core/types.ts'
 import { PALETTE } from '../state.ts'
@@ -245,8 +246,38 @@ export function createActions(core: HostState, deps: {
     run.queue = queue
     run.stopping = false
     run.finished = null // 新 run 覆盖旧的「输出完毕」未读标记
+    run.replaceMessageId = null
     touch()
     void runLoop(sess).catch((e) => console.error('group-chat run failed', e))
+    return { ok: true }
+  }
+
+  /** 对失败卡原地重试：只让该角色再讲一次，成功后覆盖同一条消息。 */
+  const retrySpeak = (args: { sessionId?: string, messageId?: string }): { ok: boolean, error?: string } => {
+    const sess = sessions.get(String(args && args.sessionId || ''))
+    if (!sess) return { ok: false, error: '会话不存在' }
+    if (run.running) return { ok: false, error: '已有对话进行中，请先停止' }
+    const msg = messages.get(String(args && args.messageId || ''))
+    if (!msg || msg.sessionId !== sess.id || !isSpeakFailure(msg)) return { ok: false, error: '没有可重试的失败发言' }
+    const g = groups.get(sess.groupId)
+    if (!g) return { ok: false, error: '群组不存在' }
+    const groupRoles = g.roleIds.map((id) => roles.get(id)).filter((r): r is RoleRecord => Boolean(r))
+    if (repairFailedMessage(msg, groupRoles)) {
+      schedulePersist({ session: sess.id })
+      touch()
+    }
+    const roleId = msg.failedRoleId || (msg.speaker !== 'user' && msg.speaker !== 'system' ? msg.speaker : '')
+    const role = roleId ? roles.get(roleId) : undefined
+    if (!role || role.groupId !== sess.groupId) return { ok: false, error: '失败角色已不存在，无法重试' }
+    if (!role.enabled) return { ok: false, error: '该角色已停用，无法重试' }
+    run.running = true
+    run.sessionId = sess.id
+    run.queue = [role.id]
+    run.stopping = false
+    run.finished = null
+    run.replaceMessageId = msg.id
+    touch()
+    void runLoop(sess, { replaceMessageId: msg.id }).catch((e) => console.error('group-chat retry failed', e))
     return { ok: true }
   }
 
@@ -324,6 +355,7 @@ export function createActions(core: HostState, deps: {
     const kind = body && body.kind
     if (kind === 'mutate') return { ok: true, snapshot: mutate(body as unknown as MutateArgs), lastCreated: core.lastCreated }
     if (kind === 'send') return send(body as unknown as SendArgs)
+    if (kind === 'retrySpeak') return retrySpeak(body as { sessionId?: string, messageId?: string })
     if (kind === 'stop') return stop(body as { sessionId?: string })
     if (kind === 'confirmCommand') return confirmCommand(body as { toolCallId?: string, allow?: boolean })
     if (kind === 'models') return { ok: true, ...(await models()) }

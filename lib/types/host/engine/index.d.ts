@@ -4,4 +4,5 @@
  */
 export { createConversation } from './conversation.ts';
 export type { Conversation } from './conversation.ts';
+export { createFold } from './fold.ts';
 export { createRetitle } from './retitle.ts';
