@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { activeAtToken, formatFileMention } from '../src/shared/file-mention-grammar'
+import { activeAtToken } from '../src/shared/file-mention-grammar'
 
 describe('activeAtToken', () => {
   describe('plain @path tokens', () => {
@@ -113,76 +113,6 @@ describe('activeAtToken', () => {
         query: '文件',
         quoted: false,
       })
-    })
-  })
-})
-
-describe('formatFileMention', () => {
-  describe('plain file paths', () => {
-    it('formats file without spaces', () => {
-      expect(formatFileMention({ kind: 'file', path: 'src/foo.ts' }, false)).toBe(
-        '@src/foo.ts',
-      )
-    })
-
-    it('quotes file with spaces and closes quote', () => {
-      expect(formatFileMention({ kind: 'file', path: 'my dir/foo.ts' }, false)).toBe(
-        '@"my dir/foo.ts"',
-      )
-    })
-
-    it('preserves quote when requested even without spaces', () => {
-      expect(formatFileMention({ kind: 'file', path: 'src/foo.ts' }, true)).toBe(
-        '@"src/foo.ts"',
-      )
-    })
-
-    it('rejects path with control characters', () => {
-      expect(formatFileMention({ kind: 'file', path: 'bad\u0000file' }, false)).toBeUndefined()
-    })
-
-    it('rejects path with embedded quotes', () => {
-      expect(formatFileMention({ kind: 'file', path: 'bad"file.ts' }, false)).toBeUndefined()
-    })
-
-    it('handles .hidden files', () => {
-      expect(formatFileMention({ kind: 'file', path: '.gitignore' }, false)).toBe(
-        '@.gitignore',
-      )
-    })
-  })
-
-  describe('directory paths', () => {
-    it('formats directory with trailing slash', () => {
-      expect(formatFileMention({ kind: 'directory', path: 'src' }, false)).toBe('@src/')
-    })
-
-    it('quotes directory with spaces and keeps quote open', () => {
-      expect(formatFileMention({ kind: 'directory', path: 'my dir' }, false)).toBe(
-        '@"my dir/',
-      )
-    })
-
-    it('preserves quote for directory without spaces (keeps open)', () => {
-      expect(formatFileMention({ kind: 'directory', path: 'src' }, true)).toBe('@"src/')
-    })
-
-    it('rejects directory path with control characters', () => {
-      expect(
-        formatFileMention({ kind: 'directory', path: 'bad\u0001dir' }, false),
-      ).toBeUndefined()
-    })
-  })
-
-  describe('drill behavior', () => {
-    it('directory with trailing slash and preserved quote stays open', () => {
-      expect(formatFileMention({ kind: 'directory', path: 'docs' }, true)).toBe('@"docs/')
-    })
-
-    it('nested directory preserves quote for drilling', () => {
-      expect(formatFileMention({ kind: 'directory', path: 'src/components' }, true)).toBe(
-        '@"src/components/',
-      )
     })
   })
 })

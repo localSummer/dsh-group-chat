@@ -36,7 +36,8 @@ export function createActions(core: HostState, deps: {
   const { touch, snapshot, schedulePersist, dropDirty, appendMessage, runLoop, wakeConfirm, killChild, browse, fileSearch, disposeFileSearch } = deps
 
   const mutate = (args: MutateArgs): Snapshot => {
-    const op = args && args.op
+    // 直接属性别名保持判别联合收窄（调用方 handleAction 已保证 body 为对象）
+    const op = args.op
     if (op === 'createGroup') {
       const g: GroupRecord = { id: core.nid('grp'), name: String(args.name || '').trim() || '群组 ' + (groups.size + 1), workspaceDir: '', permissionTier: 'view_only', roleIds: [], sessionIds: [] }
       groups.set(g.id, g)
@@ -46,14 +47,14 @@ export function createActions(core: HostState, deps: {
       schedulePersist({ ledger: true, session: sess.id })
       touch()
     } else if (op === 'renameGroup') {
-      const g = groups.get(args.groupId!)
+      const g = groups.get(args.groupId)
       if (g && String(args.name || '').trim()) {
         g.name = String(args.name).trim()
         schedulePersist({ ledger: true })
         touch()
       }
     } else if (op === 'deleteGroup') {
-      const g = groups.get(args.groupId!)
+      const g = groups.get(args.groupId)
       if (!g) return { ...snapshot(), error: '群组不存在' }
       if (groups.size <= 1) return { ...snapshot(), error: '至少保留一个群组' }
       if (run.running) {
@@ -80,7 +81,7 @@ export function createActions(core: HostState, deps: {
       schedulePersist({ ledger: true })
       touch()
     } else if (op === 'createSession') {
-      const g = groups.get(args.groupId!)
+      const g = groups.get(args.groupId)
       if (!g) return { ...snapshot(), error: '群组不存在' }
       const sess = core.newSession(g.id, String(args.name || '').trim() || undefined)
       g.sessionIds.push(sess.id)
@@ -88,7 +89,7 @@ export function createActions(core: HostState, deps: {
       schedulePersist({ ledger: true, session: sess.id })
       touch()
     } else if (op === 'renameSession') {
-      const sess = sessions.get(args.sessionId!)
+      const sess = sessions.get(args.sessionId)
       if (sess && String(args.name || '').trim()) {
         sess.name = String(args.name).trim()
         sess.namePinned = true // 手动编辑 = 隐式固定：自动命名此后跳过名称
@@ -96,7 +97,7 @@ export function createActions(core: HostState, deps: {
         touch()
       }
     } else if (op === 'deleteSession') {
-      const sess = sessions.get(args.sessionId!)
+      const sess = sessions.get(args.sessionId)
       if (!sess) return { ...snapshot(), error: '会话不存在' }
       const g = groups.get(sess.groupId)
       if (g && g.sessionIds.length <= 1) return { ...snapshot(), error: '每个群组至少保留一个会话' }
@@ -115,7 +116,7 @@ export function createActions(core: HostState, deps: {
       schedulePersist({ ledger: true })
       touch()
     } else if (op === 'setTopic') {
-      const sess = sessions.get(args.sessionId!)
+      const sess = sessions.get(args.sessionId)
       if (sess) {
         sess.topic = String(args.topic || '')
         sess.topicPinned = true // 手动编辑 = 隐式固定：自动整理此后跳过主题
@@ -123,7 +124,7 @@ export function createActions(core: HostState, deps: {
         touch()
       }
     } else if (op === 'upsertRole') {
-      const g = groups.get(args.groupId!)
+      const g = groups.get(args.groupId)
       const r = args.role || {}
       if (!g) return { ...snapshot(), error: '群组不存在' }
       if (!r.name || !String(r.name).trim()) return { ...snapshot(), error: '角色名称不能为空' }
@@ -161,7 +162,7 @@ export function createActions(core: HostState, deps: {
         touch()
       }
     } else if (op === 'deleteRole') {
-      const r = roles.get(args.roleId!)
+      const r = roles.get(args.roleId)
       if (r) {
         const gid = r.groupId
         const g = groups.get(gid)
@@ -171,14 +172,14 @@ export function createActions(core: HostState, deps: {
         touch()
       }
     } else if (op === 'setRoleEnabled') {
-      const r = roles.get(args.roleId!)
+      const r = roles.get(args.roleId)
       if (r) {
         r.enabled = !!args.enabled
         schedulePersist({ roles: r.groupId })
         touch()
       }
     } else if (op === 'setWorkspaceDir') {
-      const g = groups.get(args.groupId!)
+      const g = groups.get(args.groupId)
       if (g) {
         g.workspaceDir = String(args.path || '').trim()
         schedulePersist({ workspace: g.id })
@@ -187,7 +188,7 @@ export function createActions(core: HostState, deps: {
     } else if (op === 'setPermissionTier') {
       const tier = asPermissionTier(args.tier)
       if (!tier) return { ...snapshot(), error: '未知权限档位' }
-      const g = groups.get(args.groupId!)
+      const g = groups.get(args.groupId)
       if (g) {
         g.permissionTier = tier
         // 降到仅可查看时若该群挂着待确认命令，自动拒绝（安全侧倾斜）；
@@ -206,7 +207,7 @@ export function createActions(core: HostState, deps: {
         touch()
       }
     } else if (op === 'clearMessages') {
-      const sess = sessions.get(args.sessionId!)
+      const sess = sessions.get(args.sessionId)
       if (sess) {
         if (run.running && run.sessionId === sess.id) return { ...snapshot(), error: '对话进行中，无法清空' }
         for (const mid of sess.messageIds) messages.delete(mid)

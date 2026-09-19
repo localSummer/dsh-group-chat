@@ -87,6 +87,8 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
   let livePlaced = false
 
   if (sess) {
+    // 循环不变量：本群角色表只过滤一次（流式期间每帧执行的热路径）
+    const groupRoles = snap.roles.filter((r) => r.groupId === sess.groupId)
     const ids = sess.messageIds
     const memo = sess.constraints && sess.constraints.length
       ? <ConstraintList key={sess.id + '-constraints'} items={sess.constraints} />
@@ -100,7 +102,6 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
       if (!m) continue
       // 角色在父级解析：Bubble 按值 memo（不依赖 snap identity），流式帧
       // 不再触发已完成消息的全量重渲（每帧仅 live 行与派生列表变化）
-      const groupRoles = snap.roles.filter((r) => r.groupId === sess.groupId)
       const role = resolveFailedRole(m, groupRoles) || (m.speaker !== 'user' && m.speaker !== 'system' ? roleById(snap, m.speaker) : null)
       // 原地重试：该槽位换成 live（确认卡紧随其后），不要钉在列表末尾
       if (replaceId && m.id === replaceId) {

@@ -5,12 +5,12 @@
 
 import { useState, type ReactNode } from 'react'
 import { Icon, P, pickPrimitive } from '../lib/ui.ts'
-import type { ToolCallView } from '../lib/model.ts'
+import type { ToolCallRecord } from '../../core/types.ts'
 import { ClipWell, Fold } from './Fold.tsx'
 
 const TOOL_ICONS: Record<string, string> = { read_file: 'IconBrowseOutline16', list_dir: 'IconFolderOpenOutline16', run_command: 'IconCodeOutline16' }
 
-export function ToolRow(props: { c: ToolCallView }): ReactNode {
+export function ToolRow(props: { c: ToolCallRecord }): ReactNode {
   const c = props.c
   const [expanded, setExpanded] = useState(false)
   let brief = ''

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { activeAtToken, formatFileMention } from './file-mention-grammar.ts'
+import { activeAtToken } from './file-mention-grammar.ts'
 
 describe('activeAtToken', () => {
   it('extracts plain @path at cursor', () => {
@@ -36,42 +36,5 @@ describe('activeAtToken', () => {
   it('handles @ after whitespace', () => {
     expect(activeAtToken('  @qu', 5)).toEqual({ prefix: '@qu', query: 'qu', quoted: false })
     expect(activeAtToken('\t@"test', 7)).toEqual({ prefix: '@"test', query: 'test', quoted: true })
-  })
-})
-
-describe('formatFileMention', () => {
-  it('formats plain file without whitespace', () => {
-    expect(formatFileMention({ kind: 'file', path: 'README.md' }, false)).toBe('@README.md')
-    expect(formatFileMention({ kind: 'file', path: 'src/index.ts' }, false)).toBe('@src/index.ts')
-  })
-
-  it('formats plain directory with trailing slash', () => {
-    expect(formatFileMention({ kind: 'directory', path: 'src' }, false)).toBe('@src/')
-    expect(formatFileMention({ kind: 'directory', path: 'lib/utils' }, false)).toBe('@lib/utils/')
-  })
-
-  it('quotes file with whitespace and closes quote', () => {
-    expect(formatFileMention({ kind: 'file', path: 'My Document.txt' }, false)).toBe('@"My Document.txt"')
-    expect(formatFileMention({ kind: 'file', path: 'src/my file.ts' }, false)).toBe('@"src/my file.ts"')
-  })
-
-  it('quotes directory with whitespace but keeps quote open', () => {
-    expect(formatFileMention({ kind: 'directory', path: 'My Folder' }, false)).toBe('@"My Folder/')
-    expect(formatFileMention({ kind: 'directory', path: 'src/my lib' }, false)).toBe('@"src/my lib/')
-  })
-
-  it('preserves quote even when unnecessary', () => {
-    expect(formatFileMention({ kind: 'file', path: 'plain.txt' }, true)).toBe('@"plain.txt"')
-    expect(formatFileMention({ kind: 'directory', path: 'lib' }, true)).toBe('@"lib/')
-  })
-
-  it('rejects paths with control characters', () => {
-    expect(formatFileMention({ kind: 'file', path: 'file\x00.txt' }, false)).toBeUndefined()
-    expect(formatFileMention({ kind: 'file', path: 'file\n.txt' }, false)).toBeUndefined()
-  })
-
-  it('rejects paths with embedded quotes', () => {
-    expect(formatFileMention({ kind: 'file', path: 'file"name.txt' }, false)).toBeUndefined()
-    expect(formatFileMention({ kind: 'directory', path: 'dir"name' }, false)).toBeUndefined()
   })
 })

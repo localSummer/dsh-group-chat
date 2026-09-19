@@ -57,10 +57,10 @@ export function serializeInput(root: HTMLElement): string {
   return Array.from(root.childNodes).map(walk).join('')
 }
 
-/** @角色芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删）。 */
-export function chipHtml(role: { id: string, name: string, color?: string }): string {
+/** @角色芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删；fresh=插入后需营救选区，加 data-new 标记）。 */
+export function chipHtml(role: { id: string, name: string, color?: string }, fresh = false): string {
   const c = escapeHtml(role.color || '#888')
-  return '<span class="dsgc-chipin" data-role-id="' + escapeHtml(role.id) + '" data-name="' + escapeHtml(role.name) + '" style="--role-color:' + c + '" contenteditable="false" draggable="true">' +
+  return '<span class="dsgc-chipin"' + (fresh ? ' data-new=""' : '') + ' data-role-id="' + escapeHtml(role.id) + '" data-name="' + escapeHtml(role.name) + '" style="--role-color:' + c + '" contenteditable="false" draggable="true">' +
     '<span class="dsgc-chipdot" style="background:' + c + '"></span>' + escapeHtml(role.name) + '</span>'
 }
 
@@ -81,11 +81,11 @@ function fileTypeIconMarkup(path: string, kind: 'file' | 'directory'): string {
   }
 }
 
-/** @文件芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删）。 */
-export function fileChipHtml(path: string, kind: 'file' | 'directory'): string {
+/** @文件芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删；fresh 同 chipHtml）。 */
+export function fileChipHtml(path: string, kind: 'file' | 'directory', fresh = false): string {
   const basename = path.split('/').pop() || path
   const dir = kind === 'directory'
-  return '<span class="dsgc-chipin dsgc-chipin-file" data-kind="file"' + (dir ? ' data-dir="1"' : '') + ' data-path="' + escapeHtml(path) + '" contenteditable="false" draggable="true">' +
+  return '<span class="dsgc-chipin dsgc-chipin-file"' + (fresh ? ' data-new=""' : '') + ' data-kind="file"' + (dir ? ' data-dir="1"' : '') + ' data-path="' + escapeHtml(path) + '" contenteditable="false" draggable="true">' +
     '<span class="dsgc-chipglyph" aria-hidden="true">' + fileTypeIconMarkup(path, kind) + '</span>' + escapeHtml(basename) + '</span>'
 }
 

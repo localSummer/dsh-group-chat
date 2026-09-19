@@ -6,12 +6,13 @@
 
 import { realpathSync } from 'node:fs'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
-import { constraintBlock, formatTranscriptLine, prefixIds, speakerLabel, squeezedMessages, tempTranscript, WINDOW_SIZE } from '../../core/constraints.ts'
+import { constraintBlock, formatTranscriptLine, prefixIds, squeezedMessages, tempTranscript, WINDOW_SIZE } from '../../core/constraints.ts'
 import { unwrapSpeakFailure } from '../../core/errors.ts'
 import { TOOL_FLOOR_COST_CHARS, TOOL_REPEAT_LIMIT, TOOL_RESULTS_TOTAL_MAX, TRANSCRIPT_TOOL_SUMMARY } from '../../core/tools.ts'
 import type { GroupRecord, MessageRecord, RoleRecord, SessionRecord, SpeakResult, ToolCallRecord } from '../../core/types.ts'
 import { asEffort } from '../../core/types.ts'
 import type { HostState } from '../state.ts'
+import { speakerNameOf } from './defaults.ts'
 import { createFold } from './fold.ts'
 import { createRetitle } from './retitle.ts'
 import type { Materials } from '../materials/index.ts'
@@ -44,7 +45,6 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
   // 标题/主题自动整理 + 窗口外约束折叠（finally 之后并列后台跑，不占用 run）
   const retitle = createRetitle(core, { touch, schedulePersist })
   const fold = createFold(core, { touch, schedulePersist })
-  const nameOf = (speaker: string): string => speakerLabel(speaker, (roles.get(speaker) || { name: undefined }).name)
 
   const appendMessage = (sess: SessionRecord, speaker: string, text: string, extra?: Partial<MessageRecord>): MessageRecord => {
     const msg: MessageRecord = { id: core.nid('msg'), sessionId: sess.id, seq: sess.messageIds.length + 1, speaker, text, reasoning: undefined, model: undefined, error: undefined, ts: Date.now() }
@@ -64,57 +64,50 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
     return msg
   }
 
+  /** 原地覆盖既有消息（重试槽位）；目标不存在或不属于本会话时返回 false，由调用方走追加。 */
+  const overwriteMessage = (sess: SessionRecord, replaceId: string | undefined, patch: Partial<MessageRecord>): boolean => {
+    if (!replaceId) return false
+    const existing = messages.get(replaceId)
+    if (!existing || existing.sessionId !== sess.id) return false
+    Object.assign(existing, patch, { ts: Date.now() })
+    touch()
+    schedulePersist({ session: sess.id })
+    return true
+  }
+
   /** 把失败回合写成该角色的消息（speaker = 角色 id），不再用系统胶囊顶替。 */
   const writeFailure = (sess: SessionRecord, role: RoleRecord, err: unknown, replaceId?: string): void => {
     const raw = unwrapSpeakFailure(String((err && (err as Error).message) || err))
-    const extra: Partial<MessageRecord> = {
-      error: true,
-      failedRoleId: role.id,
-      model: role.provider + ' / ' + role.model,
-    }
-    if (replaceId) {
-      const existing = messages.get(replaceId)
-      if (existing && existing.sessionId === sess.id) {
-        existing.speaker = role.id
-        existing.text = raw
-        existing.error = true
-        existing.failedRoleId = role.id
-        existing.model = extra.model
-        existing.reasoning = undefined
-        existing.reasoningFull = undefined
-        existing.thinkingSummary = undefined
-        existing.toolCalls = undefined
-        existing.ts = Date.now()
-        touch()
-        schedulePersist({ session: sess.id })
-        return
-      }
-    }
+    const model = role.provider + ' / ' + role.model
+    const extra: Partial<MessageRecord> = { error: true, failedRoleId: role.id, model }
+    if (overwriteMessage(sess, replaceId, {
+      speaker: role.id,
+      text: raw,
+      ...extra,
+      reasoning: undefined,
+      reasoningFull: undefined,
+      thinkingSummary: undefined,
+      toolCalls: undefined,
+    })) return
     appendMessage(sess, role.id, raw, extra)
   }
 
   /** 成功发言写入：replaceId 存在则原地覆盖失败卡。 */
   const writeSuccess = (sess: SessionRecord, role: RoleRecord, out: SpeakResult, replaceId?: string): void => {
-    const extra: Partial<MessageRecord> = { model: role.provider + ' / ' + role.model, reasoning: out.reasoning, toolCalls: out.toolCalls }
-    if (replaceId) {
-      const existing = messages.get(replaceId)
-      if (existing && existing.sessionId === sess.id) {
-        existing.speaker = role.id
-        existing.text = out.text
-        existing.error = undefined
-        existing.failedRoleId = undefined
-        existing.model = extra.model
-        existing.reasoning = out.reasoning
-        existing.reasoningFull = undefined
-        existing.thinkingSummary = undefined
-        existing.toolCalls = Array.isArray(out.toolCalls) && out.toolCalls.length > 0 ? out.toolCalls : undefined
-        existing.ts = Date.now()
-        touch()
-        schedulePersist({ session: sess.id })
-        return
-      }
-    }
-    appendMessage(sess, role.id, out.text, extra)
+    const model = role.provider + ' / ' + role.model
+    const toolCalls = Array.isArray(out.toolCalls) && out.toolCalls.length > 0 ? out.toolCalls : undefined
+    if (overwriteMessage(sess, replaceId, {
+      speaker: role.id,
+      text: out.text,
+      error: undefined,
+      failedRoleId: undefined,
+      model,
+      reasoning: out.reasoning,
+      reasoningFull: undefined,
+      thinkingSummary: undefined,
+      toolCalls,
+    })) return
+    appendMessage(sess, role.id, out.text, { model, reasoning: out.reasoning, toolCalls: out.toolCalls })
   }
 
   /** 群聊记录 → 角色上下文块（最近 40 条 + 未折入临时原文）。失败卡不进上下文。重试截到该条之前。 */
@@ -123,10 +116,10 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
     for (const mid of prefixIds(sess.messageIds, skipId).slice(-WINDOW_SIZE)) {
       const m = messages.get(mid)
       if (!m || m.id === skipId || m.error) continue
-      out.push(formatTranscriptLine(m, nameOf(m.speaker)))
+      out.push(formatTranscriptLine(m, speakerNameOf(roles, m.speaker)))
     }
     const live = out.join('\n\n')
-    const temp = tempTranscript(squeezedMessages(messages, sess, skipId), (m) => nameOf(m.speaker))
+    const temp = tempTranscript(squeezedMessages(messages, sess, skipId), (m) => speakerNameOf(roles, m.speaker))
     if (!temp) return live
     if (!live) return temp
     return temp + '\n\n' + live
@@ -297,7 +290,10 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       msgs.push({ id: ('g' + core.revision + '-a' + msgs.length) as Message['id'], role: 'assistant', content: assistantContent, source: { kind: 'model', provider: role.provider, model: role.model } })
       for (const tc of round.tcs) {
         if (run.stopping) break
-        const res = await tools.executeTool(g, wsRoot!, tc)
+        // wsRoot 为 null 时 toolSchemas 必为空、不会产生 tool-call；防御性跳出，
+        // 不把空根传进沙箱
+        if (wsRoot === null) break
+        const res = await tools.executeTool(g, wsRoot, tc)
         const output = String(res.output || '')
         toolCalls.push({ tool: tc.name, args: res.args, status: res.status, output, durationMs: res.durationMs })
         budgetUsed += Math.max(output.length, TOOL_FLOOR_COST_CHARS)
@@ -326,12 +322,15 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
   }
 
   const runLoop = async (sess: SessionRecord, opts?: { replaceMessageId?: string }): Promise<void> => {
-    const g = groups.get(sess.groupId)
+    const g = groups.get(sess.groupId) ?? null
     const startCount = sess.messageIds.length
     let failed = false // 发言失败 → 会话列表「已出错」标记
     let replaceId = opts && opts.replaceMessageId
     run.replaceMessageId = replaceId || null
     try {
+      // 群组在 run 期间不可删（send 已校验 + deleteGroup 拦截运行中群组）；
+      // 防御性早退——置空让 finally 走统一复位路径
+      if (!g) return
       while (run.queue.length > 0 && !run.stopping) {
         const roleId = run.queue.shift()!
         const role = roles.get(roleId)
@@ -343,7 +342,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
         const targetId = replaceId
         replaceId = undefined
         try {
-          const out = await speak(g!, sess, role, targetId)
+          const out = await speak(g, sess, role, targetId)
           // 停止后不落部分消息（已有「已停止本次对话」系统消息承接）
           if (!run.stopping && (out.text || (Array.isArray(out.toolCalls) && out.toolCalls.length > 0))) {
             writeSuccess(sess, role, out, targetId)

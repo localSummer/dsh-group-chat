@@ -202,31 +202,39 @@ export interface FileSearchResult {
   error?: string
 }
 
-/** 发到客户端的全量快照（wire 形态）。 */
+/** 快照内的会话行（wire 形态：不含 hydrate 用的固定标记与折入水位）。 */
+export type SnapshotSession = Omit<SessionRecord, 'namePinned' | 'topicPinned' | 'constraintsUpToSeq'>
+/** 快照内的消息行（wire 形态：思考全文与摘要不外发）。 */
+export type SnapshotMessage = Omit<MessageRecord, 'reasoningFull' | 'thinkingSummary'>
+
+/** 发到客户端的全量快照（wire 形态；各表行由领域记录派生，字段增删由编译器同步）。 */
 export interface Snapshot {
   revision: number
-  run: { running: boolean, sessionId: string | null, currentRoleId: string | null, partial: string, partialReasoning: string, pendingConfirm: PendingConfirm | null, finished: RunFinished | null, replaceMessageId: string | null }
+  run: Omit<RunState, 'stopping' | 'queue' | 'confirmSignal' | 'childProc'>
   lastCreated: LastCreated | null
-  groups: { id: string, name: string, workspaceDir: string, permissionTier: PermissionTier, roleIds: string[], sessionIds: string[] }[]
-  sessions: { id: string, groupId: string, name: string, topic: string, constraints?: SessionConstraint[], messageIds: string[], createdAt: number }[]
-  roles: { id: string, groupId: string, name: string, color?: string, persona: string, provider: string, model: string, temperature?: number, reasoningEffort?: string, enabled: boolean, thinking: boolean }[]
-  messages: { id: string, sessionId: string, seq: number, speaker: string, text: string, reasoning?: string, model?: string, error?: boolean, failedRoleId?: string, toolCalls?: ToolCallRecord[], ts: number }[]
+  groups: GroupRecord[]
+  sessions: SnapshotSession[]
+  roles: RoleRecord[]
+  messages: SnapshotMessage[]
   error?: string
 }
 
-/** mutate 动作的参数形态（op 分发见 host/service）。 */
-export interface MutateArgs {
-  op: string
-  groupId?: string
-  sessionId?: string
-  roleId?: string
-  role?: Partial<RoleRecord>
-  name?: string
-  topic?: string
-  path?: string
-  tier?: string
-  enabled?: boolean
-}
+/** mutate 动作的参数形态（判别联合：按 op 收窄各分支字段；wire 上字段可缺，消费方各自守卫）。 */
+export type MutateArgs =
+  | { op: 'createGroup', name?: string }
+  | { op: 'renameGroup', groupId: string, name?: string }
+  | { op: 'deleteGroup', groupId: string }
+  | { op: 'createSession', groupId: string, name?: string }
+  | { op: 'renameSession', sessionId: string, name?: string }
+  | { op: 'deleteSession', sessionId: string }
+  | { op: 'setTopic', sessionId: string, topic?: string }
+  | { op: 'upsertRole', groupId: string, role?: Partial<RoleRecord> }
+  | { op: 'deleteRole', roleId: string }
+  | { op: 'setRoleEnabled', roleId: string, enabled?: boolean }
+  | { op: 'setWorkspaceDir', groupId: string, path?: string }
+  | { op: 'setPermissionTier', groupId: string, tier?: string }
+  | { op: 'ackFinish' }
+  | { op: 'clearMessages', sessionId: string }
 
 /** send 动作的参数形态。 */
 export interface SendArgs {

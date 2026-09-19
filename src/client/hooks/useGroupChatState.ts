@@ -70,16 +70,11 @@ export function useGroupChatState() {
   const [confirmDel, setConfirmDel] = useState<{ kind: 'group' | 'session', id: string } | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
   const [topicDraft, setTopicDraft] = useState<string | null>(null)
-  const [wsDraft, setWsDraft] = useState<string | null>(null)
-  
-  // 角色编辑
+
+  // 角色编辑（models 目录与保存/校验态在 RoleDrawer 内自理）
   const [roleDraft, setRoleDraft] = useState<RoleDraft | null>(null)
-  const [roleFormError, setRoleFormError] = useState('')
   const [models, setModels] = useState<ModelsResponse | null>(null)
   const [modelsError, setModelsError] = useState<string | null>(null)
-  
-  // 文件浏览器
-  const [fileBrowser, setFileBrowser] = useState<{ open: boolean, loading: boolean, list: import('../../core/types.ts').BrowseResult | null, error: string } | null>(null)
   
   // 参与角色选择
   const [partsSel, setPartsSel] = useState<string[] | null>(null)
@@ -174,16 +169,10 @@ export function useGroupChatState() {
     setConfirmClear,
     roleDraft,
     setRoleDraft,
-    roleFormError,
-    setRoleFormError,
     models,
     setModels,
     modelsError,
     setModelsError,
-    fileBrowser,
-    setFileBrowser,
-    wsDraft,
-    setWsDraft,
     partsSel,
     setPartsSel,
     rounds,

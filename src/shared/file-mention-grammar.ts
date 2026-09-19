@@ -1,9 +1,12 @@
 /**
  * Vendored @file token grammar from dsh-file-reference (browser-safe, zero Node API).
- * 
+ *
  * Sourced from @deepseek-ai/dsh-file-reference/lib/types/grammar.js
  * Cannot import directly due to client bundle purity gate (dsh-client-bundle-purity).
- * 
+ *
+ * 只保留输入侧的 @token 识别（activeAtToken）；候选的文本化（formatFileMention）
+ * 未被本插件采用——目录钻入走「插入整颗芯片」语义，见 docs/DESIGN.md Composer 契约。
+ *
  * @module dsh-group-chat/shared
  */
 
@@ -16,22 +19,17 @@ export interface AtToken {
   quoted: boolean
 }
 
-export interface FileCandidate {
-  kind: 'file' | 'directory'
-  path: string
-}
-
 /**
  * Extract active @token at cursor position.
  * Matches @ at word boundary (line start or after whitespace).
- * 
+ *
  * @param line - Current line text
  * @param cursor - Cursor offset in line
  * @returns Token or undefined if no active @token at cursor
  */
 export function activeAtToken(line: string, cursor: number): AtToken | undefined {
   const before = line.slice(0, cursor)
-  
+
   // Try quoted @"... first (more specific)
   const quotedMatch = /(?:^|\s)@"([^"]*)$/.exec(before)
   if (quotedMatch) {
@@ -55,28 +53,4 @@ export function activeAtToken(line: string, cursor: number): AtToken | undefined
   }
 
   return undefined
-}
-
-/**
- * Format file/directory candidate as @mention text.
- * 
- * @param candidate - File or directory to format
- * @param preserveQuote - Keep quotes even when unnecessary (for drill-down continuity)
- * @returns Formatted @path or undefined for invalid paths
- */
-export function formatFileMention(candidate: FileCandidate, preserveQuote: boolean): string | undefined {
-  const { path } = candidate
-
-  // Reject control characters and embedded quotes
-  if (/[\x00-\x1F"]/.test(path)) return undefined
-
-  const needsQuote = /\s/.test(path)
-  const useQuote = needsQuote || preserveQuote
-
-  if (candidate.kind === 'file') {
-    return useQuote ? `@"${path}"` : `@${path}`
-  } else {
-    // Directory: trailing slash, quote stays open for drill-down
-    return useQuote ? `@"${path}/` : `@${path}/`
-  }
 }

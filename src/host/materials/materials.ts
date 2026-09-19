@@ -64,6 +64,8 @@ export function createMaterials(core: HostState): Materials {
 
   /** 逐候选 stat，返回第一个存在的目标；都不存在时返回首候选与全部尝试。 */
   const resolveMaterialTarget = async (raw: unknown) => {
+    // candidatePaths 构造上恒返回非空候选数组（'' → [HOME]，其余分支均单值或
+    // 非空 map），first 必在；! 仅为取首候选，无空指针风险
     const candidates = await candidatePaths(raw)
     let first: { target: import('@deepseek-ai/dsh-fs').FsTarget, path: string } | undefined
     for (const c of candidates) {

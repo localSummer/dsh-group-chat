@@ -7,11 +7,12 @@ import { type ModelsResponse, type RoleDraft } from '../lib/model.ts';
 export interface RoleDrawerProps {
     draft: RoleDraft;
     set: (draft: RoleDraft) => void;
+    /** 保存目标群组（upsertRole 落库）。 */
+    groupId: string;
     models: ModelsResponse | null;
     modelsError: string | null;
     onRetryModels: () => void;
-    onSave: () => void;
+    mutate: (args: Record<string, unknown>) => Promise<unknown>;
     onCancel: () => void;
-    formError: string;
 }
 export declare function RoleDrawer(props: RoleDrawerProps): ReactNode;

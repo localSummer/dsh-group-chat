@@ -111,17 +111,7 @@ export function repairFailedMessage(
   return changed
 }
 
-function pickJsonBlob(text: string): Record<string, unknown> | null {
-  const start = text.indexOf('{')
-  const end = text.lastIndexOf('}')
-  if (start < 0 || end <= start) return null
-  try {
-    const parsed = JSON.parse(text.slice(start, end + 1)) as unknown
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null
-  } catch {
-    return null
-  }
-}
+import { looseJson } from './json.ts'
 
 function httpStatus(text: string): number | null {
   const m = text.match(/\b([1-5]\d{2})\b/)
@@ -141,7 +131,7 @@ function resetHint(message: string): string | undefined {
  */
 export function classifySpeakFailure(raw: string): SpeakFailureView {
   const source = unwrapSpeakFailure(raw)
-  const blob = pickJsonBlob(source)
+  const blob = looseJson(source)
   const code = blob && typeof blob.code === 'string' ? blob.code : ''
   const type = blob && typeof blob.type === 'string' ? blob.type : ''
   const message = blob && typeof blob.message === 'string' ? blob.message : source

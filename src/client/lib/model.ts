@@ -3,7 +3,7 @@
  * @module dsh-group-chat/client/model
  */
 
-import type { RoleRecord, Snapshot, ToolCallRecord } from '../../core/types.ts'
+import type { Snapshot } from '../../core/types.ts'
 
 /** 会话列表状态派生与文案（core 纯函数，供 NavPanel 渲染）。 */
 export { sessStatus, SESS_STATUS_LABEL, type SessStatus } from '../../core/status.ts'
@@ -104,16 +104,3 @@ export function draftFromRole(role: SnapshotRole): RoleDraft {
 export function blankDraft(): RoleDraft {
   return { name: '', color: null, persona: '', provider: '', model: '', temperature: undefined, reasoningEffort: 'default', enabled: true, thinking: false }
 }
-
-/** 工具调用行的展示参数。 */
-export type ToolCallView = ToolCallRecord
-
-/** 草稿是否可作为角色落库（宿主侧再校验一次）。 */
-export function draftMissing(draft: RoleDraft): string {
-  if (!draft.name.trim()) return '角色名称不能为空'
-  if (!draft.provider || !draft.model) return '请选择角色绑定的模型'
-  return ''
-}
-
-/** RoleRecord 兼容视图（快照角色行即其展示子集）。 */
-export type RoleView = RoleRecord

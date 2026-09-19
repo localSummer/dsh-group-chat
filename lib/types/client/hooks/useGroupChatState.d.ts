@@ -47,26 +47,10 @@ export declare function useGroupChatState(): {
     setConfirmClear: import("react").Dispatch<import("react").SetStateAction<boolean>>;
     roleDraft: RoleDraft | null;
     setRoleDraft: import("react").Dispatch<import("react").SetStateAction<RoleDraft | null>>;
-    roleFormError: string;
-    setRoleFormError: import("react").Dispatch<import("react").SetStateAction<string>>;
     models: ModelsResponse | null;
     setModels: import("react").Dispatch<import("react").SetStateAction<ModelsResponse | null>>;
     modelsError: string | null;
     setModelsError: import("react").Dispatch<import("react").SetStateAction<string | null>>;
-    fileBrowser: {
-        open: boolean;
-        loading: boolean;
-        list: import("../../core/types.ts").BrowseResult | null;
-        error: string;
-    } | null;
-    setFileBrowser: import("react").Dispatch<import("react").SetStateAction<{
-        open: boolean;
-        loading: boolean;
-        list: import("../../core/types.ts").BrowseResult | null;
-        error: string;
-    } | null>>;
-    wsDraft: string | null;
-    setWsDraft: import("react").Dispatch<import("react").SetStateAction<string | null>>;
     partsSel: string[] | null;
     setPartsSel: import("react").Dispatch<import("react").SetStateAction<string[] | null>>;
     rounds: number;

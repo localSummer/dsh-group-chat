@@ -1,34 +1,59 @@
 /**
- * 右侧成员与工作区栏组件
+ * 右侧成员与工作区栏组件。工作区目录编辑态（草稿、文件浏览器）为栏内自有状态。
  * @module dsh-group-chat/client/components
  */
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Icon, P } from '../lib/ui.ts'
-import { roleById, type ClientSnapshot, type ModelsResponse, type RoleDraft, type SnapshotRole } from '../lib/model.ts'
+import { api } from '../lib/api.ts'
+import { roleById, type ClientSnapshot, type SnapshotRole } from '../lib/model.ts'
+import type { BrowseResult } from '../../core/types.ts'
 
 interface AsidePanelProps {
   snap: ClientSnapshot
   group: ClientSnapshot['groups'][number]
   asideOpen: boolean
-  wsDraft: string | null
-  setWsDraft: (val: string | null) => void
-  fileBrowser: { open: boolean, loading: boolean, list: import('../../core/types.ts').BrowseResult | null, error: string } | null
-  setFileBrowser: (val: { open: boolean, loading: boolean, list: import('../../core/types.ts').BrowseResult | null, error: string } | null) => void
   mutate: (args: Record<string, unknown>) => Promise<unknown>
-  openRoleEditor: (role: SnapshotRole | null) => Promise<void>
-  openBrowser: (path: string | undefined) => Promise<void>
-  selectCurrentDir: () => void
+  openRoleEditor: (role: SnapshotRole | null) => void
+}
+
+/** 文件浏览器态（栏内自有）。 */
+interface FileBrowserState {
+  open: boolean
+  loading: boolean
+  list: BrowseResult | null
+  error: string
 }
 
 export function AsidePanel(props: AsidePanelProps): ReactNode {
-  const { snap, group, asideOpen, wsDraft, setWsDraft, fileBrowser, setFileBrowser, mutate, openRoleEditor, openBrowser, selectCurrentDir } = props
+  const { snap, group, asideOpen, mutate, openRoleEditor } = props
+  const [wsDraft, setWsDraft] = useState<string | null>(null)
+  const [fileBrowser, setFileBrowser] = useState<FileBrowserState | null>(null)
 
   const commitWsDir = (): void => {
     if (wsDraft !== null && group && wsDraft !== (group.workspaceDir || '')) {
       void mutate({ op: 'setWorkspaceDir', groupId: group.id, path: wsDraft })
     }
     setWsDraft(null)
+  }
+
+  const openBrowser = async (path: string | undefined): Promise<void> => {
+    setFileBrowser({ open: true, loading: true, list: null, error: '' })
+    try {
+      const res = await api.action({ kind: 'browse', path: path || '' }) as BrowseResult
+      if (res && res.ok) setFileBrowser({ open: true, loading: false, list: res, error: '' })
+      else setFileBrowser({ open: true, loading: false, list: null, error: (res && res.error) || '浏览失败' })
+    } catch (e) {
+      setFileBrowser({ open: true, loading: false, list: null, error: String((e && (e as Error).message) || e) })
+    }
+  }
+
+  const selectCurrentDir = (): void => {
+    if (!fileBrowser || !fileBrowser.list || !group) return
+    const path = fileBrowser.list.path!
+    void mutate({ op: 'setWorkspaceDir', groupId: group.id, path })
+    setWsDraft(null)
+    setFileBrowser(null)
   }
 
   return (
@@ -38,7 +63,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
           群成员
           <span className="dsgc-secspacer" />
           <span className="dsgc-seccount">{group.roleIds.length ? group.roleIds.length + ' 个' : ''}</span>
-          <P.Button variant="ghost" size="sm" onClick={() => { void openRoleEditor(null) }} aria-label="添加角色">
+          <P.Button variant="ghost" size="sm" onClick={() => { openRoleEditor(null) }} aria-label="添加角色">
             {Icon(P.IconPlusOutline16, 14)}添加
           </P.Button>
         </div>
@@ -54,8 +79,8 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                     className={'dsgc-role' + (r.enabled ? '' : ' off')}
                     role="button"
                     tabIndex={0}
-                    onClick={() => { void openRoleEditor(r) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void openRoleEditor(r) } }}
+                    onClick={() => { openRoleEditor(r) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); openRoleEditor(r) } }}
                     title="点击编辑角色"
                   >
                     <div className="dsgc-rolehead">
@@ -94,7 +119,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                           className="dsgc-opbtn"
                           title="编辑角色"
                           aria-label="编辑角色"
-                          onClick={(e) => { e.stopPropagation(); void openRoleEditor(r) }}
+                          onClick={(e) => { e.stopPropagation(); openRoleEditor(r) }}
                         >
                           {Icon(P.IconEditOutline16, 14)}
                         </button>

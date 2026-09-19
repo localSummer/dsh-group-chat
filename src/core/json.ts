@@ -27,3 +27,20 @@ export function roleJson(r: Partial<RoleRecord>): Record<string, unknown> {
   if (typeof r.reasoningEffort === 'string' && r.reasoningEffort && r.reasoningEffort !== 'default') o.reasoningEffort = r.reasoningEffort
   return o
 }
+
+/**
+ * 宽容 JSON 提取（模型输出/供应商错误原文的统一解析入口）：
+ * 取首个 { 至末个 } 的片段解析，仅接受普通对象；失败返回 null。
+ * 代码围栏剥离由调用方按需先行处理（供应商错误原文不剥）。
+ */
+export function looseJson(raw: string): Record<string, unknown> | null {
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+  if (start < 0 || end <= start) return null
+  try {
+    const parsed = JSON.parse(raw.slice(start, end + 1)) as unknown
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null
+  } catch {
+    return null
+  }
+}

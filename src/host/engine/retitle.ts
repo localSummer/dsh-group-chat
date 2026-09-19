@@ -6,28 +6,14 @@
  */
 
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
+import { looseJson } from '../../core/json.ts'
 import type { SessionRecord } from '../../core/types.ts'
 import { DEFAULT_SESSION_NAME, type HostState } from '../state.ts'
+import { defaultModel, speakerNameOf } from './defaults.ts'
 
 /** 仍是新建占位名（含改名之前的「会话 N」存量），自动标题尚未落地。 */
 const isPlaceholderName = (name: string): boolean =>
   name === DEFAULT_SESSION_NAME || /^会话 \d+$/.test(name)
-
-/** DSH 默认模型（agentDefaultModel 服务缺位或未配置时返回 null，调用方静默跳过）。 */
-const defaultModel = (core: HostState): { provider: string, model: string } | null => {
-  try {
-    // cordis 语义：未 inject 的 ctx 属性访问会抛错（"cannot get property without
-    // inject"），`?.` 接不住——可选消费必须走 reflect.get（读全局注册表，缺位返回
-    // undefined）。直接属性访问曾致 retitle 被静默跳过（标题/主题从不生成）。
-    const svc = core.ctx.reflect.get('agentDefaultModel')
-    const sel = svc ? svc.currentSelection() : null
-    return sel && typeof sel.provider === 'string' && typeof sel.model === 'string' && sel.provider && sel.model
-      ? { provider: sel.provider, model: sel.model }
-      : null
-  } catch {
-    return null
-  }
-}
 
 /** 命名输入：最近 40 条非系统消息的紧凑转写（每条 500 字符封顶，命名不需要全文）。 */
 const titleTranscript = (core: HostState, sess: SessionRecord): string => {
@@ -35,26 +21,18 @@ const titleTranscript = (core: HostState, sess: SessionRecord): string => {
   for (const mid of sess.messageIds.slice(-40)) {
     const m = core.messages.get(mid)
     if (!m || m.speaker === 'system' || m.error || !m.text) continue
-    const name = m.speaker === 'user' ? '用户' : (core.roles.get(m.speaker) || { name: undefined }).name || '成员'
-    out.push('【' + name + '】' + m.text.replace(/\s+/g, ' ').slice(0, 500))
+    out.push('【' + speakerNameOf(core.roles, m.speaker) + '】' + m.text.replace(/\s+/g, ' ').slice(0, 500))
   }
   return out.join('\n')
 }
 
-/** 宽容解析模型输出：剥代码围栏 → 取首个 { 至末个 } 的 JSON → 校验并封顶字段。 */
+/** 宽容解析模型输出：剥代码围栏 → looseJson → 校验并封顶字段。 */
 const parseRetitle = (raw: string): { name?: string, topic?: string } => {
-  const body = raw.replace(/```(?:json)?/g, '')
-  const l = body.indexOf('{')
-  const r = body.lastIndexOf('}')
-  if (l < 0 || r <= l) return {}
-  try {
-    const o = JSON.parse(body.slice(l, r + 1)) as { name?: unknown, topic?: unknown }
-    const name = typeof o.name === 'string' ? o.name.trim() : ''
-    const topic = typeof o.topic === 'string' ? o.topic.trim() : ''
-    return { name: name ? name.slice(0, 24) : undefined, topic: topic ? topic.slice(0, 120) : undefined }
-  } catch {
-    return {}
-  }
+  const o = looseJson(raw.replace(/```(?:json)?/g, ''))
+  if (!o) return {}
+  const name = typeof o.name === 'string' ? o.name.trim() : ''
+  const topic = typeof o.topic === 'string' ? o.topic.trim() : ''
+  return { name: name ? name.slice(0, 24) : undefined, topic: topic ? topic.slice(0, 120) : undefined }
 }
 
 /**

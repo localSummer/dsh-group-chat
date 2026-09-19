@@ -13,24 +13,11 @@ import {
   parseConstraints,
   squeezedMaxSeq,
   squeezedMessages,
-  speakerLabel,
   takeFoldBatch,
 } from '../../core/constraints.ts'
 import type { SessionRecord } from '../../core/types.ts'
 import type { HostState } from '../state.ts'
-
-/** DSH 默认模型（与 retitle 同一读取面；缺位返回 null）。 */
-const defaultModel = (core: HostState): { provider: string, model: string } | null => {
-  try {
-    const svc = core.ctx.reflect.get('agentDefaultModel')
-    const sel = svc ? svc.currentSelection() : null
-    return sel && typeof sel.provider === 'string' && typeof sel.model === 'string' && sel.provider && sel.model
-      ? { provider: sel.provider, model: sel.model }
-      : null
-  } catch {
-    return null
-  }
-}
+import { defaultModel, speakerNameOf } from './defaults.ts'
 
 /**
  * 每轮 send 结束后折叠窗口外约束：fire-and-forget、不产生消息、静默失败。
@@ -41,13 +28,11 @@ export function createFold(core: HostState, deps: { touch: () => void, scheduleP
   const { touch, schedulePersist } = deps
   const folding = new Set<string>()
 
-  const nameOf = (speaker: string): string => speakerLabel(speaker, (roles.get(speaker) || { name: undefined }).name)
-
   return async (sess: SessionRecord): Promise<void> => {
     if (folding.has(sess.id)) return
     const squeezed = squeezedMessages(messages, sess)
     if (!squeezed.length) return
-    const input = takeFoldBatch(squeezed, (m) => nameOf(m.speaker))
+    const input = takeFoldBatch(squeezed, (m) => speakerNameOf(roles, m.speaker))
     const watermark = squeezedMaxSeq(input.consumed)
     if (watermark <= 0) return
 

@@ -13,14 +13,14 @@ export declare function execCommand(commandId: 'delete' | 'insertHTML' | 'insert
  * DIV/P 块前补换行（防粘贴残留的块级包裹）。
  */
 export declare function serializeInput(root: HTMLElement): string;
-/** @角色芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删）。 */
+/** @角色芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删；fresh=插入后需营救选区，加 data-new 标记）。 */
 export declare function chipHtml(role: {
     id: string;
     name: string;
     color?: string;
-}): string;
-/** @文件芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删）。 */
-export declare function fileChipHtml(path: string, kind: 'file' | 'directory'): string;
+}, fresh?: boolean): string;
+/** @文件芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删；fresh 同 chipHtml）。 */
+export declare function fileChipHtml(path: string, kind: 'file' | 'directory', fresh?: boolean): string;
 /**
  * 光标前的活跃 @token（角色或文件弹层触发判定）。
  *

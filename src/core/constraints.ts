@@ -3,6 +3,7 @@
  * @module dsh-group-chat/core/constraints
  */
 
+import { looseJson } from './json.ts'
 import { TRANSCRIPT_TOOL_SUMMARY } from './tools.ts'
 import { asConstraintKind, type MessageRecord, type SessionConstraint, type SessionRecord } from './types.ts'
 
@@ -182,18 +183,11 @@ export function sanitizeConstraints(raw: unknown): SessionConstraint[] {
  * 解析折叠模型输出。null = 解析失败（水位不推）；[] = 无新结论（水位推、备忘不动）。
  */
 export function parseConstraints(raw: string): SessionConstraint[] | null {
-  const body = raw.replace(/```(?:json)?/g, '')
-  const l = body.indexOf('{')
-  const r = body.lastIndexOf('}')
-  if (l < 0 || r <= l) return null
-  try {
-    const o = JSON.parse(body.slice(l, r + 1)) as { constraints?: unknown }
-    if (!Object.prototype.hasOwnProperty.call(o, 'constraints')) return null
-    if (!Array.isArray(o.constraints)) return null
-    return sanitizeConstraints(o.constraints)
-  } catch {
-    return null
-  }
+  const o = looseJson(raw.replace(/```(?:json)?/g, ''))
+  if (o === null) return null
+  if (!Object.prototype.hasOwnProperty.call(o, 'constraints')) return null
+  if (!Array.isArray(o.constraints)) return null
+  return sanitizeConstraints(o.constraints)
 }
 
 /** 本批无用户消息时，新的已定/否决降为未决。 */

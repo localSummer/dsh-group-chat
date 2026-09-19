@@ -9,7 +9,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { closeSync, openSync, readSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { isAbsolute, join, sep } from 'node:path'
 import { CMD_CAPTURE_MAX_BYTES, CMD_OUTPUT_MAX_CHARS, READ_FILE_MAX_BYTES, RUN_CMD_TIMEOUT_MS, TOOL_SCHEMAS } from '../../core/tools.ts'
-import type { GroupRecord, RunState, ToolExecution } from '../../core/types.ts'
+import type { GroupRecord, PendingConfirm, ToolExecution } from '../../core/types.ts'
 import type { HostState } from '../state.ts'
 
 /** 工具面。 */
@@ -134,7 +134,7 @@ export function createTools(core: HostState, touch: () => void): Tools {
 
   /** run_command 确认闸门：置 pendingConfirm 后无限等待，confirmCommand/stop/dispose 唤醒。 */
   const requestConfirmation = (toolCallId: string, args: Record<string, unknown>): Promise<boolean> => new Promise((resolve) => {
-    run.pendingConfirm = { toolCallId, tool: 'run_command', args: args as RunState['pendingConfirm'] extends null ? never : NonNullable<RunState['pendingConfirm']>['args'] }
+    run.pendingConfirm = { toolCallId, tool: 'run_command', args: args as PendingConfirm['args'] }
     run.confirmSignal = { resolve }
     touch()
   })

@@ -5,13 +5,8 @@
 
 import { useState, type ReactNode } from 'react'
 import type { SessionConstraint } from '../../core/types.ts'
+import { KIND_LABEL } from '../../core/constraints.ts'
 import { ClipWell, Fold } from './Fold.tsx'
-
-const KIND_LABEL: Record<SessionConstraint['kind'], string> = {
-  decided: '已定',
-  rejected: '否决',
-  open: '未决',
-}
 
 interface ConstraintListProps {
   items: SessionConstraint[]

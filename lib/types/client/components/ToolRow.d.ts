@@ -3,7 +3,7 @@
  * @module dsh-group-chat/client/ToolRow
  */
 import { type ReactNode } from 'react';
-import type { ToolCallView } from '../lib/model.ts';
+import type { ToolCallRecord } from '../../core/types.ts';
 export declare function ToolRow(props: {
-    c: ToolCallView;
+    c: ToolCallRecord;
 }): ReactNode;

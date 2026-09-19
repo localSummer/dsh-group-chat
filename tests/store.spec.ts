@@ -1,7 +1,9 @@
 /**
- * Store 持久化契约冒烟测试：目录布局、原子写、单实例锁、损坏隔离、v1 迁移、残留清理。
+ * Store 持久化契约冒烟测试：目录布局、原子写、单实例锁（含外部进程持有/
+ * 崩溃残留/不可读）、损坏隔离、v1 迁移、残留清理。
  */
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -51,6 +53,28 @@ describe('单实例锁', () => {
     store.release()
     const store2 = new Store(dir)
     store2.release()
+  })
+
+  it('锁被存活的外部进程持有 → 拒绝并报出 PID', () => {
+    const dir = freshDir()
+    writeFileSync(join(dir, '.lock'), JSON.stringify({ pid: process.pid, token: 'x', at: 1 }))
+    expect(() => new Store(dir)).toThrow(new RegExp('持久化锁被进程 ' + process.pid + ' 持有'))
+  })
+
+  it('锁属主进程已死（崩溃残留）→ 自动清理并接管', () => {
+    const dir = freshDir()
+    const dead = spawnSync('true')
+    expect(dead.pid).toBeTruthy()
+    writeFileSync(join(dir, '.lock'), JSON.stringify({ pid: dead.pid, token: 'x', at: 1 }))
+    const store = new Store(dir)
+    expect(existsSync(join(dir, '.lock'))).toBe(true)
+    store.release()
+  })
+
+  it('锁内容不可读 → 明确报错（提示手动删除）', () => {
+    const dir = freshDir()
+    writeFileSync(join(dir, '.lock'), 'not-json')
+    expect(() => new Store(dir)).toThrow(/锁不可读/)
   })
 })
 

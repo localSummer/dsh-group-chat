@@ -127,14 +127,14 @@ export function useMentionChip(
   setMentionIdx: (val: number) => void,
   syncFromDOM: () => void,
 ) {
-  /** 弹层候选 → 删掉光标前的 @词、插入原子芯片 + 尾随空格 */
-  const insertChip = useCallback((role: SnapshotRole): void => {
+  /** 弹层候选 → 删掉光标前的 @词、插入带 data-new 标记的芯片 + 尾随空格。 */
+  const insertChipHtml = useCallback((html: string): void => {
     const el = inputRef.current
     const sel = window.getSelection()
     if (!el || !sel) return
     if (!sel.anchorNode || !el.contains(sel.anchorNode)) return
     el.focus({ preventScroll: true })
-    
+
     // 1. 删除光标前的 @token（包括引号）
     const node = sel.anchorNode
     if (node.nodeType === Node.TEXT_NODE) {
@@ -157,12 +157,13 @@ export function useMentionChip(
         }
       }
     }
-    
-    // 2. 插入芯片
-    execCommand('insertHTML', chipHtml(role).replace('class="dsgc-chipin"', 'class="dsgc-chipin" data-new=""'))
+
+    // 2. 插入芯片（fresh 标记：部分浏览器把选区落进 contenteditable=false 芯片内部，
+    //    曾致空格丢失与光标不可见）
+    execCommand('insertHTML', html)
     const chip = el.querySelector<HTMLElement>('.dsgc-chipin[data-new]')
     if (!chip) return
-    
+
     // 3. 选区显式钉到芯片之后，再补尾随空格
     const after = document.createRange()
     after.setStartAfter(chip)
@@ -176,53 +177,13 @@ export function useMentionChip(
     syncFromDOM()
   }, [inputRef, setMention, setMentionIdx, syncFromDOM])
 
+  const insertChip = useCallback((role: SnapshotRole): void => {
+    insertChipHtml(chipHtml(role, true))
+  }, [insertChipHtml])
+
   const insertFileChip = useCallback((path: string, kind: 'file' | 'directory'): void => {
-    const el = inputRef.current
-    const sel = window.getSelection()
-    if (!el || !sel) return
-    if (!sel.anchorNode || !el.contains(sel.anchorNode)) return
-    el.focus({ preventScroll: true })
-    
-    // 1. 删除光标前的 @token（包括引号）
-    const node = sel.anchorNode
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.nodeValue || ''
-      const off = sel.anchorOffset
-      const before = text.slice(0, off)
-      // 匹配 @词 或 @"词
-      const m = /(?:^|\s)@("?)([^"\s@]*)$/.exec(before)
-      if (m) {
-        const prefixLen = m[1] ? 2 : 1  // @" 或 @
-        const queryLen = m[2].length
-        const start = off - prefixLen - queryLen
-        if (start >= 0) {
-          const range = document.createRange()
-          range.setStart(node, start)
-          range.setEnd(node, off)
-          sel.removeAllRanges()
-          sel.addRange(range)
-          execCommand('delete')
-        }
-      }
-    }
-    
-    // 2. 插入文件芯片
-    execCommand('insertHTML', fileChipHtml(path, kind).replace('class="dsgc-chipin dsgc-chipin-file"', 'class="dsgc-chipin dsgc-chipin-file" data-new=""'))
-    const chip = el.querySelector<HTMLElement>('.dsgc-chipin[data-new]')
-    if (!chip) return
-    
-    // 3. 选区显式钉到芯片之后，再补尾随空格
-    const after = document.createRange()
-    after.setStartAfter(chip)
-    after.collapse(true)
-    sel.removeAllRanges()
-    sel.addRange(after)
-    execCommand('insertText', ' ')
-    chip.removeAttribute('data-new')
-    setMention(null)
-    setMentionIdx(0)
-    syncFromDOM()
-  }, [inputRef, setMention, setMentionIdx, syncFromDOM])
+    insertChipHtml(fileChipHtml(path, kind, true))
+  }, [insertChipHtml])
 
   return { insertChip, insertFileChip }
 }

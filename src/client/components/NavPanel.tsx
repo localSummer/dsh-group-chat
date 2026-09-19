@@ -1,5 +1,5 @@
 /**
- * 左侧导航栏组件
+ * 左侧导航栏组件（群组 → 会话目录树；群组行与会话行共用重命名/删除三件套）。
  * @module dsh-group-chat/client/components
  */
 
@@ -7,6 +7,9 @@ import type { ReactNode, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Icon, P } from '../lib/ui.ts'
 import { HoverTip } from './HoverTip.tsx'
 import { groupById, sessById, sessStatus, SESS_STATUS_LABEL, type ClientSnapshot } from '../lib/model.ts'
+
+/** 目录树节点编辑态形状（群组/会话共用）。 */
+type NodeEdit = { kind: 'group' | 'session', id: string, value: string }
 
 interface NavPanelProps {
   snap: ClientSnapshot
@@ -19,12 +22,53 @@ interface NavPanelProps {
   setGid: (val: string) => void
   setSid: (val: string) => void
   setPartsSel: (val: string[] | null) => void
-  renameDraft: { kind: 'group' | 'session', id: string, value: string } | null
-  setRenameDraft: (val: { kind: 'group' | 'session', id: string, value: string } | null) => void
+  renameDraft: NodeEdit | null
+  setRenameDraft: (val: NodeEdit | null) => void
   confirmDel: { kind: 'group' | 'session', id: string } | null
   setConfirmDel: (val: { kind: 'group' | 'session', id: string } | null) => void
   mutate: (args: Record<string, unknown>) => Promise<unknown>
   navOpen: boolean
+}
+
+/** 内联重命名输入（群组行/会话行同款）。 */
+function RenameField(props: { draft: NodeEdit, set: (d: NodeEdit | null) => void, commit: () => void, keyDown: (e: ReactKeyboardEvent<HTMLInputElement>) => void }): ReactNode {
+  const { draft, set, commit, keyDown } = props
+  return (
+    <input
+      className="dsgc-rename"
+      value={draft.value}
+      autoFocus
+      onChange={(e) => { set({ kind: draft.kind, id: draft.id, value: e.target.value }) }}
+      onBlur={() => { commit() }}
+      onKeyDown={keyDown}
+      onClick={(e) => { e.stopPropagation() }}
+    />
+  )
+}
+
+/** 行尾操作钮：重命名 + 两次点击确认删除（群组行/会话行同款）。 */
+function NodeOps(props: { renameLabel: string, deleteLabel: string, deleteTitle: string, danger: boolean, onRename: () => void, onDelete: () => void }): ReactNode {
+  const { renameLabel, deleteLabel, deleteTitle, danger, onRename, onDelete } = props
+  return (
+    <span className="dsgc-nodeops">
+      <button
+        className="dsgc-opbtn"
+        title={renameLabel}
+        aria-label={renameLabel}
+        onClick={(e) => { e.stopPropagation(); onRename() }}
+      >
+        {Icon(P.IconEditOutline16, 14)}
+      </button>
+      <button
+        className={'dsgc-opbtn' + (danger ? ' danger' : '')}
+        title={deleteTitle}
+        aria-label={deleteLabel}
+        onClick={(e) => { e.stopPropagation(); onDelete() }}
+      >
+        {Icon(P.IconTrashOutline16, 14)}
+      </button>
+    </span>
+  )
 }
 
 export function NavPanel(props: NavPanelProps): ReactNode {
@@ -58,6 +102,22 @@ export function NavPanel(props: NavPanelProps): ReactNode {
     else await mutate({ op: 'deleteSession', sessionId: d.id })
   }
 
+  // 选中即清编辑态（四连调用收敛为一处）
+  const clearEdits = (): void => {
+    setPartsSel(null)
+    setConfirmDel(null)
+    setRenameDraft(null)
+  }
+  const pickGroup = (id: string): void => {
+    setGid(id)
+    clearEdits()
+  }
+  const pickSession = (gidToSet: string, sidToSet: string): void => {
+    setGid(gidToSet)
+    setSid(sidToSet)
+    clearEdits()
+  }
+
   const q = search.trim().toLowerCase()
   const groupMatches = (g: ClientSnapshot['groups'][number]): { show: boolean, filterSessions: boolean } => {
     if (!q) return { show: true, filterSessions: false }
@@ -67,6 +127,7 @@ export function NavPanel(props: NavPanelProps): ReactNode {
   }
 
   const group = gid ? groupById(snap, gid) : null
+  const selected = sid ? sessById(snap, sid) : null
 
   const treeNodes: ReactNode[] = []
   for (const g of snap.groups) {
@@ -76,14 +137,13 @@ export function NavPanel(props: NavPanelProps): ReactNode {
     const isRenameGroup = renameDraft && renameDraft.kind === 'group' && renameDraft.id === g.id
     const isConfirmGroup = confirmDel && confirmDel.kind === 'group' && confirmDel.id === g.id
     const groupChildren: ReactNode[] = []
-    
+
     if (expanded) {
       for (const sessionId of g.sessionIds) {
         const s = sessById(snap, sessionId)
         if (!s) continue
         if (match.filterSessions && !s.name.toLowerCase().includes(q)) continue
-        const sess = sid ? sessById(snap, sid) : null
-        const isActive = sess && s.id === sess.id && g.id === group?.id
+        const isActive = selected && s.id === selected.id && g.id === group?.id
         const isRenameSess = renameDraft && renameDraft.kind === 'session' && renameDraft.id === s.id
         const isConfirm = confirmDel && confirmDel.kind === 'session' && confirmDel.id === s.id
         // 会话状态（对齐主 GUI StateDot：idle 不渲染点）
@@ -95,11 +155,11 @@ export function NavPanel(props: NavPanelProps): ReactNode {
             className={'dsgc-sess-row' + (isActive ? ' on' : '')}
             role="button"
             tabIndex={0}
-            onClick={() => { setGid(g.id); setSid(s.id); setPartsSel(null); setConfirmDel(null); setRenameDraft(null) }}
+            onClick={() => { pickSession(g.id, s.id) }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                setGid(g.id); setSid(s.id); setPartsSel(null); setConfirmDel(null); setRenameDraft(null)
+                pickSession(g.id, s.id)
               }
             }}
           >
@@ -114,66 +174,45 @@ export function NavPanel(props: NavPanelProps): ReactNode {
                 : null}
             </span>
             {isRenameSess
-              ? (
-                <input
-                  className="dsgc-rename"
-                  value={renameDraft!.value}
-                  autoFocus
-                  onChange={(e) => { setRenameDraft({ kind: 'session', id: s.id, value: e.target.value }) }}
-                  onBlur={() => { void commitRename() }}
-                  onKeyDown={renameKeyDown}
-                  onClick={(e) => { e.stopPropagation() }}
-                />
-                )
+              ? <RenameField draft={renameDraft!} set={setRenameDraft} commit={() => { void commitRename() }} keyDown={renameKeyDown} />
               : (
                 <HoverTip label={s.name} side="right" delayMs={500} className="dsgc-sess-name">
                   {s.name}
                 </HoverTip>
                 )}
-            <span className="dsgc-nodeops">
-              <button
-                className="dsgc-opbtn"
-                title="重命名会话"
-                aria-label="重命名会话"
-                onClick={(e) => { e.stopPropagation(); setRenameDraft({ kind: 'session', id: s.id, value: s.name }) }}
-              >
-                {Icon(P.IconEditOutline16, 14)}
-              </button>
-              <button
-                className={'dsgc-opbtn' + (isConfirm ? ' danger' : '')}
-                title={isConfirm ? '再次点击确认删除' : '删除会话'}
-                aria-label="删除会话"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (isConfirm) void doDelete()
-                  else setConfirmDel({ kind: 'session', id: s.id })
-                }}
-              >
-                {Icon(P.IconTrashOutline16, 14)}
-              </button>
-            </span>
+            <NodeOps
+              renameLabel="重命名会话"
+              deleteLabel="删除会话"
+              deleteTitle={isConfirm ? '再次点击确认删除' : '删除会话'}
+              danger={!!isConfirm}
+              onRename={() => { setRenameDraft({ kind: 'session', id: s.id, value: s.name }) }}
+              onDelete={() => {
+                if (isConfirm) void doDelete()
+                else setConfirmDel({ kind: 'session', id: s.id })
+              }}
+            />
           </div>,
         )
       }
-      
+
       groupChildren.push(
         <button key="__add" className="dsgc-addsess" onClick={() => { void mutate({ op: 'createSession', groupId: g.id }) }}>
           {Icon(P.IconPlusOutline16, 14)}新会话
         </button>,
       )
     }
-    
+
     treeNodes.push(
       <div key={g.id} className="dsgc-gnode">
         <div
           className={'dsgc-grow-row' + (g.id === group?.id ? ' on' : '')}
           role="button"
           tabIndex={0}
-          onClick={() => { setGid(g.id); setPartsSel(null); setConfirmDel(null); setRenameDraft(null) }}
+          onClick={() => { pickGroup(g.id) }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              setGid(g.id); setPartsSel(null); setConfirmDel(null); setRenameDraft(null)
+              pickGroup(g.id)
             }
           }}
         >
@@ -194,40 +233,19 @@ export function NavPanel(props: NavPanelProps): ReactNode {
             {Icon(P.IconChevronDownOutline14, 14)}
           </button>
           {isRenameGroup
-            ? (
-              <input
-                className="dsgc-rename"
-                value={renameDraft!.value}
-                autoFocus
-                onChange={(e) => { setRenameDraft({ kind: 'group', id: g.id, value: e.target.value }) }}
-                onBlur={() => { void commitRename() }}
-                onKeyDown={renameKeyDown}
-                onClick={(e) => { e.stopPropagation() }}
-              />
-              )
+            ? <RenameField draft={renameDraft!} set={setRenameDraft} commit={() => { void commitRename() }} keyDown={renameKeyDown} />
             : <span className="dsgc-gname">{g.name}</span>}
-          <span className="dsgc-nodeops">
-            <button
-              className="dsgc-opbtn"
-              title="重命名群组"
-              aria-label="重命名群组"
-              onClick={(e) => { e.stopPropagation(); setRenameDraft({ kind: 'group', id: g.id, value: g.name }) }}
-            >
-              {Icon(P.IconEditOutline16, 14)}
-            </button>
-            <button
-              className={'dsgc-opbtn' + (isConfirmGroup ? ' danger' : '')}
-              title={isConfirmGroup ? '再次点击确认删除' : '删除群组'}
-              aria-label="删除群组"
-              onClick={(e) => {
-                e.stopPropagation()
-                if (isConfirmGroup) void doDelete()
-                else setConfirmDel({ kind: 'group', id: g.id })
-              }}
-            >
-              {Icon(P.IconTrashOutline16, 14)}
-            </button>
-          </span>
+          <NodeOps
+            renameLabel="重命名群组"
+            deleteLabel="删除群组"
+            deleteTitle={isConfirmGroup ? '再次点击确认删除' : '删除群组'}
+            danger={!!isConfirmGroup}
+            onRename={() => { setRenameDraft({ kind: 'group', id: g.id, value: g.name }) }}
+            onDelete={() => {
+              if (isConfirmGroup) void doDelete()
+              else setConfirmDel({ kind: 'group', id: g.id })
+            }}
+          />
         </div>
         {expanded ? <div className="dsgc-sess-list">{groupChildren}</div> : null}
       </div>,

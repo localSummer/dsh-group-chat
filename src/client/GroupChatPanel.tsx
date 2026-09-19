@@ -41,16 +41,10 @@ export function GroupChatPanel(): ReactNode {
     setConfirmClear,
     roleDraft,
     setRoleDraft,
-    roleFormError,
-    setRoleFormError,
     models,
     setModels,
     modelsError,
     setModelsError,
-    fileBrowser,
-    setFileBrowser,
-    wsDraft,
-    setWsDraft,
     partsSel,
     setPartsSel,
     rounds,
@@ -129,11 +123,11 @@ export function GroupChatPanel(): ReactNode {
     if (busyNow || !sess || sendingRef.current) return
     sendingRef.current = true
     try {
-      const parts = mentionedRoles.length ? mentionedRoles.map((r) => r.id) : participants
-      if (!parts.length) {
-        setErr(mentionedRoles.length ? '' : '请至少选择一个参与角色（或在消息中 @成员）')
-        if (!mentionedRoles.length) return
+      if (!participants.length && !mentionedRoles.length) {
+        setErr('请至少选择一个参与角色（或在消息中 @成员）')
+        return
       }
+      const parts = mentionedRoles.length ? mentionedRoles.map((r) => r.id) : participants
       const res = await action({ kind: 'send', sessionId: sess.id, text: input, participantRoleIds: parts, rounds }) as ActionOk | null
       if (res && !res.ok && res.error) setErr(res.error)
       else if (res && res.ok) {
@@ -220,49 +214,12 @@ export function GroupChatPanel(): ReactNode {
 
   const openRoleEditor = async (role: SnapshotRole | null): Promise<void> => {
     setErr('')
-    setRoleFormError('')
     if (!models || modelsError) await fetchModels()
     setRoleDraft(role ? draftFromRole(role) : blankDraft())
   }
 
-  const saveRole = async (): Promise<void> => {
-    if (!roleDraft) return
-    if (!roleDraft.name.trim()) {
-      setRoleFormError('角色名称不能为空')
-      return
-    }
-    if (!roleDraft.provider || !roleDraft.model) {
-      setRoleFormError('请选择角色绑定的模型')
-      return
-    }
-    const res = await mutate({ op: 'upsertRole', groupId: group.id, role: roleDraft })
-    if (res && res.ok && res.snapshot && !res.snapshot.error) {
-      setRoleDraft(null)
-      setRoleFormError('')
-    }
-  }
-
   const stopRun = async (): Promise<void> => {
     await action({ kind: 'stop', sessionId: sess!.id })
-  }
-
-  const openBrowser = async (path: string | undefined): Promise<void> => {
-    setFileBrowser({ open: true, loading: true, list: null, error: '' })
-    try {
-      const res = await api.action({ kind: 'browse', path: path || '' }) as import('../core/types.ts').BrowseResult
-      if (res && res.ok) setFileBrowser({ open: true, loading: false, list: res, error: '' })
-      else setFileBrowser({ open: true, loading: false, list: null, error: (res && res.error) || '浏览失败' })
-    } catch (e) {
-      setFileBrowser({ open: true, loading: false, list: null, error: String((e && (e as Error).message) || e) })
-    }
-  }
-
-  const selectCurrentDir = (): void => {
-    if (!fileBrowser || !fileBrowser.list || !group) return
-    const path = fileBrowser.list.path!
-    void mutate({ op: 'setWorkspaceDir', groupId: group.id, path })
-    setWsDraft(null)
-    setFileBrowser(null)
   }
 
   return (
@@ -338,14 +295,8 @@ export function GroupChatPanel(): ReactNode {
         snap={snap}
         group={group}
         asideOpen={asideOpen}
-        wsDraft={wsDraft}
-        setWsDraft={setWsDraft}
-        fileBrowser={fileBrowser}
-        setFileBrowser={setFileBrowser}
         mutate={mutate}
         openRoleEditor={openRoleEditor}
-        openBrowser={openBrowser}
-        selectCurrentDir={selectCurrentDir}
       />
       {sess && confirmClear
         ? (
@@ -386,12 +337,12 @@ export function GroupChatPanel(): ReactNode {
           <RoleDrawer
             draft={roleDraft}
             set={setRoleDraft}
+            groupId={group.id}
             models={models}
             modelsError={modelsError}
             onRetryModels={() => { void fetchModels() }}
-            onSave={() => { void saveRole() }}
-            onCancel={() => { setRoleDraft(null); setRoleFormError('') }}
-            formError={roleFormError}
+            mutate={mutate}
+            onCancel={() => { setRoleDraft(null) }}
           />
           )
         : null}

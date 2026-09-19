@@ -2,7 +2,7 @@
  * 浏览器半共享常量与小工具（纯函数，无 React 依赖）。
  * @module dsh-group-chat/client/model
  */
-import type { RoleRecord, Snapshot, ToolCallRecord } from '../../core/types.ts';
+import type { Snapshot } from '../../core/types.ts';
 /** 会话列表状态派生与文案（core 纯函数，供 NavPanel 渲染）。 */
 export { sessStatus, SESS_STATUS_LABEL, type SessStatus } from '../../core/status.ts';
 /** 角色标识色调色板（与宿主半一致）。 */
@@ -72,9 +72,3 @@ export interface RoleDraft {
 }
 export declare function draftFromRole(role: SnapshotRole): RoleDraft;
 export declare function blankDraft(): RoleDraft;
-/** 工具调用行的展示参数。 */
-export type ToolCallView = ToolCallRecord;
-/** 草稿是否可作为角色落库（宿主侧再校验一次）。 */
-export declare function draftMissing(draft: RoleDraft): string;
-/** RoleRecord 兼容视图（快照角色行即其展示子集）。 */
-export type RoleView = RoleRecord;
