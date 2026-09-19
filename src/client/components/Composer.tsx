@@ -7,6 +7,7 @@ import type { ReactNode, KeyboardEvent as ReactKeyboardEvent, ClipboardEvent as 
 import { Icon, P } from '../lib/ui.ts'
 import { PermissionSelect } from './PermissionSelect.tsx'
 import { escapeRegExp, type ClientSnapshot, type SnapshotRole } from '../lib/model.ts'
+import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
 interface ComposerProps {
   snap: ClientSnapshot
@@ -17,9 +18,12 @@ interface ComposerProps {
   mentionedRoles: SnapshotRole[]
   busyNow: boolean
   input: string
-  mention: string | null
+  mention: AtToken | null
   mentionCandidates: SnapshotRole[]
   mentionIdxC: number
+  fileCandidates: Array<{ path: string, isDir: boolean }>
+  fileSearchError: string | null
+  fileSearchLoading: boolean
   rounds: number
   err: string
   atBottom: boolean
@@ -35,10 +39,11 @@ interface ComposerProps {
   onDropCE: (e: ReactDragEvent<HTMLDivElement>) => void
   onDragOverCE: (e: ReactDragEvent<HTMLDivElement>) => void
   insertChip: (role: SnapshotRole) => void
+  insertFileChip: (path: string, kind: 'file' | 'directory') => void
   sendMsg: () => Promise<void>
   stopRun: () => Promise<void>
   mutate: (args: Record<string, unknown>) => Promise<unknown>
-  setMention: (val: string | null) => void
+  setMention: (val: AtToken | null) => void
 }
 
 export function Composer(props: ComposerProps): ReactNode {
@@ -54,6 +59,9 @@ export function Composer(props: ComposerProps): ReactNode {
     mention,
     mentionCandidates,
     mentionIdxC,
+    fileCandidates,
+    fileSearchError,
+    fileSearchLoading,
     rounds,
     err,
     atBottom,
@@ -69,6 +77,7 @@ export function Composer(props: ComposerProps): ReactNode {
     onDropCE,
     onDragOverCE,
     insertChip,
+    insertFileChip,
     sendMsg,
     stopRun,
     mutate,
@@ -113,7 +122,7 @@ export function Composer(props: ComposerProps): ReactNode {
       </div>
       <div className="dsgc-card">
         <div className="dsgc-mentionwrap">
-          {mention !== null && mentionCandidates.length > 0
+          {mention !== null && mention.query === '' && mentionCandidates.length > 0
             ? (
               <div className="dsgc-mention" role="listbox">
                 {mentionCandidates.map((r, i) => (
@@ -135,7 +144,38 @@ export function Composer(props: ComposerProps): ReactNode {
                 <span className="dsgc-mentionhint">↑↓ 选择 · Enter/Tab 插入</span>
               </div>
               )
-            : null}
+            : mention !== null && mention.query !== ''
+              ? (
+                <div className="dsgc-mention dsgc-mention-file" role="listbox">
+                  {fileSearchLoading
+                    ? <div className="dsgc-mentionitem dsgc-hint">检索中…</div>
+                    : fileSearchError
+                      ? <div className="dsgc-mentionitem dsgc-hint">{fileSearchError}</div>
+                      : fileCandidates.length === 0
+                        ? <div className="dsgc-mentionitem dsgc-hint">无匹配文件</div>
+                        : fileCandidates.map((item, i) => (
+                          <button
+                            key={item.path}
+                            type="button"
+                            className={'dsgc-mentionitem' + (i === mentionIdxC ? ' on' : '')}
+                            role="option"
+                            aria-selected={i === mentionIdxC ? 'true' : 'false'}
+                            onMouseDown={(e) => { e.preventDefault() }}
+                            onClick={() => {
+                              insertFileChip(item.path, item.isDir ? 'directory' : 'file')
+                            }}
+                            onMouseEnter={() => setMentionIdx(i)}
+                          >
+                            <span className="dsgc-mentionname">{item.isDir ? '📁 ' : '📄 '}{item.path}</span>
+                            {item.isDir ? <span className="dsgc-mentionhint">→</span> : null}
+                          </button>
+                        ))}
+                  <span className="dsgc-mentionhint">
+                    {fileCandidates.some(f => f.isDir) ? '↑↓ 选择 · Enter 插入 · Tab 进入目录 · Esc 关闭' : '↑↓ 选择 · Enter 插入 · Esc 关闭'}
+                  </span>
+                </div>
+                )
+              : null}
           {!input.trim()
             ? <div className="dsgc-ph" aria-hidden="true">发消息给全群，@成员 点名让其回应（留空则让角色自由讨论）…</div>
             : null}

@@ -184,6 +184,8 @@ export const CSS = [
   '.dsgc-mentionname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}',
   '.dsgc-mentionmodel{font-size:11px;color:var(--dsw-alias-label-tertiary,inherit)}',
   '.dsgc-mentionhint{font-size:11px;color:var(--dsw-alias-label-tertiary,inherit);padding:2px 8px 1px}',
+  '.dsgc-mention-file .dsgc-mentionitem.dsgc-hint{cursor:default;color:var(--dsw-alias-label-tertiary,inherit);justify-content:center}',
+  '.dsgc-mention-file .dsgc-mentionitem.dsgc-hint:hover{background:none}',
   /* ===== 右上下文栏 ===== */
   '.dsgc-aside{width:304px;flex:none;display:flex;flex-direction:column;gap:10px;border-left:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));padding:12px;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent;transition:width .28s cubic-bezier(.16,1,.3,1),opacity .18s ease,padding .28s cubic-bezier(.16,1,.3,1),border-left-width .28s cubic-bezier(.16,1,.3,1)}',
   /* 子元素经 flex 列默认 stretch 填满内容区（面板为 content-box、内容区实宽

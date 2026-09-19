@@ -8,6 +8,7 @@ import { Icon, P } from '../lib/ui.ts'
 import { MessageFlow } from './MessageFlow.tsx'
 import { Composer } from './Composer.tsx'
 import type { ClientSnapshot, SnapshotRole } from '../lib/model.ts'
+import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
 interface ChatPanelProps {
   snap: ClientSnapshot
@@ -18,9 +19,12 @@ interface ChatPanelProps {
   mentionedRoles: SnapshotRole[]
   busyNow: boolean
   input: string
-  mention: string | null
+  mention: AtToken | null
   mentionCandidates: SnapshotRole[]
   mentionIdxC: number
+  fileCandidates: Array<{ path: string, isDir: boolean }>
+  fileSearchError: string | null
+  fileSearchLoading: boolean
   rounds: number
   err: string
   atBottom: boolean
@@ -44,11 +48,12 @@ interface ChatPanelProps {
   onDropCE: (e: React.DragEvent<HTMLDivElement>) => void
   onDragOverCE: (e: React.DragEvent<HTMLDivElement>) => void
   insertChip: (role: SnapshotRole) => void
+  insertFileChip: (path: string, kind: 'file' | 'directory') => void
   sendMsg: () => Promise<void>
   stopRun: () => Promise<void>
   action: (payload: Record<string, unknown>) => Promise<unknown>
   mutate: (args: Record<string, unknown>) => Promise<unknown>
-  setMention: (val: string | null) => void
+  setMention: (val: AtToken | null) => void
 }
 
 export function ChatPanel(props: ChatPanelProps): ReactNode {
@@ -64,6 +69,9 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
     mention,
     mentionCandidates,
     mentionIdxC,
+    fileCandidates,
+    fileSearchError,
+    fileSearchLoading,
     rounds,
     err,
     atBottom,
@@ -87,6 +95,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
     onDropCE,
     onDragOverCE,
     insertChip,
+    insertFileChip,
     sendMsg,
     stopRun,
     action,
@@ -176,6 +185,9 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
         mention={mention}
         mentionCandidates={mentionCandidates}
         mentionIdxC={mentionIdxC}
+        fileCandidates={fileCandidates}
+        fileSearchError={fileSearchError}
+        fileSearchLoading={fileSearchLoading}
         rounds={rounds}
         err={err}
         atBottom={atBottom}
@@ -191,6 +203,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
         onDropCE={onDropCE}
         onDragOverCE={onDragOverCE}
         insertChip={insertChip}
+        insertFileChip={insertFileChip}
         sendMsg={sendMsg}
         stopRun={stopRun}
         mutate={mutate}

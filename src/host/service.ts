@@ -52,6 +52,8 @@ export function createGroupChatService(ctx: Context): GroupChatService {
     wakeConfirm: tools.wakeConfirm,
     killChild: tools.killChild,
     browse: materials.browse,
+    fileSearch: materials.fileSearch,
+    disposeFileSearch: materials.disposeFileSearch,
   })
 
   return {
@@ -68,6 +70,7 @@ export function createGroupChatService(ctx: Context): GroupChatService {
       core.run.stopping = true
       if (core.run.pendingConfirm) tools.wakeConfirm()
       tools.killChild()
+      materials.disposeFileSearch()
       bus.dispose()
       persist.release()
     },

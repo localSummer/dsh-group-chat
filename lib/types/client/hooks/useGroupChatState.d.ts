@@ -3,6 +3,7 @@
  * @module dsh-group-chat/client/hooks
  */
 import type { ClientSnapshot, ModelsResponse, RoleDraft } from '../lib/model.ts';
+import type { AtToken } from '../../shared/file-mention-grammar.ts';
 export interface MutateResponse {
     ok: boolean;
     snapshot?: ClientSnapshot;
@@ -76,8 +77,8 @@ export declare function useGroupChatState(): {
     setErr: import("react").Dispatch<import("react").SetStateAction<string>>;
     topicDraft: string | null;
     setTopicDraft: import("react").Dispatch<import("react").SetStateAction<string | null>>;
-    mention: string | null;
-    setMention: import("react").Dispatch<import("react").SetStateAction<string | null>>;
+    mention: AtToken | null;
+    setMention: import("react").Dispatch<import("react").SetStateAction<AtToken | null>>;
     mentionIdx: number;
     setMentionIdx: import("react").Dispatch<import("react").SetStateAction<number>>;
     asideOpen: boolean;

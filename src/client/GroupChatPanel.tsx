@@ -16,7 +16,9 @@ import { AsidePanel } from './components/AsidePanel.tsx'
 import { ChatPanel } from './components/ChatPanel.tsx'
 import { useGroupChatState, type ActionOk } from './hooks/useGroupChatState.ts'
 import { useComposerEffects, useComposerInput, useMentionChip, useInputKeyboard } from './hooks/useComposer.ts'
-import { draftFromRole, blankDraft, escapeRegExp, groupById, roleById, sessById, type ClientSnapshot, type ModelsResponse, type SnapshotRole } from './lib/model.ts'
+import { useFileSearch } from './hooks/useFileSearch.ts'
+import { useMentionCandidates, useMentionedRoles, useSafeMentionIndex } from './hooks/useMentionState.ts'
+import { draftFromRole, blankDraft, groupById, roleById, sessById, type ClientSnapshot, type ModelsResponse, type SnapshotRole } from './lib/model.ts'
 
 export function GroupChatPanel(): ReactNode {
   const state = useGroupChatState()
@@ -105,15 +107,21 @@ export function GroupChatPanel(): ReactNode {
     if (finishedRun && sess && finishedRun.sessionId === sess.id) void mutate({ op: 'ackFinish' })
   }, [finishedRun, sess])
 
-  // @成员：候选与插入
-  const mentionCandidates = mention !== null
-    ? enabledRoles.filter((r) => r.name.toLowerCase().includes(mention.toLowerCase()))
-    : []
-  const mentionIdxC = mentionCandidates.length ? Math.min(mentionIdx, mentionCandidates.length - 1) : 0
+  // 提及状态：角色候选、文件搜索、索引安全化
+  const mentionCandidates = useMentionCandidates(mention, enabledRoles)
+  const { fileCandidates, fileSearchError, fileSearchLoading } = useFileSearch(
+    mention,
+    group?.id,
+    action
+  )
+  const mentionIdxC = useSafeMentionIndex(
+    mentionCandidates.length || fileCandidates.length,
+    mentionIdx
+  )
+  
+  const mentionedRoles = useMentionedRoles(input, enabledRoles)
 
-  const { insertChip } = useMentionChip(inputRef, setMention, setMentionIdx, syncFromDOM)
-
-  const mentionedRoles = enabledRoles.filter((r) => new RegExp('(^|\\s)@' + escapeRegExp(r.name) + '(?=\\s|$)').test(input))
+  const { insertChip, insertFileChip } = useMentionChip(inputRef, setMention, setMentionIdx, syncFromDOM)
 
   const sendMsg = useCallback(async (): Promise<void> => {
     if (busyNow || !sess || sendingRef.current) return
@@ -140,7 +148,7 @@ export function GroupChatPanel(): ReactNode {
     }
   }, [busyNow, sess, sendingRef, mentionedRoles, participants, action, rounds, input, inputRef, setInput, setMention, setErr, setAtBottom, syncFromDOM])
 
-  const { onInputKeyDown } = useInputKeyboard(mention, mentionCandidates, mentionIdxC, setMentionIdx, insertChip, sendMsg)
+  const { onInputKeyDown } = useInputKeyboard(mention, mentionCandidates, mentionIdxC, setMentionIdx, insertChip, insertFileChip, fileCandidates, setMention, sendMsg)
 
   // ---- 条件性早期返回 ----
   if (!snap) {
@@ -276,6 +284,9 @@ export function GroupChatPanel(): ReactNode {
         mention={mention}
         mentionCandidates={mentionCandidates}
         mentionIdxC={mentionIdxC}
+        fileCandidates={fileCandidates}
+        fileSearchError={fileSearchError}
+        fileSearchLoading={fileSearchLoading}
         rounds={rounds}
         err={err}
         atBottom={atBottom}
@@ -302,6 +313,7 @@ export function GroupChatPanel(): ReactNode {
         onDropCE={onDropCE}
         onDragOverCE={onDragOverCE}
         insertChip={insertChip}
+        insertFileChip={insertFileChip}
         sendMsg={sendMsg}
         stopRun={stopRun}
         action={action}

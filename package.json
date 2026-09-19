@@ -59,6 +59,8 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --pretty false"
   },
   "dependencies": {
+    "@deepseek-ai/dsh-file-reference": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-file-reference-local": "0.1.5-rc.2",
     "schemastery": "^3.18.0"
   },
   "peerDependencies": {

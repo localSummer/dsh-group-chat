@@ -4,6 +4,7 @@
  */
 import type { ReactNode } from 'react';
 import type { ClientSnapshot, SnapshotRole } from '../lib/model.ts';
+import type { AtToken } from '../../shared/file-mention-grammar.ts';
 interface ChatPanelProps {
     snap: ClientSnapshot;
     sess: ClientSnapshot['sessions'][number] | null;
@@ -13,9 +14,15 @@ interface ChatPanelProps {
     mentionedRoles: SnapshotRole[];
     busyNow: boolean;
     input: string;
-    mention: string | null;
+    mention: AtToken | null;
     mentionCandidates: SnapshotRole[];
     mentionIdxC: number;
+    fileCandidates: Array<{
+        path: string;
+        isDir: boolean;
+    }>;
+    fileSearchError: string | null;
+    fileSearchLoading: boolean;
     rounds: number;
     err: string;
     atBottom: boolean;
@@ -39,11 +46,12 @@ interface ChatPanelProps {
     onDropCE: (e: React.DragEvent<HTMLDivElement>) => void;
     onDragOverCE: (e: React.DragEvent<HTMLDivElement>) => void;
     insertChip: (role: SnapshotRole) => void;
+    insertFileChip: (path: string, kind: 'file' | 'directory') => void;
     sendMsg: () => Promise<void>;
     stopRun: () => Promise<void>;
     action: (payload: Record<string, unknown>) => Promise<unknown>;
     mutate: (args: Record<string, unknown>) => Promise<unknown>;
-    setMention: (val: string | null) => void;
+    setMention: (val: AtToken | null) => void;
 }
 export declare function ChatPanel(props: ChatPanelProps): ReactNode;
 export {};

@@ -7,7 +7,13 @@
 
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, join } from 'node:path'
-import type { BrowseResult, GroupRecord } from '../../core/types.ts'
+import {
+  DEFAULT_FILE_SEARCH_EXCLUDED_DIRECTORIES,
+  DEFAULT_FILE_SEARCH_MAX_ENTRIES,
+  DEFAULT_FILE_SEARCH_MAX_RESULTS,
+  WorkspaceFileSearch,
+} from '@deepseek-ai/dsh-file-reference-local'
+import type { BrowseResult, FileSearchResult, GroupRecord } from '../../core/types.ts'
 import type { HostState } from '../state.ts'
 
 // 群组工作区目录 → 注入文件清单：目录内文本文件（白名单扩展名、跳过隐藏项，
@@ -23,6 +29,10 @@ export interface Materials {
   materialBlock: (parts: { name: string, content: string, error?: string }[], dir: string) => string
   /** 目录浏览：返回文件+目录条目（绝对路径由 Host 解析，客户端不拼路径）。 */
   browse: (args: { path?: string } | undefined) => Promise<BrowseResult>
+  /** 群工作区 @ 文件检索（WorkspaceFileSearch，根 = 解析后的 workspaceDir）。 */
+  fileSearch: (args: { groupId?: string, query?: string } | undefined) => Promise<FileSearchResult>
+  /** 释放某群（或全部）文件检索索引。 */
+  disposeFileSearch: (groupId?: string) => void
 }
 
 /** 创建资料面。 */
@@ -130,5 +140,53 @@ export function createMaterials(core: HostState): Materials {
     }
   }
 
-  return { loadWorkspaceFiles, materialBlock, browse }
+  const FILE_SEARCH_CONFIG = {
+    maxResults: DEFAULT_FILE_SEARCH_MAX_RESULTS,
+    maxEntries: DEFAULT_FILE_SEARCH_MAX_ENTRIES,
+    excludedDirectories: [...DEFAULT_FILE_SEARCH_EXCLUDED_DIRECTORIES],
+  }
+  const searches = new Map<string, { root: string, search: WorkspaceFileSearch }>()
+
+  const disposeFileSearch = (groupId?: string): void => {
+    if (groupId) {
+      searches.get(groupId)?.search.dispose()
+      searches.delete(groupId)
+      return
+    }
+    for (const hit of searches.values()) hit.search.dispose()
+    searches.clear()
+  }
+
+  const searchFor = (groupId: string, root: string): WorkspaceFileSearch => {
+    const hit = searches.get(groupId)
+    if (hit && hit.root === root) return hit.search
+    hit?.search.dispose()
+    const search = new WorkspaceFileSearch(root, FILE_SEARCH_CONFIG)
+    searches.set(groupId, { root, search })
+    return search
+  }
+
+  const fileSearch = async (args: { groupId?: string, query?: string } | undefined): Promise<FileSearchResult> => {
+    const groupId = String((args && args.groupId) || '')
+    const g = core.groups.get(groupId)
+    if (!g) return { ok: false, error: '群组不存在' }
+    const raw = String(g.workspaceDir || '').trim()
+    if (!raw) return { ok: false, error: '未设置群工作区，无法检索文件' }
+    if (raw === '~' || raw === '/') return { ok: false, error: '工作区不能是 ~ 或 /，请设置具体目录' }
+    try {
+      const res = await resolveMaterialTarget(raw)
+      if (res.info === undefined) return { ok: false, error: '工作区目录不存在（尝试过：' + res.tried.join('；') + '）' }
+      if (res.info.type !== 'directory') return { ok: false, error: '工作区不是目录：' + res.path }
+      const listed = await searchFor(g.id, res.path).list(String((args && args.query) || ''), AbortSignal.timeout(8000))
+      return {
+        ok: true,
+        candidates: listed.map((c) => ({ path: c.path, isDir: c.kind === 'directory' })),
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name === 'TimeoutError') return { ok: false, error: '文件检索超时' }
+      return { ok: false, error: String((e && (e as Error).message) || e) }
+    }
+  }
+
+  return { loadWorkspaceFiles, materialBlock, browse, fileSearch, disposeFileSearch }
 }

@@ -4,7 +4,7 @@
  * 再试 dsh web 进程 cwd。目录浏览器与资料读取共用同一套解析。
  * @module dsh-group-chat/host/materials
  */
-import type { BrowseResult, GroupRecord } from '../../core/types.ts';
+import type { BrowseResult, FileSearchResult, GroupRecord } from '../../core/types.ts';
 import type { HostState } from '../state.ts';
 /** 资料面。 */
 export interface Materials {
@@ -27,6 +27,13 @@ export interface Materials {
     browse: (args: {
         path?: string;
     } | undefined) => Promise<BrowseResult>;
+    /** 群工作区 @ 文件检索（WorkspaceFileSearch，根 = 解析后的 workspaceDir）。 */
+    fileSearch: (args: {
+        groupId?: string;
+        query?: string;
+    } | undefined) => Promise<FileSearchResult>;
+    /** 释放某群（或全部）文件检索索引。 */
+    disposeFileSearch: (groupId?: string) => void;
 }
 /** 创建资料面。 */
 export declare function createMaterials(core: HostState): Materials;

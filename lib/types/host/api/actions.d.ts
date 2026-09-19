@@ -31,4 +31,6 @@ export declare function createActions(core: HostState, deps: {
     wakeConfirm: () => void;
     killChild: () => void;
     browse: Materials['browse'];
+    fileSearch: Materials['fileSearch'];
+    disposeFileSearch: Materials['disposeFileSearch'];
 }): Actions;

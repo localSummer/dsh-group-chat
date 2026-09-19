@@ -28,9 +28,11 @@ export function createActions(core: HostState, deps: {
   wakeConfirm: () => void
   killChild: () => void
   browse: Materials['browse']
+  fileSearch: Materials['fileSearch']
+  disposeFileSearch: Materials['disposeFileSearch']
 }): Actions {
   const { llm, groups, sessions, roles, messages, run } = core
-  const { touch, snapshot, schedulePersist, dropDirty, appendMessage, runLoop, wakeConfirm, killChild, browse } = deps
+  const { touch, snapshot, schedulePersist, dropDirty, appendMessage, runLoop, wakeConfirm, killChild, browse, fileSearch, disposeFileSearch } = deps
 
   const mutate = (args: MutateArgs): Snapshot => {
     const op = args && args.op
@@ -65,6 +67,7 @@ export function createActions(core: HostState, deps: {
       }
       for (const rid of g.roleIds) roles.delete(rid)
       groups.delete(g.id)
+      disposeFileSearch(g.id)
       dropDirty({ roles: g.id, workspace: g.id })
       if (core.store !== null) {
         try {
@@ -324,6 +327,7 @@ export function createActions(core: HostState, deps: {
     if (kind === 'models') return { ok: true, ...(await models()) }
     if (kind === 'efforts') return efforts(body as { provider?: string, model?: string })
     if (kind === 'browse') return browse(body as { path?: string })
+    if (kind === 'fileSearch') return fileSearch(body as { groupId?: string, query?: string })
     return { ok: false, error: 'unknown-action' }
   }
 

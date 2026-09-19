@@ -4,6 +4,7 @@
  */
 import type { ReactNode, KeyboardEvent as ReactKeyboardEvent, ClipboardEvent as ReactClipboardEvent, DragEvent as ReactDragEvent } from 'react';
 import { type ClientSnapshot, type SnapshotRole } from '../lib/model.ts';
+import type { AtToken } from '../../shared/file-mention-grammar.ts';
 interface ComposerProps {
     snap: ClientSnapshot;
     sess: ClientSnapshot['sessions'][number] | null;
@@ -13,9 +14,15 @@ interface ComposerProps {
     mentionedRoles: SnapshotRole[];
     busyNow: boolean;
     input: string;
-    mention: string | null;
+    mention: AtToken | null;
     mentionCandidates: SnapshotRole[];
     mentionIdxC: number;
+    fileCandidates: Array<{
+        path: string;
+        isDir: boolean;
+    }>;
+    fileSearchError: string | null;
+    fileSearchLoading: boolean;
     rounds: number;
     err: string;
     atBottom: boolean;
@@ -31,10 +38,11 @@ interface ComposerProps {
     onDropCE: (e: ReactDragEvent<HTMLDivElement>) => void;
     onDragOverCE: (e: ReactDragEvent<HTMLDivElement>) => void;
     insertChip: (role: SnapshotRole) => void;
+    insertFileChip: (path: string, kind: 'file' | 'directory') => void;
     sendMsg: () => Promise<void>;
     stopRun: () => Promise<void>;
     mutate: (args: Record<string, unknown>) => Promise<unknown>;
-    setMention: (val: string | null) => void;
+    setMention: (val: AtToken | null) => void;
 }
 export declare function Composer(props: ComposerProps): ReactNode;
 export {};

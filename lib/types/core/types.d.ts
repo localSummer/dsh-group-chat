@@ -165,6 +165,15 @@ export interface BrowseResult {
     }[];
     error?: string;
 }
+/** 群工作区 @ 文件检索结果（fileSearch action 的载荷）。 */
+export interface FileSearchResult {
+    ok: boolean;
+    candidates?: {
+        path: string;
+        isDir: boolean;
+    }[];
+    error?: string;
+}
 /** 发到客户端的全量快照（wire 形态）。 */
 export interface Snapshot {
     revision: number;

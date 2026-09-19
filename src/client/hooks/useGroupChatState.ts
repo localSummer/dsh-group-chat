@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api.ts'
 import type { ClientSnapshot, ModelsResponse, RoleDraft } from '../lib/model.ts'
+import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
 export interface MutateResponse {
   ok: boolean
@@ -85,7 +86,7 @@ export function useGroupChatState() {
   
   // 输入与 @提及
   const [input, setInput] = useState('')
-  const [mention, setMention] = useState<string | null>(null)
+  const [mention, setMention] = useState<AtToken | null>(null)
   const [mentionIdx, setMentionIdx] = useState(0)
   
   // 错误提示
@@ -125,14 +126,14 @@ export function useGroupChatState() {
   }, [applySnap, selectGroup, selectSession])
 
   // API 操作封装
-  const action = async (payload: Record<string, unknown>): Promise<unknown> => {
+  const action = useCallback(async (payload: Record<string, unknown>): Promise<unknown> => {
     try {
       return await api.action(payload)
     } catch (e) {
       setErr(String((e && (e as Error).message) || e))
       return null
     }
-  }
+  }, [])
 
   const mutate = async (args: Record<string, unknown>): Promise<MutateResponse | null> => {
     setErr('')
