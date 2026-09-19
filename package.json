@@ -31,6 +31,10 @@
     "README.md"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/localSummer/dsh-group-chat"
+  },
   "keywords": [
     "dsh-plugin",
     "deepseek-harness"
@@ -56,7 +60,8 @@
     "watch": "tsdown --watch",
     "prepare": "tsc -p tsconfig.build.json && tsdown",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --pretty false"
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --pretty false",
+    "pack:check": "pnpm build && pnpm pack --dry-run"
   },
   "dependencies": {
     "@deepseek-ai/dsh-file-reference": "0.1.5-rc.2",
