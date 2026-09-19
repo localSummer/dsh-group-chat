@@ -147,36 +147,40 @@ export function Composer(props: ComposerProps): ReactNode {
             : mention !== null && mention.query !== ''
               ? (
                 <div className="dsgc-mention dsgc-mention-file" role="listbox">
-                  {fileSearchLoading
-                    ? <div className="dsgc-mentionitem dsgc-hint">检索中…</div>
-                    : fileSearchError
-                      ? <div className="dsgc-mentionitem dsgc-hint">{fileSearchError}</div>
-                      : fileCandidates.length === 0
-                        ? <div className="dsgc-mentionitem dsgc-hint">无匹配文件</div>
-                        : fileCandidates.map((item, i) => (
-                          <button
-                            key={item.path}
-                            type="button"
-                            className={'dsgc-mentionitem' + (i === mentionIdxC ? ' on' : '')}
-                            role="option"
-                            aria-selected={i === mentionIdxC ? 'true' : 'false'}
-                            onMouseDown={(e) => { e.preventDefault() }}
-                            onClick={() => {
-                              insertFileChip(item.path, item.isDir ? 'directory' : 'file')
-                            }}
-                            onMouseEnter={() => setMentionIdx(i)}
-                          >
-                            <span className={'dsgc-fileglyph' + (item.isDir ? ' dir' : ' file')} aria-hidden="true">
-                              {item.isDir
-                                ? <P.FileTypeIcon kind="folder" size={16} />
-                                : <P.FileTypeIcon path={item.path} size={16} />}
-                            </span>
-                            <span className="dsgc-mentionname">{item.path}</span>
-                            {item.isDir ? <span className="dsgc-filedrill">{Icon(P.IconChevronRightOutline14, 12)}</span> : null}
-                          </button>
-                        ))}
+                  {fileCandidates.length
+                    ? fileCandidates.map((item, i) => (
+                      <button
+                        key={item.path}
+                        type="button"
+                        className={'dsgc-mentionitem' + (i === mentionIdxC ? ' on' : '')}
+                        role="option"
+                        aria-selected={i === mentionIdxC ? 'true' : 'false'}
+                        onMouseDown={(e) => { e.preventDefault() }}
+                        onClick={() => {
+                          insertFileChip(item.path, item.isDir ? 'directory' : 'file')
+                        }}
+                        onMouseEnter={() => setMentionIdx(i)}
+                      >
+                        <span className={'dsgc-fileglyph' + (item.isDir ? ' dir' : ' file')} aria-hidden="true">
+                          {item.isDir
+                            ? <P.FileTypeIcon kind="folder" size={16} />
+                            : <P.FileTypeIcon path={item.path} size={16} />}
+                        </span>
+                        <span className="dsgc-mentionname">{item.path}</span>
+                        {item.isDir ? <span className="dsgc-filedrill">{Icon(P.IconChevronRightOutline14, 12)}</span> : null}
+                      </button>
+                    ))
+                    : fileSearchLoading
+                      ? <div className="dsgc-mentionitem dsgc-hint">检索中…</div>
+                      : fileSearchError
+                        ? <div className="dsgc-mentionitem dsgc-hint">{fileSearchError}</div>
+                        : <div className="dsgc-mentionitem dsgc-hint">无匹配文件</div>}
                   <span className="dsgc-mentionhint">
-                    {fileCandidates.some(f => f.isDir) ? '↑↓ 选择 · Enter 插入 · Tab 进入目录 · Esc 关闭' : '↑↓ 选择 · Enter 插入 · Esc 关闭'}
+                    {fileSearchLoading && fileCandidates.length
+                      ? '检索中…'
+                      : fileCandidates.some((f) => f.isDir)
+                        ? '↑↓ 选择 · Enter 插入 · Tab 进入目录 · Esc 关闭'
+                        : '↑↓ 选择 · Enter 插入 · Esc 关闭'}
                   </span>
                 </div>
                 )

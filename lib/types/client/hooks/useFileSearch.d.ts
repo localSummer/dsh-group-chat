@@ -1,5 +1,5 @@
 /**
- * 文件搜索 hook：封装文件检索的状态管理、API 调用和过期响应丢弃。
+ * 文件搜索 hook：防抖 + 取消过期请求 + 短缓存。
  * @module dsh-group-chat/client/hooks
  */
 import type { AtToken } from '../../shared/file-mention-grammar.ts';
@@ -13,8 +13,7 @@ export interface FileSearchResult {
     fileSearchLoading: boolean;
 }
 /**
- * 文件搜索 hook。
- * 仅依赖 query/groupId，不把 action 身份放进 effect——SSE 重渲染会换掉 action，
- * 旧实现据此 abort 后又不把 loading 置回 false，弹层会一直停在「检索中」。
+ * 文件搜索：query 变化 180ms 内合并；过期 fetch 真正 abort；
+ * 命中短缓存立刻出结果。离开文件模式才清空列表，避免每个按键闪「检索中」。
  */
-export declare function useFileSearch(mention: AtToken | null, groupId: string | undefined, action: (args: Record<string, unknown>) => Promise<unknown>): FileSearchResult;
+export declare function useFileSearch(mention: AtToken | null, groupId: string | undefined): FileSearchResult;

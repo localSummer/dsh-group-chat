@@ -112,7 +112,6 @@ export function GroupChatPanel(): ReactNode {
   const { fileCandidates, fileSearchError, fileSearchLoading } = useFileSearch(
     mention,
     group?.id,
-    action
   )
   const mentionIdxC = useSafeMentionIndex(
     mentionCandidates.length || fileCandidates.length,

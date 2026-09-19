@@ -4,5 +4,5 @@
  */
 export declare const api: {
     state: () => Promise<unknown>;
-    action: (payload: Record<string, unknown>) => Promise<unknown>;
+    action: (payload: Record<string, unknown>, signal?: AbortSignal) => Promise<unknown>;
 };

@@ -14,9 +14,10 @@ async function readJson<T>(fetchPromise: Promise<Response>): Promise<T> {
 
 export const api = {
   state: (): Promise<unknown> => readJson(fetch(API_PREFIX + '/state', { cache: 'no-store' })),
-  action: (payload: Record<string, unknown>): Promise<unknown> => readJson(fetch(API_PREFIX + '/action', {
+  action: (payload: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> => readJson(fetch(API_PREFIX + '/action', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
+    signal,
   })),
 }
