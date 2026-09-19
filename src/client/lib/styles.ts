@@ -309,7 +309,7 @@ export function injectStyles(): void {
   if (typeof document === 'undefined') return
   if (document.querySelector('style[data-plugin-css=' + JSON.stringify(TAG_ID) + ']') === null) {
     const tag = document.createElement('style')
-    tag.dataset.plugin = 'dsh-group-chat'
+    tag.dataset.plugin = '@roaming-ai/dsh-group-chat'
     tag.dataset.pluginCss = TAG_ID
     tag.textContent = CSS
     document.head.appendChild(tag)

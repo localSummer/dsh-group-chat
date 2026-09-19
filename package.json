@@ -1,7 +1,7 @@
 {
   "name": "@roaming-ai/dsh-group-chat",
   "description": "DSH 模型群聊：多模型角色群组对话面板。角色绑定不同 provider/model，群内共享对话记录；设置页支持启用/停用。",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "packageManager": "pnpm@11.1.0",
   "engines": {
