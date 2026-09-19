@@ -179,7 +179,7 @@ components:
 - **输入底**（`--dsw-specific-input-major`，回退 layer-3）与**滚动条**（`scrollbar-bg-l2`）。
 
 ### Named Rules
-**唯一个性源规则。** 角色颜色只以环和点的形式出现（头像环、色点），永不染指文字色或边框。唯一例外：**@提及芯片**——角色身份在输入区内的直接引用，允许「色点 + 该色 color-mix 15% 淡底胶囊」，仍不染文字色、不做满饱和底、不进消息流渲染。其余任何屏里的彩色面积以个位数像素计。
+**唯一个性源规则。** 角色颜色只以环和点的形式出现（头像环、色点），永不染指文字色或边框。两处输入区例外：**@角色芯片**——角色身份在输入区内的直接引用，允许「色点 + 该色 color-mix 15% 淡底胶囊」，仍不染文字色、不做满饱和底、不进消息流渲染；**@文件芯片**——中性淡底（`--dsw-static-neutral-bluish-300` 18%），目录芯片淡琥珀底（`--dsw-static-amber-400` 18%）+ FileTypeIcon，与角色 PALETTE 分家。其余任何屏里的彩色面积以个位数像素计。
 **令牌纪律规则。** 每个颜色引用都是 `var(--dsw-alias-*, 灰阶回退)` 的完整对；PALETTE 8 色 + `#888` 回退 + danger 上的 `#fff` 是代码里仅有的字面色。新样式不得绕过这对结构。**例外（记录在案）**：流式「深度求索...」微光扫动使用宿主静态品牌令牌 `--dsw-static-deepseek-500/200`（回退 `#4176e6`/`#d3e2ff`）——对标宿主 TurnStatus「深度求索中...」的品牌签名动画，非主题别名（品牌色不随明暗主题反转）。
 
 ## Typography
@@ -227,7 +227,7 @@ components:
 分层不投影：静止表面靠三层底色（layer-2 凹陷 / layer-3 抬升）+ 1px 边框表达深度，宿主主题令牌保证明暗两态成立。投影是「临时浮层」与「输入面」的专属信号，浮层四处（方向一致向左或向下）+ 输入卡一处：
 
 ### Shadow Vocabulary
-- **@弹层**（`var(--dsw-shadow-lv3, 0 8px 24px rgba(0,0,0,.18))`）：向下投，输入时的成员候选浮层。
+- **@弹层**（`var(--dsw-shadow-lv3, 0 8px 24px rgba(0,0,0,.18))`）：向下投，输入时的成员或文件候选浮层。
 - **回到底部药丸**（同 @弹层配方）：向下投，消息流离底时的浮动按钮。
 - **接缝收合钮·左**（`3px 0 10px rgba(0,0,0,.07)`）：向右投，左接缝竖向页签；**接缝收合钮·右**（`-3px 0 10px rgba(0,0,0,.07)`）：向左投，右接缝竖向页签（镜像对）。
 - **角色抽屉**（`-12px 0 32px rgba(0,0,0,.14)`）：向左投，380px 滑出面板。
@@ -258,7 +258,7 @@ components:
 ### Inputs / Fields
 - **自有控件**（input/select/textarea）：`input-bg` 底 + `border-l2`，圆角 8，13px，focus 边框 → 输入焦点色；表单字段 = 12px/500 标签 + 5px 间距。
 - **搜索**：P.Input 带描边图标（IconSearchOutline16）。
-- **Composer 输入**：卡内无边框 **contenteditable**（非受控——React 不管理其子节点；36px 起、自适应增高至 180px、左缩进 14px）。@成员 = 原子芯片（`.dsgc-chipin`：`contenteditable=false` + `draggable`，退格整删、`user-select:all`）；序列化契约：芯片展开回纯文本「@名字␠」、`<br>`→换行——**芯片=糖、正则=真**（参与判定与发送值仍由 mentionedRoles 正则对序列化文本承载，手打 @名字 与芯片等价）。行为：Enter 发送 / Shift+Enter `insertLineBreak` 换行（弹层开时亦然——换行后的 input 事件自然关弹层）/ 粘贴与拖放均强制 `text/plain`（`insertText`，拖放是粘贴之外的第二入口）/ IME 组合期只读不写 DOM（`isComposing` + keyCode 229 双守卫）；插入全程走 execCommand（`delete`/`insertHTML`/`insertText`）保 undo 栈，`insertHTML` 后选区经 `data-new` 标记营救（部分浏览器把选区落进 contenteditable=false 芯片内部，曾致空格丢失与光标不可见）；弹层失焦即关、候选索引按候选收缩钳制、芯片插入前校验选区落在输入区内、发送带在途锁；占位符 = 独立覆盖层 `.dsgc-ph`（`pointer-events:none`，对齐主会话——不用 ::before，生成内容会把聚焦光标顶到占位文字之后）。
+- **Composer 输入**：卡内无边框 **contenteditable**（非受控——React 不管理其子节点；36px 起、自适应增高至 180px、左缩进 14px）。@成员 / @文件 = 原子芯片（`.dsgc-chipin`：`contenteditable=false` + `draggable`，退格整删、`user-select:all`；文件另加 `.dsgc-chipin-file` + FileTypeIcon）。序列化契约：角色芯片展开回「@名字␠」、文件芯片展开回 `@path` 或 `@"path with spaces"`、`<br>`→换行——**芯片=糖、文本=真**（参与判定仍由 mentionedRoles 正则对序列化文本承载，手打 @名字 与芯片等价；文件芯片不把正文写入消息）。弹层分流：裸 `@` 出成员候选；`@` 后 query 非空出工作区文件候选（目录行右侧 chevron，Enter 插入芯片）。行为：Enter 发送 / Shift+Enter `insertLineBreak` 换行（弹层开时亦然——换行后的 input 事件自然关弹层）/ 粘贴与拖放均强制 `text/plain`（`insertText`，拖放是粘贴之外的第二入口）/ IME 组合期只读不写 DOM（`isComposing` + keyCode 229 双守卫）；插入全程走 execCommand（`delete`/`insertHTML`/`insertText`）保 undo 栈，`insertHTML` 后选区经 `data-new` 标记营救（部分浏览器把选区落进 contenteditable=false 芯片内部，曾致空格丢失与光标不可见）；弹层失焦即关、候选索引按候选收缩钳制、芯片插入前校验选区落在输入区内、发送带在途锁；占位符 = 独立覆盖层 `.dsgc-ph`（`pointer-events:none`，对齐主会话——不用 ::before，生成内容会把聚焦光标顶到占位文字之后）。
 - **安静输入**：会话主题框为无边框透明输入（secondary 色，focus 提为 primary）；目录树重命名为内联 mini 输入（12.5px，圆角 6）。
 
 ### Navigation
@@ -273,7 +273,7 @@ components:
 P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「思考」+ 折叠摘要（剥离 markdown 标记的纯文本，44ch 截断，11.5px）；展开体为 pre-wrap 纯文本 12.5px/1.7，左缘 2px `border-l2` 规线，max-height 320px 滚动。
 
 ### Composer（签名组件）
-纵列：参与角色 chips 行（卡外，配置不入卡）→ **输入卡**（对标主会话 composer 卡：22px 圆角独立卡、`input-major` 实底、`elevation-soft` 软影【输入面豁免】、卡内无边框 textarea 36px 起自适应，左缩进 14px）→ 卡内底部**附件行**（权限芯片居左 + 轮数步进器 −/数字/+（数字 26px 宽 tabular-nums + 「轮」）紧邻 P.Button primary「发送」/ 覆写 danger「停止」，全部 white-space:nowrap——发送参数与主操作同组）。composer 区无 `border-top` 硬分隔，输入卡直接浮在消息流下方（上缘留 12px 呼吸）。@弹层（卡内锚定、向上溢出卡片）：layer-3 + `border-l2` + 圆角 10 + `shadow-lv3`，候选项 = 色点 + 名字（500）+ 模型（11px），键盘 ↑↓/Enter/Tab（Esc 不参与——输入法组合下行为不稳，明确不做）；Enter/Tab/点击候选 → 删除光标前 @词并插入**原子芯片**（候选钮 `mousedown` 阻止默认，保住输入区选区）；底部操作提示行。
+纵列：参与角色 chips 行（卡外，配置不入卡）→ **输入卡**（对标主会话 composer 卡：22px 圆角独立卡、`input-major` 实底、`elevation-soft` 软影【输入面豁免】、卡内无边框 textarea 36px 起自适应，左缩进 14px）→ 卡内底部**附件行**（权限芯片居左 + 轮数步进器 −/数字/+（数字 26px 宽 tabular-nums + 「轮」）紧邻 P.Button primary「发送」/ 覆写 danger「停止」，全部 white-space:nowrap——发送参数与主操作同组）。composer 区无 `border-top` 硬分隔，输入卡直接浮在消息流下方（上缘留 12px 呼吸）。@弹层（卡内锚定、向上溢出卡片）：layer-3 + `border-l2` + 圆角 10 + `shadow-lv3`。成员候选项 = 色点 + 名字（500）+ 模型（11px）；文件候选项 = 22px FileTypeIcon 井位（目录淡琥珀底 / 文件 module 底）+ 路径 + 目录行右侧 chevron。键盘 ↑↓/Enter/Tab（文件弹层 Esc 关闭；成员弹层 Esc 不参与——输入法组合下行为不稳，明确不做）；Enter/Tab/点击候选 → 删除光标前 @词并插入**原子芯片**（候选钮 `mousedown` 阻止默认，保住输入区选区）；底部操作提示行。
 
 ### 角色抽屉
 右侧滑出 380px：`bg-layer-2` + 左缘 `border-l2` + 向左投影 + `.18s ease-out` 入场动画（translateX 24px + 淡入）；头（标题 + ghost 关闭）/ 体（滚动，12px 间距表单：名称、标识色调色盘、人设 textarea、提供方/模型 select、温度、深度思考 P.Switch）/ 脚（取消 outline + 保存 primary）。Escape 关闭。
@@ -297,7 +297,7 @@ P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「�
 ### Do:
 - **Do** 原语优先：宿主有 Button/Input/Switch/Tooltip/DisclosureRow/MarkdownText/Icon*Outline 就直接用；自有 CSS 只写原语覆盖不到的布局与定制件。
 - **Do** 每个颜色引用都带完整 `var(--dsw-alias-*, 灰阶回退)` 对，明暗主题自动成立。
-- **Do** 角色颜色只画环和点；头像环 2px、角色点 10px、chip 点 8px。@提及芯片是唯一带色底的例外（色点 + 15% 淡底胶囊，见唯一个性源规则）。
+- **Do** 角色颜色只画环和点；头像环 2px、角色点 10px、chip 点 8px。输入区内带色底的例外只有 @角色芯片（色点 + 15% 淡底胶囊）与 @文件芯片（中性/目录淡琥珀底），见唯一个性源规则。
 - **Do** 响应式用容器查询（880px / 640px 两级），新面板不依赖视口媒体查询。
 - **Do** 所有滚动容器给 `scrollbar-width:thin` + `scrollbar` 色；所有自有可交互控件给 `focus-visible` 2px 品牌描边 + offset 1px。
 - **Do** 破坏性操作二次确认，两档形态：树删除用两次点击（第一次变 danger 红）；清空会话用确认弹窗（体量大且不可恢复，需说明范围与后果）。Esc 关闭临时层，键盘可达（Enter/Space/↑↓/Tab）。

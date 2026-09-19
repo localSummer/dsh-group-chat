@@ -54,7 +54,7 @@ export function GroupChatSettingsSection(props: { settingsScope: SettingsScope<G
     <div className="dgcs-page">
       <div className="dgcs-head">
         <h3 className="dgcs-title">模型群聊</h3>
-        <p className="dgcs-desc">多模型角色群组对话面板：每个角色绑定不同的 provider/model；群组内多会话目录树管理，群内共享对话记录与资料空间；消息以 markdown 渲染、支持思考折叠；输入框支持 @成员 点名。数据持久化于 ~/.dsh/storages/group-chat/，重启 dsh web 后恢复。</p>
+        <p className="dgcs-desc">多模型角色群组对话面板：每个角色绑定不同的 provider/model；群组内多会话目录树管理，群内共享对话记录与工作区目录；消息以 markdown 渲染、支持思考折叠；输入框支持 @成员 / @文件。数据持久化于 ~/.dsh/storages/group-chat/，重启 dsh web 后恢复。</p>
       </div>
       <div className="dgcs-card">
         <div className="dgcs-cardtext">

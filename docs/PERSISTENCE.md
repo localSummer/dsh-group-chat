@@ -139,6 +139,8 @@ grill-me 确认项：
 
 内容为一行路径文本，如 `/home/xxx/projects/my-repo`。hydrate 时逐群组读入；`setWorkspaceDir` 时原子重写该文件并更新内存态——不做任何其他处理（如移动旧会话文件）。
 
+这是共享资料的**唯一**持久化配置：不另存文本笔记或文件清单。工作区文件内容不写入本目录；角色发言时由 materials 层实时读盘（只扫根下一层文本文件）注入 system 提示词。
+
 ## 4. 原子写策略（atomicWriteGroup）
 
 沿用 v1 的 `tmp + fsync + rename` 原子写原语，升级为「按群组目录共享、按 flush 批量」：
