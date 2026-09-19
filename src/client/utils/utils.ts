@@ -3,7 +3,11 @@
  * @module dsh-group-chat/client/utils
  */
 
-import { activeAtToken, formatFileMention, type AtToken, type FileCandidate } from '../../shared/file-mention-grammar.ts'
+import { createElement } from 'react'
+import { flushSync } from 'react-dom'
+import { createRoot } from 'react-dom/client'
+import { FileTypeIcon } from '@deepseek-ai/dsh-client-ui-primitives'
+import { activeAtToken, type AtToken } from '../../shared/file-mention-grammar.ts'
 
 /** HTML 转义（芯片以 execCommand('insertHTML') 注入，角色名需转义）。 */
 export function escapeHtml(v: string): string {
@@ -60,12 +64,29 @@ export function chipHtml(role: { id: string, name: string, color?: string }): st
     '<span class="dsgc-chipdot" style="background:' + c + '"></span>' + escapeHtml(role.name) + '</span>'
 }
 
+/** 把宿主 FileTypeIcon 渲成静态 SVG，再塞进 insertHTML（与检索列表同一套字形）。 */
+function fileTypeIconMarkup(path: string, kind: 'file' | 'directory'): string {
+  if (typeof document === 'undefined') return ''
+  const host = document.createElement('span')
+  const root = createRoot(host)
+  try {
+    flushSync(() => {
+      root.render(kind === 'directory'
+        ? createElement(FileTypeIcon, { kind: 'folder', size: 14 })
+        : createElement(FileTypeIcon, { path, size: 14 }))
+    })
+    return host.innerHTML
+  } finally {
+    root.unmount()
+  }
+}
+
 /** @文件芯片的 HTML（原子元素：contenteditable=false + draggable，退格整删）。 */
 export function fileChipHtml(path: string, kind: 'file' | 'directory'): string {
-  const icon = kind === 'directory' ? '📁' : '📄'
   const basename = path.split('/').pop() || path
-  return '<span class="dsgc-chipin dsgc-chipin-file" data-kind="file" data-path="' + escapeHtml(path) + '" contenteditable="false" draggable="true">' +
-    icon + ' ' + escapeHtml(basename) + '</span>'
+  const dir = kind === 'directory'
+  return '<span class="dsgc-chipin dsgc-chipin-file" data-kind="file"' + (dir ? ' data-dir="1"' : '') + ' data-path="' + escapeHtml(path) + '" contenteditable="false" draggable="true">' +
+    '<span class="dsgc-chipglyph" aria-hidden="true">' + fileTypeIconMarkup(path, kind) + '</span>' + escapeHtml(basename) + '</span>'
 }
 
 /**

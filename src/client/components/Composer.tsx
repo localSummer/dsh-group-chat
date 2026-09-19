@@ -166,8 +166,13 @@ export function Composer(props: ComposerProps): ReactNode {
                             }}
                             onMouseEnter={() => setMentionIdx(i)}
                           >
-                            <span className="dsgc-mentionname">{item.isDir ? '📁 ' : '📄 '}{item.path}</span>
-                            {item.isDir ? <span className="dsgc-mentionhint">→</span> : null}
+                            <span className={'dsgc-fileglyph' + (item.isDir ? ' dir' : ' file')} aria-hidden="true">
+                              {item.isDir
+                                ? <P.FileTypeIcon kind="folder" size={16} />
+                                : <P.FileTypeIcon path={item.path} size={16} />}
+                            </span>
+                            <span className="dsgc-mentionname">{item.path}</span>
+                            {item.isDir ? <span className="dsgc-filedrill">{Icon(P.IconChevronRightOutline14, 12)}</span> : null}
                           </button>
                         ))}
                   <span className="dsgc-mentionhint">

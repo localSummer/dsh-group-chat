@@ -186,6 +186,16 @@ export const CSS = [
   '.dsgc-mentionhint{font-size:11px;color:var(--dsw-alias-label-tertiary,inherit);padding:2px 8px 1px}',
   '.dsgc-mention-file .dsgc-mentionitem.dsgc-hint{cursor:default;color:var(--dsw-alias-label-tertiary,inherit);justify-content:center}',
   '.dsgc-mention-file .dsgc-mentionitem.dsgc-hint:hover{background:none}',
+  /* 文件检索：宿主 FileTypeIcon 分色字形 + 井位底，文件夹/文件扫一眼可分 */
+  '.dsgc-fileglyph{flex:none;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px}',
+  '.dsgc-fileglyph.dir{background:color-mix(in srgb,var(--dsw-static-amber-400,#e8912d) 16%,transparent)}',
+  '.dsgc-fileglyph.file{background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.12))}',
+  '.dsgc-filedrill{flex:none;display:inline-flex;color:var(--dsw-alias-label-tertiary,inherit)}',
+  '.dsgc-mentionitem.on .dsgc-filedrill,.dsgc-mentionitem:hover .dsgc-filedrill{color:var(--dsw-alias-label-secondary,inherit)}',
+  '.dsgc-chipin-file{background:color-mix(in srgb,var(--dsw-static-neutral-bluish-300,rgba(128,128,128,.55)) 18%,transparent)}',
+  '.dsgc-chipin-file[data-dir="1"]{background:color-mix(in srgb,var(--dsw-static-amber-400,#e8912d) 18%,transparent)}',
+  '.dsgc-chipglyph{flex:none;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}',
+  '.dsgc-chipglyph svg{display:block}',
   /* ===== 右上下文栏 ===== */
   '.dsgc-aside{width:304px;flex:none;display:flex;flex-direction:column;gap:10px;border-left:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));padding:12px;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent;transition:width .28s cubic-bezier(.16,1,.3,1),opacity .18s ease,padding .28s cubic-bezier(.16,1,.3,1),border-left-width .28s cubic-bezier(.16,1,.3,1)}',
   /* 子元素经 flex 列默认 stretch 填满内容区（面板为 content-box、内容区实宽
