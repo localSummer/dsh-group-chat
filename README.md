@@ -2,6 +2,8 @@
 
 DSH Web GUI 的「模型群聊」插件：多模型角色群组对话面板。
 
+兼容：`dsh >= 0.1.5-rc.1`（Web profile）
+
 ## 功能
 
 - **群组管理**：新建、重命名、删除（至少保留一个群组）；左栏搜索框按群组名/会话名过滤
@@ -31,15 +33,54 @@ DSH Web GUI 的「模型群聊」插件：多模型角色群组对话面板。
 
 设计文档位于 `docs/`：`PRODUCT.md`（产品定义）、`DESIGN.md`（界面设计契约）、`PERSISTENCE.md`（持久化契约）、`TOOLS.md`（工具执行护栏）。
 
-## 安装（本 profile）
+## 安装
 
-`~/.dsh/profiles/web/package.json` 的 `dependencies` 已含 `"dsh-group-chat": "link:/home/.../plugins/dsh-group-chat"`，且 `dsh.profile.bundles` 已列 `dsh-group-chat`。本包改为 TS 源码 + 构建产物形态，修改源码后在本目录执行：
+通过官方 `dsh plugin` 装进 web profile。它在 `$DSH_HOME/profiles/web` 里转发给 pnpm；本包声明了 `dsh.bundle`，安装成功后会按真实包名 `@roaming-ai/dsh-group-chat` 自动写入 `dsh.profile.bundles`。不要手改 profile 的 `package.json` 或 `cordis.patch.yml`。
 
-```bash
-cd ~/.dsh/profiles/web/plugins/dsh-group-chat && pnpm install && pnpm build
+要求：已能运行 `dsh web`；Node `^22.19.0 || >=24`；PATH 上有 `pnpm`。
+
+### 从 GitHub 安装
+
+```sh
+dsh plugin --profile web add github:localSummer/dsh-group-chat#main
 ```
 
-重启 `dsh web` 生效。开发辅助：`pnpm watch`（tsdown 增量构建）、`pnpm test`（core/store 冒烟测试）、`pnpm typecheck`。
+等价：`dsh plugin --profile web add git+https://github.com/localSummer/dsh-group-chat.git`
+
+本包的 `prepare` 会在安装时构建 `lib/`。pnpm 若拦截构建脚本，把提示的 key 写进 `$DSH_HOME/profiles/web/pnpm-workspace.yaml` 的 `allowBuilds`，再重跑同一条命令。
+
+### 从本地检出安装（开发）
+
+相对路径按**调用目录**锚定（`dsh plugin` 的 cwd 是 profile 目录，不要在 profile 里写 `.` / `../`）。
+
+```sh
+git clone https://github.com/localSummer/dsh-group-chat.git
+cd dsh-group-chat
+pnpm install && pnpm build
+dsh plugin --profile web add link:$(pwd)
+```
+
+也可以给绝对路径：`dsh plugin --profile web add /path/to/dsh-group-chat`。
+
+开发辅助（在本仓库内）：`pnpm watch`（tsdown 增量构建）、`pnpm test`、`pnpm typecheck`。`link:` 安装后改源码需重建产物；host 半通常仍要重启 `dsh web`。
+
+### 安装后
+
+重启 `dsh web`（或 `dsh --profile web`）。用 dump 确认组合层已挂上：
+
+```sh
+dsh --profile web --dump-config
+```
+
+应出现 `# == @roaming-ai/dsh-group-chat` 层，且含 `id: group-chat` 行。侧边栏有「群聊」入口，设置页有「模型群聊」开关。
+
+## 卸载
+
+```sh
+dsh plugin --profile web remove @roaming-ai/dsh-group-chat
+```
+
+然后重启 DSH。会话数据留在 `~/.dsh/storages/group-chat/`，卸载不会删除。
 
 ## 数据与持久化
 
