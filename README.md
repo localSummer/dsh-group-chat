@@ -1,5 +1,7 @@
 # dsh-group-chat
 
+![模型群聊面板](assets/banner.png)
+
 DSH Web GUI 的「模型群聊」插件：多模型角色群组对话面板。
 
 兼容：`dsh >= 0.1.5-rc.1`（Web profile）
