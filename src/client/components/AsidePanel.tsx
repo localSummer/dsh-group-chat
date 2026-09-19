@@ -78,15 +78,17 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                     </div>
                     {r.persona ? <div className="dsgc-rolepersona" title={r.persona}>{r.persona}</div> : null}
                     <div className="dsgc-rolemenu">
-                      <span
-                        className="dsgc-rolemodel"
-                        title={r.provider + ' / ' + r.model + (r.thinking ? ' · 深度思考' + (r.reasoningEffort && r.reasoningEffort !== 'default' ? '（' + r.reasoningEffort + '）' : '') : '')}
-                      >
-                        {r.provider} / {r.model}
+                      <span className="dsgc-rolemeta">
+                        <span
+                          className="dsgc-rolemodel"
+                          title={r.provider + ' / ' + r.model + (r.thinking ? ' · 深度思考' + (r.reasoningEffort && r.reasoningEffort !== 'default' ? '（' + r.reasoningEffort + '）' : '') : '')}
+                        >
+                          {r.provider} / {r.model}
+                        </span>
+                        {r.thinking
+                          ? <span className="dsgc-rolethink" title="深度思考">{Icon(P.IconThinkOutline14, 14)}</span>
+                          : null}
                       </span>
-                      {r.thinking
-                        ? <span title="深度思考" style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--dsw-alias-label-tertiary,inherit)' }}>{Icon(P.IconThinkOutline14, 14)}</span>
-                        : null}
                       <span className="dsgc-roleops">
                         <button
                           className="dsgc-opbtn"

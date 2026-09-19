@@ -6,6 +6,7 @@
 
 import { existsSync } from 'node:fs'
 import { messageJson, roleJson } from '../../core/json.ts'
+import { sanitizeConstraints } from '../../core/constraints.ts'
 import { asNumber, migrateTier } from '../../core/types.ts'
 import type { GroupRecord, MessageRecord, RoleRecord, SessionRecord } from '../../core/types.ts'
 import { emptyGroup, LedgerDocument, scanGroupIds, scanSessionIds, STORE_DIR, Store } from './store.ts'
@@ -17,6 +18,8 @@ interface SessionDocument {
   topic?: string
   namePinned?: boolean
   topicPinned?: boolean
+  constraints?: unknown
+  constraintsUpToSeq?: number
   createdAt?: number
   messages?: Partial<MessageRecord>[]
 }
@@ -74,6 +77,8 @@ export function createPersistence(core: HostState): Persistence {
     topic: s.topic,
     ...(s.namePinned ? { namePinned: true } : {}),
     ...(s.topicPinned ? { topicPinned: true } : {}),
+    ...(s.constraints && s.constraints.length ? { constraints: s.constraints } : {}),
+    ...(typeof s.constraintsUpToSeq === 'number' && s.constraintsUpToSeq > 0 ? { constraintsUpToSeq: s.constraintsUpToSeq } : {}),
     createdAt: s.createdAt,
     messages: s.messageIds.map((mid) => core.messages.get(mid)).filter(Boolean).map((m) => messageJson(m)).filter(Boolean),
   })
@@ -178,6 +183,9 @@ export function createPersistence(core: HostState): Persistence {
       if (typeof doc.topic === 'string') sess.topic = doc.topic
       if (doc.namePinned === true) sess.namePinned = true
       if (doc.topicPinned === true) sess.topicPinned = true
+      const constraints = sanitizeConstraints(doc.constraints)
+      if (constraints.length) sess.constraints = constraints
+      if (typeof doc.constraintsUpToSeq === 'number' && doc.constraintsUpToSeq > 0) sess.constraintsUpToSeq = doc.constraintsUpToSeq
       if (typeof doc.createdAt === 'number') sess.createdAt = doc.createdAt
       let fallbackSeq = 0
       for (const m of (Array.isArray(doc.messages) ? doc.messages : [])) {

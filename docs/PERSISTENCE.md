@@ -17,7 +17,7 @@ grill-me 确认项：
 | 5 | 原子写策略 | 群组目录级共享的 `atomicWriteGroup()`，按 flush 批量合并 |
 | 6 | 损坏恢复 | 每个会话文件损坏时就地隔离 `.corrupt-*`，仅丢该会话消息 |
 | 7 | 客户端读取 | 不新增 API：全量快照 + 客户端按 `sessionId` 本地过滤 |
-| 8 | 会话文件结构 | 自包含完整版（schema/savedAt/id/name/groupId/topic/createdAt/messages + 可选 namePinned/topicPinned，手动编辑标记=true 时写入，自动整理跳过该字段） |
+| 8 | 会话文件结构 | 自包含完整版（schema/savedAt/id/name/groupId/topic/createdAt/messages + 可选 namePinned/topicPinned，手动编辑标记=true 时写入，自动整理跳过该字段；可选 constraints / constraintsUpToSeq，空数组与水位 0 省略，schema 仍为 1） |
 | 9 | setWorkspaceDir | 仅更新值，无额外处理 |
 | 10 | messages 字段 | 推荐结构（对标 DSH 本地会话 session.v3 的消息形态） |
 
@@ -71,7 +71,7 @@ grill-me 确认项：
 ```
 
 - 会话顺序 = `sessions` 数组顺序（目录树顺序）
-- 写 ledger 的操作：建群/删群/改群组名、建会话/删会话；改角色 → 写该群 `roles.json`；改会话名/主题/清空消息 → 写会话文件
+- 写 ledger 的操作：建群/删群/改群组名、建会话/删会话；改角色 → 写该群 `roles.json`；改会话名/主题/清空消息/约束折叠 → 写会话文件
 
 ### 3.2 roles.json（schema: 1）——群组级角色定义
 
@@ -99,6 +99,11 @@ grill-me 确认项：
   "name": "会话 1",
   "groupId": "grp-1",
   "topic": "会话主题",
+  "constraints": [
+    { "kind": "decided", "text": "采用 Redis 作为缓存" },
+    { "kind": "open", "text": "本地 KV 成本尚未对比完" }
+  ],
+  "constraintsUpToSeq": 41,
   "createdAt": 173xxxx,
   "messages": [
     {
@@ -130,10 +135,19 @@ grill-me 确认项：
 | `reasoningFull` | string | ✗ | 完整思考；省略同上 |
 | `thinkingSummary` | string | ✗ | 思考摘要；省略同上 |
 
+会话级约束备忘（可选，schema 仍为 1）：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `constraints` | `{kind,text}[]` | ✗ | 窗口外无主结论；`kind` = `decided` / `rejected` / `open`；空则省略 |
+| `constraintsUpToSeq` | number | ✗ | 已折入备忘的最大消息 seq；0/缺省省略 |
+
 实现注意：
 
 - 可选字段「无则省略」，不写 `null`（对齐 v1 的 undefined 序列化行为）
 - v1 的 `error: true`（系统错误行）不在确认结构内：作为兼容扩展字段保留（系统错误行 `speaker:"system"` + `error:true`，落盘保留该字段以不丢错误语义；读取时容忍缺失）
+- `constraints` hydrate 走 `sanitizeConstraints`（非法 kind / 空 text 丢条目；最多 12 条、总长 1200）；快照只推 `constraints`，不推水位
+- `clearMessages` 同时清 `constraints` 与 `constraintsUpToSeq`
 
 ### 3.4 workspaceDir（群组工作区目录设置）
 

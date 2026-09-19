@@ -44,7 +44,7 @@ export function createBroadcast(core: HostState): Broadcast {
     run: { running: core.run.running, sessionId: core.run.sessionId, currentRoleId: core.run.currentRoleId, partial: core.run.partial, partialReasoning: core.run.partialReasoning, pendingConfirm: core.run.pendingConfirm, finished: core.run.finished },
     lastCreated: core.lastCreated,
     groups: [...core.groups.values()].map((g) => ({ id: g.id, name: g.name, workspaceDir: g.workspaceDir, permissionTier: g.permissionTier, roleIds: g.roleIds.slice(), sessionIds: g.sessionIds.slice() })),
-    sessions: [...core.sessions.values()].map((s) => ({ id: s.id, groupId: s.groupId, name: s.name, topic: s.topic, messageIds: s.messageIds.slice(), createdAt: s.createdAt })),
+    sessions: [...core.sessions.values()].map((s) => ({ id: s.id, groupId: s.groupId, name: s.name, topic: s.topic, ...(s.constraints && s.constraints.length ? { constraints: s.constraints } : {}), messageIds: s.messageIds.slice(), createdAt: s.createdAt })),
     roles: [...core.roles.values()].map((r) => ({ id: r.id, groupId: r.groupId, name: r.name, color: r.color, persona: r.persona, provider: r.provider, model: r.model, temperature: r.temperature, reasoningEffort: r.reasoningEffort, enabled: r.enabled, thinking: r.thinking === true })),
     messages: [...core.messages.values()].map((m) => ({ id: m.id, sessionId: m.sessionId, seq: m.seq, speaker: m.speaker, text: m.text, reasoning: m.reasoning, model: m.model, error: m.error, toolCalls: m.toolCalls, ts: m.ts })),
   })

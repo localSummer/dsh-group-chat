@@ -210,6 +210,8 @@ export function createActions(core: HostState, deps: {
         if (run.running && run.sessionId === sess.id) return { ...snapshot(), error: '对话进行中，无法清空' }
         for (const mid of sess.messageIds) messages.delete(mid)
         sess.messageIds = []
+        sess.constraints = undefined
+        sess.constraintsUpToSeq = undefined
         schedulePersist({ session: sess.id })
         touch()
       }

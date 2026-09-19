@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 import { Icon, P } from '../lib/ui.ts'
 import { MessageFlow } from './MessageFlow.tsx'
 import { Composer } from './Composer.tsx'
+import { ConstraintList } from './ConstraintList.tsx'
 import type { ClientSnapshot, SnapshotRole } from '../lib/model.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
@@ -143,18 +144,23 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
       </button>
       
       <div className="dsgc-chathead">
-        {sess ? <span className="dsgc-sess-title" title={'当前会话：' + sess.name}>{sess.name}</span> : null}
-        <input
-          className="dsgc-topic"
-          value={topicDraft === null ? (sess ? sess.topic : '') : topicDraft}
-          placeholder="设置本会话主题（可选）…"
-          onChange={(e) => { setTopicDraft(e.target.value) }}
-          onBlur={commitTopic}
-          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-        />
-        <P.Button variant="ghost" size="sm" className="dsgc-clearbtn" title="清空当前会话的消息记录" onClick={() => { if (sess) setConfirmClear(true) }}>
-          清空
-        </P.Button>
+        <div className="dsgc-chathead-row">
+          {sess ? <span className="dsgc-sess-title" title={'当前会话：' + sess.name}>{sess.name}</span> : null}
+          <input
+            className="dsgc-topic"
+            value={topicDraft === null ? (sess ? sess.topic : '') : topicDraft}
+            placeholder="设置本会话主题（可选）…"
+            onChange={(e) => { setTopicDraft(e.target.value) }}
+            onBlur={commitTopic}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          />
+          <P.Button variant="ghost" size="sm" className="dsgc-clearbtn" title="清空当前会话的消息记录" onClick={() => { if (sess) setConfirmClear(true) }}>
+            清空
+          </P.Button>
+        </div>
+        {sess && sess.constraints && sess.constraints.length
+          ? <ConstraintList key={sess.id} items={sess.constraints} />
+          : null}
       </div>
       
       <div className="dsgc-msgs" ref={scrollRef} onScroll={onMsgsScroll}>

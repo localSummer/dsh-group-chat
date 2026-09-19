@@ -9,6 +9,9 @@ import { PermissionSelect } from './PermissionSelect.tsx'
 import { escapeRegExp, type ClientSnapshot, type SnapshotRole } from '../lib/model.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
+/** 轮数控件 hover：宿主 Tooltip 三行说明（pre-line）。 */
+const ROUNDS_HINT = '一轮 = 参与角色各说一次。\n要他们自己互相反驳、你不插话时再加轮。\n要边看边插话，就留 1，再点发送。'
+
 interface ComposerProps {
   snap: ClientSnapshot
   sess: ClientSnapshot['sessions'][number] | null
@@ -102,23 +105,25 @@ export function Composer(props: ComposerProps): ReactNode {
       {err ? <div className="dsgc-err">{err}</div> : null}
       <div className="dsgc-parts">
         <span className="dsgc-partslabel">参与角色</span>
-        {mentionedRoles.length
-          ? <span className="dsgc-partslabel">已 @ {mentionedRoles.map((r) => r.name).join('、')}（本轮仅被点名成员发言）</span>
-          : enabledRoles.length
-            ? enabledRoles.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                className={'dsgc-partchip' + (participants.includes(r.id) ? ' on' : '')}
-                onClick={() => togglePart(r.id)}
-                disabled={busyNow}
-                title={busyNow ? '对话进行中，暂停调整' : '点击切换本轮是否参与'}
-              >
-                <span className="dsgc-chipdot" style={{ background: r.color || '#888' }} />
-                {r.name}
-              </button>
-              ))
-            : <span className="dsgc-hint">还没有启用的角色，请在右侧添加</span>}
+        <div className="dsgc-partlist">
+          {mentionedRoles.length
+            ? <span className="dsgc-partslabel">已 @ {mentionedRoles.map((r) => r.name).join('、')}（本轮仅被点名成员发言）</span>
+            : enabledRoles.length
+              ? enabledRoles.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={'dsgc-partchip' + (participants.includes(r.id) ? ' on' : '')}
+                  onClick={() => togglePart(r.id)}
+                  disabled={busyNow}
+                  title={busyNow ? '对话进行中，暂停调整' : '点击切换本轮是否参与'}
+                >
+                  <span className="dsgc-chipdot" style={{ background: r.color || '#888' }} />
+                  {r.name}
+                </button>
+                ))
+              : <span className="dsgc-hint">还没有启用的角色，请在右侧添加</span>}
+        </div>
       </div>
       <div className="dsgc-card">
         <div className="dsgc-mentionwrap">
@@ -210,16 +215,18 @@ export function Composer(props: ComposerProps): ReactNode {
             onSelect={(tier) => { void mutate({ op: 'setPermissionTier', groupId: group.id, tier }) }}
           />
           <span style={{ flex: 1 }} />
-          <div className="dsgc-rounds" title="自由讨论的轮数（1–10）：一轮 = 全体参与角色按顺序各发言一次">
-            <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
-              {Icon(P.IconChevronLeftOutline14, 12)}
-            </button>
-            <span className="dsgc-roundnum" title="轮数">{rounds}</span>
-            <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
-              {Icon(P.IconChevronRightOutline14, 12)}
-            </button>
-            <span style={{ padding: '0 6px 0 2px' }}>轮</span>
-          </div>
+          <P.Tooltip label={ROUNDS_HINT} side="top" delayMs={500} maxWidth={280}>
+            <div className="dsgc-rounds">
+              <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
+                {Icon(P.IconChevronLeftOutline14, 12)}
+              </button>
+              <span className="dsgc-roundnum">{rounds}</span>
+              <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
+                {Icon(P.IconChevronRightOutline14, 12)}
+              </button>
+              <span style={{ padding: '0 6px 0 2px' }}>轮</span>
+            </div>
+          </P.Tooltip>
           {busyNow
             ? (
               <P.Button variant="outline" className="dsgc-stopbtn" onClick={() => { void stopRun() }}>

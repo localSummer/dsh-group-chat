@@ -1,15 +1,17 @@
 /**
  * 对话引擎：消息追加、群聊记录转写、角色发言（speak：prompt 构建 + 流式
- * 轮次 + 工具回注循环）、多轮 runLoop（每轮结束触发 retitle 标题整理）。
+ * 轮次 + 工具回注循环）、多轮 runLoop（结束时后台 retitle + 窗口外约束折叠）。
  * @module dsh-group-chat/host/engine/conversation
  */
 
 import { realpathSync } from 'node:fs'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
+import { constraintBlock, formatTranscriptLine, speakerLabel, squeezedMessages, tempTranscript, WINDOW_SIZE } from '../../core/constraints.ts'
 import { TOOL_FLOOR_COST_CHARS, TOOL_REPEAT_LIMIT, TOOL_RESULTS_TOTAL_MAX, TRANSCRIPT_TOOL_SUMMARY } from '../../core/tools.ts'
 import type { GroupRecord, MessageRecord, RoleRecord, SessionRecord, SpeakResult, ToolCallRecord } from '../../core/types.ts'
 import { asEffort } from '../../core/types.ts'
 import type { HostState } from '../state.ts'
+import { createFold } from './fold.ts'
 import { createRetitle } from './retitle.ts'
 import type { Materials } from '../materials/index.ts'
 import type { Tools } from '../tools/index.ts'
@@ -38,8 +40,10 @@ export interface Conversation {
 export function createConversation(core: HostState, deps: { touch: () => void, schedulePersist: (targets?: { session?: string | null }) => void, materials: Materials, tools: Tools }): Conversation {
   const { llm, groups, roles, messages, run } = core
   const { touch, schedulePersist, materials, tools } = deps
-  // 标题/主题自动整理（独立关注点，见 retitle.ts；runLoop 每轮结束触发）
+  // 标题/主题自动整理 + 窗口外约束折叠（finally 之后并列后台跑，不占用 run）
   const retitle = createRetitle(core, { touch, schedulePersist })
+  const fold = createFold(core, { touch, schedulePersist })
+  const nameOf = (speaker: string): string => speakerLabel(speaker, (roles.get(speaker) || { name: undefined }).name)
 
   const appendMessage = (sess: SessionRecord, speaker: string, text: string, extra?: Partial<MessageRecord>): MessageRecord => {
     const msg: MessageRecord = { id: core.nid('msg'), sessionId: sess.id, seq: sess.messageIds.length + 1, speaker, text, reasoning: undefined, model: undefined, error: undefined, ts: Date.now() }
@@ -58,35 +62,19 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
     return msg
   }
 
-  /** 群聊记录 → 角色上下文块（最近 40 条、逐条 8k 截断、工具行压缩）。 */
+  /** 群聊记录 → 角色上下文块（最近 40 条 + 未折入临时原文）。 */
   const transcriptBlock = (sess: SessionRecord): string => {
     const out: string[] = []
-    for (const mid of sess.messageIds) {
+    for (const mid of sess.messageIds.slice(-WINDOW_SIZE)) {
       const m = messages.get(mid)
       if (!m) continue
-      const name = m.speaker === 'user' ? '用户' : m.speaker === 'system' ? '系统' : (roles.get(m.speaker) || { name: undefined }).name || '成员'
-      let text = m.text || ''
-      if (text.length > 8000) text = text.slice(0, 8000) + '…(已截断)'
-      let line = '【' + name + '】' + text
-      if (Array.isArray(m.toolCalls)) {
-        for (const c of m.toolCalls) {
-          if (!c || typeof c.tool !== 'string') continue
-          let brief = ''
-          try {
-            brief = JSON.stringify(c.args) || ''
-          } catch {
-            brief = ''
-          }
-          if (brief.length > 60) brief = brief.slice(0, 60) + '…'
-          const st = c.status === 'ok' ? '成功' : c.status === 'denied' ? '用户拒绝' : '失败'
-          let ob = String(c.output || '')
-          if (ob.length > TRANSCRIPT_TOOL_SUMMARY) ob = ob.slice(0, TRANSCRIPT_TOOL_SUMMARY) + '…'
-          line += '\n  [工具] ' + c.tool + ' ' + brief + ' → ' + st + (ob ? '（' + ob.replace(/\s+/g, ' ') + '）' : '')
-        }
-      }
-      out.push(line)
+      out.push(formatTranscriptLine(m, nameOf(m.speaker)))
     }
-    return out.slice(-40).join('\n\n')
+    const live = out.join('\n\n')
+    const temp = tempTranscript(squeezedMessages(messages, sess), (m) => nameOf(m.speaker))
+    if (!temp) return live
+    if (!live) return temp
+    return temp + '\n\n' + live
   }
 
   const speak = async (g: GroupRecord, sess: SessionRecord, role: RoleRecord): Promise<SpeakResult> => {
@@ -99,6 +87,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       '- 名称：' + role.name,
       '- 人设：' + (role.persona ? role.persona : '（未填写，请以积极协作者的身份参与讨论）'),
       sess.topic ? '\n# 本会话主题\n' + sess.topic : '',
+      constraintBlock(sess.constraints),
       materials.materialBlock(parts, ws.dir),
       ws.dir
         ? '\n# 可用工具\n你可以调用工具在群组工作区目录（' + ws.dir + '）内查看文件与目录' +
@@ -323,8 +312,11 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       run.stopping = false
       touch()
     }
-    // 本轮有新消息落盘 → 后台整理标题/主题（fire-and-forget，不产生消息、静默失败）
-    if (sess.messageIds.length > startCount) void retitle(sess)
+    // 本轮有新消息落盘 → 后台整理标题/主题 + 窗口外约束（fire-and-forget，不占用 run）
+    if (sess.messageIds.length > startCount) {
+      void retitle(sess)
+      void fold(sess)
+    }
   }
 
   return { appendMessage, runLoop }

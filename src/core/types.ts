@@ -41,6 +41,23 @@ export interface GroupRecord {
   sessionIds: string[]
 }
 
+/** 会话约束条目类型（窗口外结论/约束备忘）。 */
+export type ConstraintKind = 'decided' | 'rejected' | 'open'
+
+/** 全部合法约束类型。 */
+export const CONSTRAINT_KINDS: readonly ConstraintKind[] = ['decided', 'rejected', 'open']
+
+/** 合法 kind 原样，其余 undefined。 */
+export function asConstraintKind(value: unknown): ConstraintKind | undefined {
+  return typeof value === 'string' && (CONSTRAINT_KINDS as readonly string[]).includes(value) ? value as ConstraintKind : undefined
+}
+
+/** 一条无主结论/约束（已定 / 否决 / 未决）。 */
+export interface SessionConstraint {
+  kind: ConstraintKind
+  text: string
+}
+
 /** 会话：消息挂在会话上。 */
 export interface SessionRecord {
   id: string
@@ -51,6 +68,10 @@ export interface SessionRecord {
   namePinned?: boolean
   /** 主题已被手动编辑：自动整理永久跳过（隐式固定）。 */
   topicPinned?: boolean
+  /** 窗口外结论/约束备忘；空则省略。 */
+  constraints?: SessionConstraint[]
+  /** 已折入备忘的最大消息 seq；0/缺省 = 尚未折过。 */
+  constraintsUpToSeq?: number
   messageIds: string[]
   createdAt: number
 }
@@ -183,7 +204,7 @@ export interface Snapshot {
   run: { running: boolean, sessionId: string | null, currentRoleId: string | null, partial: string, partialReasoning: string, pendingConfirm: PendingConfirm | null, finished: RunFinished | null }
   lastCreated: LastCreated | null
   groups: { id: string, name: string, workspaceDir: string, permissionTier: PermissionTier, roleIds: string[], sessionIds: string[] }[]
-  sessions: { id: string, groupId: string, name: string, topic: string, messageIds: string[], createdAt: number }[]
+  sessions: { id: string, groupId: string, name: string, topic: string, constraints?: SessionConstraint[], messageIds: string[], createdAt: number }[]
   roles: { id: string, groupId: string, name: string, color?: string, persona: string, provider: string, model: string, temperature?: number, reasoningEffort?: string, enabled: boolean, thinking: boolean }[]
   messages: { id: string, sessionId: string, seq: number, speaker: string, text: string, reasoning?: string, model?: string, error?: boolean, toolCalls?: ToolCallRecord[], ts: number }[]
   error?: string

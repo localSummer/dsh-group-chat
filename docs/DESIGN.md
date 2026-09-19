@@ -197,7 +197,7 @@ components:
 - **Control**（400, 13px）：输入框、select、textarea、搜索框、角色名、设置页描述。
 - **Minor**（400, 12.5px）：会话行、重命名框、@候选、文件行、思考体（行高 1.7）。
 - **Label**（500, 12px）：表单标签、chips、提示、区块头（600）、轮数。
-- **Caption**（400, 11.5px, 1.5）：系统通知、思考摘要（44ch 截断）、角色人设（2 行钳制）。
+- **Caption**（400, 11.5px, 1.5）：系统通知、思考摘要（44ch 截断）、角色人设（2 行钳制）、会话头约束备忘。
 - **Micro**（500, 11px, line-height 17）：角色卡模型徽章。
 - **Micro-tiny**（500, 10.5px）：流内模型徽章（line-height 16）、相对时间、文件尺寸。
 
@@ -209,7 +209,7 @@ components:
 三区工作台（`.dsgc-root` 为 `container-type:inline-size` 容器，响应式全部走容器查询而非媒体查询）：
 
 - **左导航 232px**（`flex:none`，右缘 1px `border-l1`，**可收起**——左接缝收合钮触发，收合动画与右栏同款配方）：搜索框（P.Input，13px）→ 目录树（`flex:1` 滚动）→「新建群组」（P.Button outline）。群组块间距 6px；群组行（继承 14px）展开后会话列表带上缘 4px 呼吸 + 1px `border-l1` 左规线 + 12px 缩进，会话行距 2px、行内边距 6px 8px（12.5px 字号、行高 1.5）。
-- **中央会话区流体**（`flex:1;min-width:0;position:relative`）：会话头（12px 16px，标题 + 主题输入框 + 清空 ghost 钮——清空经确认弹窗（P.Modal：说明删除范围〔会话名 + 消息条数〕、不可恢复后果、不受影响项，busy 时禁用确认），收合控制不在头部，见接缝收合钮；主题输入框为透明无边框内联输入，hover 露出 border-b2 下划线、focus 变 business-primary 下划线——无方框 outline）→ 消息流（padding 20px 24px 16px，行距 16px，贴底跟随，离底 60px 即出「回到底部」浮动药丸，锚在 composer 上方 `bottom:calc(100% + 8px)`）→ composer（钉底，无分隔线 + padding 12px 16px 14px，列间 10px，输入卡见签名组件）。
+- **中央会话区流体**（`flex:1;min-width:0;position:relative`）：会话头两行（12px 16px：第一行标题 + 主题输入框 + 清空 ghost 钮；第二行只在有约束备忘时出现，贴主题正下方——只读平铺 caption，不进右栏、不做成卡）。清空经确认弹窗（P.Modal：说明删除范围〔会话名 + 消息条数 + 本会话约束备忘〕、不可恢复后果、不受影响项，busy 时禁用确认），收合控制不在头部，见接缝收合钮；主题输入框为透明无边框内联输入，hover 露出 border-b2 下划线、focus 变 business-primary 下划线——无方框 outline）→ 消息流（padding 20px 24px 16px，行距 16px，贴底跟随，离底 60px 即出「回到底部」浮动药丸，锚在 composer 上方 `bottom:calc(100% + 8px)`）→ composer（钉底，无分隔线 + padding 12px 16px 14px，列间 10px，输入卡见签名组件）。
 - **右上下文栏 304px**（`flex:none`，左缘 1px `border-l1`，整体滚动）：「群成员」角色卡列 + 「工作区目录」（`.dsgc-wsrow` 弹性行：输入 flex:1 + min-width:0，按钮 flex:none + nowrap，杜绝「浏览」文字折行；内联文件浏览器）。
 - **容器查询降级**：≤880px 右栏转绝对定位覆盖层（z-index 15，带投影与 `border-l2`）；≤640px 左栏收窄 200px、消息体 max-width 放宽到 88%（常态 76%）。
 - **角色抽屉**：右侧滑出 380px（`max-width:calc(100% - 40px)`），覆盖在右栏之上（z-index 20）。
@@ -220,7 +220,7 @@ components:
 
 ### Named Rules
 **行/卡二分规则。** 导航与列表一律平铺行（无边框、圆角 6、hover 换底色）；卡片（圆角 12、边框、底色）只承载内容单元——角色卡、消息卡、设置卡。禁止给平铺行加边框或给卡片去掉边框。
-**三区守恒规则。** 只有三个常驻区。新功能要么进右栏（管理类）、要么走抽屉/弹层（临时类），不得开辟第四栏。
+**三区守恒规则。** 只有三个常驻区。新功能要么进右栏（管理类）、要么走抽屉/弹层（临时类），不得开辟第四栏。会话约束备忘挂在会话头第二行，不是第四栏。
 
 ## Elevation & Depth
 
@@ -249,6 +249,9 @@ components:
 ### Seam handles（左右栏收合钮）
 钉在会话区两缘的竖向页签（`position:absolute`，垂直居中 `translateY(-50%)`，24×56px）：**钮在哪一侧就控制哪一侧的面板**——位置即语义，取代原先挤在会话头部的两枚翻转同款图标钮。左钮 IconChevronLeftOutline14、右钮 IconChevronRightOutline14（16px 渲染，方向相反、各指其侧，不再用 scaleX 翻转）。半页签形状：靠接缝一侧无边框、另一侧 8px 圆角（左钮 `0 8px 8px 0`、右钮镜像）；实底 `bg-layer-3` + `border-l2` + 轻方向性软影（见影调词表）。z-index 14（低于 ≤880px 覆盖式右栏的 15——窄模式滑行时钮藏于面板下、到位后在接缝处露出）。状态经 `aria-expanded` + 动态 title/aria-label（收起/展开·其侧栏名）；hover 换 `hover-fill` 提色。
 
+### Session constraints（会话头第二行）
+只读平铺行，不是卡（无底、无边框、无色点、无左规线）。层级永远弱于主题：caption 11.5px / 行高 1.5。一行一条：文案前缀「已定 / 否决 / 未决」+ 一句约束。已定前缀 `label-secondary`、否决前缀 `state-error-primary`（对齐清空 hover / 系统错误，不是角色红）、未决前缀 `label-tertiary`；正文一律 `label-primary`。空备忘不渲染。1–4 条全露；超过 4 条默认露 3 条 + 底部弱平铺「还有 N 条约束」（`role="button"`，Enter/Space），展开后全部 + 「收起」；展开态不 persist，换会话重置。折叠后台完全静默（对齐 retitle，不画「整理中」）。第二行出现用现有 fade ≤180ms；reduced-motion 关掉。`aria-label="本会话已确认约束"`；前缀对读屏可读。窄容器第二行全宽换行，不得把第一行清空钮挤没。
+
 ### Chips
 参与角色 chip 为自有件：胶囊（999px）+ `border-l2` + 透明底 + 8px 角色色点，12px；选中态换 `active-fill` 底（边框不变）；hover 只提字色；对话中禁用（opacity .5）。被 @ 时 chips 让位给一行说明文字。
 
@@ -273,7 +276,7 @@ components:
 P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「思考」+ 折叠摘要（剥离 markdown 标记的纯文本，44ch 截断，11.5px）；展开体为 pre-wrap 纯文本 12.5px/1.7，左缘 2px `border-l2` 规线，max-height 320px 滚动。
 
 ### Composer（签名组件）
-纵列：参与角色 chips 行（卡外，配置不入卡）→ **输入卡**（对标主会话 composer 卡：22px 圆角独立卡、`input-major` 实底、`elevation-soft` 软影【输入面豁免】、卡内无边框 textarea 36px 起自适应，左缩进 14px）→ 卡内底部**附件行**（权限芯片居左 + 轮数步进器 −/数字/+（数字 26px 宽 tabular-nums + 「轮」）紧邻 P.Button primary「发送」/ 覆写 danger「停止」，全部 white-space:nowrap——发送参数与主操作同组）。composer 区无 `border-top` 硬分隔，输入卡直接浮在消息流下方（上缘留 12px 呼吸）。@弹层（卡内锚定、向上溢出卡片）：layer-3 + `border-l2` + 圆角 10 + `shadow-lv3`。成员候选项 = 色点 + 名字（500）+ 模型（11px）；文件候选项 = 22px FileTypeIcon 井位（目录淡琥珀底 / 文件 module 底）+ 路径 + 目录行右侧 chevron。键盘 ↑↓/Enter/Tab（文件弹层 Esc 关闭；成员弹层 Esc 不参与——输入法组合下行为不稳，明确不做）；Enter/Tab/点击候选 → 删除光标前 @词并插入**原子芯片**（候选钮 `mousedown` 阻止默认，保住输入区选区）；底部操作提示行。
+纵列：参与角色 chips 行（卡外，配置不入卡）→ **输入卡**（对标主会话 composer 卡：22px 圆角独立卡、`input-major` 实底、`elevation-soft` 软影【输入面豁免】、卡内无边框 textarea 36px 起自适应，左缩进 14px）→ 卡内底部**附件行**（权限芯片居左 + 轮数步进器 −/数字/+（数字 26px 宽 tabular-nums + 「轮」）紧邻 P.Button primary「发送」/ 覆写 danger「停止」，全部 white-space:nowrap——发送参数与主操作同组）。轮数整块（含 ±、数字、「轮」）包宿主 `P.Tooltip`：`side="top"`、`delayMs={500}`（对齐侧栏会话行 hover，点 ± 不闪）、`maxWidth={280}`；三行 `pre-line`——「一轮 = 参与角色各说一次。」/「要他们自己互相反驳、你不插话时再加轮。」/「要边看边插话，就留 1，再点发送。」；去掉 native `title`，避免双气泡；± 保留 `aria-label`。气泡形态走原语（`--dsw-alias-tooltip-bg`、13px / 20px、圆角 8、150ms fade），不自绘。composer 区无 `border-top` 硬分隔，输入卡直接浮在消息流下方（上缘留 12px 呼吸）。@弹层（卡内锚定、向上溢出卡片）：layer-3 + `border-l2` + 圆角 10 + `shadow-lv3`。成员候选项 = 色点 + 名字（500）+ 模型（11px）；文件候选项 = 22px FileTypeIcon 井位（目录淡琥珀底 / 文件 module 底）+ 路径 + 目录行右侧 chevron。键盘 ↑↓/Enter/Tab（文件弹层 Esc 关闭；成员弹层 Esc 不参与——输入法组合下行为不稳，明确不做）；Enter/Tab/点击候选 → 删除光标前 @词并插入**原子芯片**（候选钮 `mousedown` 阻止默认，保住输入区选区）；底部操作提示行。
 
 ### 角色抽屉
 右侧滑出 380px：`bg-layer-2` + 左缘 `border-l2` + 向左投影 + `.18s ease-out` 入场动画（translateX 24px + 淡入）；头（标题 + ghost 关闭）/ 体（滚动，12px 间距表单：名称、标识色调色盘、人设 textarea、提供方/模型 select、温度、深度思考 P.Switch）/ 脚（取消 outline + 保存 primary）。Escape 关闭。
@@ -286,7 +289,7 @@ P.DisclosureRow 定制：12px 行（hover 换底），IconThinkOutline14 + 「�
 动效只为反馈、状态与连续性服务；流式正文零逐帧动画（SSE 120ms 高频更新不叠加效果）。统一到达曲线 `cubic-bezier(0.16,1,.3,1)`，退场恒短于入场（ease-in 出）。
 
 - **签名循环**：`dsgc-presence` 1.8s ease-in-out infinite——正在流式发言的角色头像以 `--role-color`（color-mix 22%）呼吸 4px 光环；随 live 行卸载即停。`dsgc-typing-shimmer` 1.8s linear infinite——live 行「深度求索...」时间槽的品牌蓝微光扫动（对标宿主 TurnStatus「深度求索中...」：`--dsw-static-deepseek-500/200` 渐变带 + `background-clip:text` + `background-position` 扫动；reduced-motion 降级为静态渐变）。`dsgc-dot-breathe` 1.2s（0/.2/.4s 交错）——首个 delta 前「思考中」占位行的三点呼吸。
-- **出现确认**（fade + 轻微位移）：消息 `.22s`（6px 上浮）、@弹层 `.16s`（4px）、回到底部 `.18s`（6px，保留 translateX(-50%) 定位）、思考正文 `.2s`（3px）、错误 `.18s` / 文件浏览器 `.2s` / 空状态 `.3s`（纯 fade）、系统消息 `.24s`（scale .96）。
+- **出现确认**（fade + 轻微位移）：消息 `.22s`（6px 上浮）、@弹层 `.16s`（4px）、回到底部 `.18s`（6px，保留 translateX(-50%) 定位）、思考正文 `.2s`（3px）、错误 `.18s` / 文件浏览器 `.2s` / 空状态 `.3s`（纯 fade）、系统消息 `.24s`（scale .96）、会话头约束备忘 `.18s`（纯 fade）。
 - **布局连续性（唯一的 layout 动画，左右对称两处）**：左右栏折叠，同一配方。宽模式 `width →0` + opacity（开 `.28s` 曲线到 / 合 `.24s` ease-in），子元素经 flex 列默认 stretch 填满内容区（不写死宽度——面板为 content-box，宿主无全局 border-box，写死像素会与内容区实宽脱节致左右内距失衡；收合期间内容随面板收缩，行内 ellipsis 渐进截断 + nowrap 元素 `overflow:hidden` 防涂抹），`visibility` 延迟 `.22s` 切换（关闭时键盘焦点安全）；窄容器（≤880px）右栏覆盖层 `translateX` 滑行（开 `.3s` / 合 `.26s`），左栏在 ≤640px 下收窄至 200px。**接缝收合钮随接缝滑行**：宽模式由布局驱动（中栏连续变宽，贴缘绝对定位的钮自动同步，无自有动画）；窄模式右钮以同曲线 `right` 过渡（`.3s`）跟踪覆盖层左缘。
 - **抽屉**：入 `.22s`（32px 滑入 + 淡入）；出 `.14s` ease-in + `pointer-events:none`——取消/Esc 走 140ms 退场后卸载，保存成功为即时确认。
 - **时长纪律**：微反馈 ≤150ms（色彩过渡 `.12/.16s` 沿用）→ 出现 160–240ms → 布局 260–300ms。
