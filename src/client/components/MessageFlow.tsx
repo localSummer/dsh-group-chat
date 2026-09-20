@@ -8,6 +8,7 @@ import { WINDOW_SIZE } from '../../core/constraints.ts'
 import { Icon, P } from '../lib/ui.ts'
 import { Bubble } from './Bubble.tsx'
 import { ConstraintList } from './ConstraintList.tsx'
+import { SpeakerOrb, type SpeakerOrbState } from './SpeakerOrb.tsx'
 import { ThinkRow } from './ThinkRow.tsx'
 import { resolveFailedRole } from '../../core/errors.ts'
 import { roleById, type ClientSnapshot } from '../lib/model.ts'
@@ -30,15 +31,18 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
   const replaceMsg = replaceId ? msgById[replaceId] : null
   const liveRoleId = snap.run.currentRoleId || (replaceMsg && (replaceMsg.failedRoleId || replaceMsg.speaker)) || null
   const lr = busyNow && liveRoleId ? roleById(snap, liveRoleId) : null
+  const liveColor = lr ? (lr.color || '#888') : '#888'
+  // 执行阶段映射：正文流出 → listening 涟漪；等待首字节/推理中 → thinking 热斑游走
+  const orbState: SpeakerOrbState = snap.run.partial ? 'listening' : 'thinking'
 
   const live = lr
     ? (
       <div key="__live" className="dsgc-msg live">
         <div
           className="dsgc-avatar"
-          style={{ border: '2px solid ' + (lr.color || '#888'), '--role-color': lr.color || '#888' } as CSSProperties}
+          style={{ border: '2px solid ' + liveColor, '--role-color': liveColor } as CSSProperties}
         >
-          {lr.name.slice(0, 1)}
+          <SpeakerOrb state={orbState} color={liveColor} />
         </div>
         <div className="dsgc-msgbody">
           <div className="dsgc-msghead">

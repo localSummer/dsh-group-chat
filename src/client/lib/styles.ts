@@ -104,6 +104,9 @@ export const CSS = [
   '.dsgc-msg.mine{flex-direction:row-reverse}',
   '.dsgc-avatar{width:28px;height:28px;box-sizing:border-box;border:2px solid var(--dsw-alias-border-l3,rgba(128,128,128,.4));border-radius:50%;background:var(--dsw-alias-bg-module-platform,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex:none;margin-top:1px}',
   '.dsgc-avatar.mine{border-color:transparent;background:var(--dsw-alias-button-info-fill,#4f6ef7);color:var(--dsw-alias-label-primary-foreground,#fff)}',
+  /* 执行中头像点阵光球（SpeakerOrb）：inline canvas 需 block 消除基线空隙，
+     尺寸由组件内联 style 钉死为头像内容盒 24px */
+  '.dsgc-avatar .dsgc-orb{display:block}',
   '.dsgc-msgbody{max-width:76%;min-width:0;display:flex;flex-direction:column;gap:5px}',
   '.dsgc-msg.mine .dsgc-msgbody{align-items:flex-end}',
   '.dsgc-msghead{display:flex;gap:6px;align-items:center;min-width:0;font-size:12px;color:var(--dsw-alias-label-secondary,inherit)}',
