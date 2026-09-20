@@ -13,16 +13,14 @@ export interface Persistence {
         roles?: string | null;
         workspace?: string | null;
     }) => void;
-    /** 同步 flush：写全部脏文件（dispose 最终落盘用）。 */
-    flushNow: () => void;
     /** 删除群组/会话后摘除脏标记（对应文件已删/将删，flush 跳过）。 */
     dropDirty: (targets: {
         session?: string | null;
         roles?: string | null;
         workspace?: string | null;
     }) => void;
-    /** dispose：同步最终 flush → 释放锁 → 摘除句柄。 */
-    release: () => void;
+    /** dispose：停止新调度 → 等待挂起 flush → 最终 flush → 释放锁（异步）。 */
+    release: () => Promise<void>;
 }
 /**
  * 创建持久化面：构造即完成 store 初始化 + hydrate（v1 迁移 → 残留清理 →

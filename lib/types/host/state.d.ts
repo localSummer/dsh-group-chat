@@ -27,6 +27,7 @@ export interface HostState {
     ctx: Context;
     llm: Context['llm'];
     fs: Context['fs'];
+    shell: Context['shell'];
     groups: Map<string, GroupRecord>;
     sessions: Map<string, SessionRecord>;
     roles: Map<string, RoleRecord>;

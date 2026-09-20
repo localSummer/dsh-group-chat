@@ -71,9 +71,9 @@ beforeAll(async () => {
   env = { svc, storeDir, pushPlan: (rounds) => { queue.push(rounds) } }
 })
 
-afterAll(() => {
+afterAll(async () => {
   if (env) {
-    env.svc.dispose()
+    await env.svc.dispose()
     rmSync(env.storeDir, { recursive: true, force: true }) // 清理本文件的临时 store 目录
     env = null
   }

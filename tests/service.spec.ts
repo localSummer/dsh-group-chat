@@ -11,6 +11,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { fakeShell } from './shell-stub.ts'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
@@ -80,14 +81,14 @@ beforeAll(async () => {
     readText: async () => '',
     processPath: (p: string) => p,
   }
-  const ctx = { llm, fs, workspaceRegistry: { list: async () => [] } } as unknown as import('@deepseek-ai/cordis').Context
+  const ctx = { llm, fs, shell: fakeShell(), workspaceRegistry: { list: async () => [] } } as unknown as import('@deepseek-ai/cordis').Context
   const svc = createGroupChatService(ctx)
   await svc.handleAction({ kind: 'mutate', op: 'setWorkspaceDir', groupId: 'grp-a', path: wsDir })
   await svc.handleAction({ kind: 'mutate', op: 'upsertRole', groupId: 'grp-a', role: { name: '工程师', provider: 'p', model: 'm' } })
   env = { svc, wsDir, storeDir, calls, pushPlan: (rounds) => { queue.push(rounds) } }
 })
 
-afterAll(() => { if (env) { env.svc.dispose(); env = null } })
+afterAll(async () => { if (env) { await env.svc.dispose(); env = null } })
 
 /** 一次 run_command 工具调用的 chunk 计划。 */
 const cmdRound = (command: string): StreamChunk[] => [
@@ -171,7 +172,7 @@ describe('权限档位（host 冒烟，顺序场景）', () => {
   it('dispose 后 ledger 落盘 schema 3 + permissionTier（最后场景：dispose 即终结）', async () => {
     const e = env!
     await e.svc.handleAction({ kind: 'mutate', op: 'setPermissionTier', groupId: 'grp-b', tier: 'full_access' })
-    e.svc.dispose()
+    await e.svc.dispose()
     const ledger = JSON.parse(readFileSync(join(e.storeDir, 'ledger.json'), 'utf8')) as { schema: number, groups: { id: string, permissionTier?: string, allowCommands?: boolean }[] }
     expect(ledger.schema).toBe(3)
     const a = ledger.groups.find((g) => g.id === 'grp-a')!

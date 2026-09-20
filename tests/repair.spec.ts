@@ -63,8 +63,8 @@ beforeAll(async () => {
   svc = createGroupChatService(ctx)
 })
 
-afterAll(() => {
-  if (svc) svc.dispose()
+afterAll(async () => {
+  if (svc) await svc.dispose()
   if (storeDir) rmSync(storeDir, { recursive: true, force: true })
 })
 

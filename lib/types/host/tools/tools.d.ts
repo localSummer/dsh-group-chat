@@ -1,7 +1,8 @@
 /**
  * 工具执行（TOOLS.md §2：沙箱 / §3：确认闸门）：read_file / list_dir /
  * run_command 三件套；realpath 硬边界 + 分隔符比较；run_command 按群组
- * 权限档位走逐条确认或直接执行。
+ * 权限档位走逐条确认或直接执行，经 `shell` 服务（ctx.shell 沙箱执行器）
+ * 以 per-call sandboxPolicy 收紧到群工作区。
  * @module dsh-group-chat/host/tools
  */
 import { TOOL_SCHEMAS } from '../../core/tools.ts';

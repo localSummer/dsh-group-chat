@@ -23,6 +23,17 @@ async function until(cond: () => boolean, ms = 5000): Promise<void> {
   throw new Error('等待超时')
 }
 
+/** 轮询读取 JSON 文件直到断言通过（flush 异步化后 sleep+直读有竞态）。 */
+async function untilDoc<T>(file: string, pred: (doc: T) => boolean, ms = 5000): Promise<T> {
+  const deadline = Date.now() + ms
+  for (;;) {
+    const doc = JSON.parse(readFileSync(file, 'utf8')) as T
+    if (pred(doc)) return doc
+    if (Date.now() > deadline) throw new Error('等待落盘超时：' + file)
+    await sleep(20)
+  }
+}
+
 interface StreamChunk { type: string, [key: string]: unknown }
 
 type Service = import('../src/host/service.ts').GroupChatService
@@ -103,7 +114,7 @@ beforeAll(async () => {
   }
 })
 
-afterAll(() => { if (env) { env.svc.dispose(); env = null } })
+afterAll(async () => { if (env) { await env.svc.dispose(); env = null } })
 
 /** 模型返回的命名 JSON chunk 计划。 */
 const titleRound = (name: string, topic: string): StreamChunk[] => [
@@ -136,9 +147,8 @@ describe('会话标题/主题自动整理', () => {
     expect(e.lastOpts && e.lastOpts.purpose).toBe('session-title')
     expect(e.lastOpts && e.lastOpts.provider).toBe('dp')
     expect(e.lastOpts && e.lastOpts.model).toBe('dm')
-    // 落盘（schedulePersist 微任务 flush）
-    await sleep(60)
-    const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { name: string, topic: string }
+    // 落盘（schedulePersist → 异步 flush 链）
+    const doc = await untilDoc<{ name: string, topic: string }>(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), (d) => d.name === '🔎 缓存选型｜Redis 对比' && d.topic === '围绕缓存选型讨论，聚焦 Redis 与本地 KV 的成本对比')
     expect(doc.name).toBe('🔎 缓存选型｜Redis 对比')
     expect(doc.topic).toBe('围绕缓存选型讨论，聚焦 Redis 与本地 KV 的成本对比')
   })
@@ -151,10 +161,8 @@ describe('会话标题/主题自动整理', () => {
     expect(send.ok).toBe(true)
     await until(() => sessionOf(e).topic === '持久化方案讨论，聚焦刷盘时机')
     expect(sessionOf(e).name).toBe('🔎 缓存选型｜Redis 对比')
-    await sleep(60)
-    const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { name: string, topic: string, namePinned?: boolean }
+    const doc = await untilDoc<{ name: string, topic: string, namePinned?: boolean }>(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), (d) => d.topic === '持久化方案讨论，聚焦刷盘时机')
     expect(doc.name).toBe('🔎 缓存选型｜Redis 对比')
-    expect(doc.topic).toBe('持久化方案讨论，聚焦刷盘时机')
     expect(doc.namePinned).toBeUndefined()
   })
 
@@ -167,10 +175,7 @@ describe('会话标题/主题自动整理', () => {
     expect(send.ok).toBe(true)
     await until(() => sessionOf(e).topic === '刷盘时机与 WAL 取舍')
     expect(sessionOf(e).name).toBe('我的手动会话名')
-    await sleep(60)
-    const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { name: string, namePinned?: boolean, topicPinned?: boolean }
-    expect(doc.name).toBe('我的手动会话名')
-    expect(doc.namePinned).toBe(true)
+    const doc = await untilDoc<{ name: string, namePinned?: boolean, topicPinned?: boolean }>(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), (d) => d.name === '我的手动会话名' && d.namePinned === true)
     expect(doc.topicPinned).toBeUndefined()
   })
 

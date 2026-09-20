@@ -28,8 +28,8 @@ export interface GroupChatService {
   subscribePush(push: () => void): () => void
   /** 设置停用时中止正在进行的群聊。 */
   stopAll(): void
-  /** 卸载/热重载：唤醒确认等待 + kill 子进程 → 同步最终 flush → 释放锁。 */
-  dispose(): void
+  /** 卸载/热重载：唤醒确认等待 + kill 子进程 → 异步最终 flush → 释放锁（cordis 会 await）。 */
+  dispose(): Promise<void>
 }
 
 /**
@@ -66,13 +66,13 @@ export function createGroupChatService(ctx: Context): GroupChatService {
         bus.touch()
       }
     },
-    dispose(): void {
+    dispose(): Promise<void> {
       core.run.stopping = true
       if (core.run.pendingConfirm) tools.wakeConfirm()
       tools.killChild()
       materials.disposeFileSearch()
       bus.dispose()
-      persist.release()
+      return persist.release()
     },
   }
 }

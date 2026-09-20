@@ -14,6 +14,9 @@
  *    （engine/fold.ts；立刻 idle、fire-and-forget，不产生消息）
  *  - 群组工作区目录经 `fs` 服务读取（根下一层文本文件，最多 20 个），
  *    以「共享资料」块注入每个角色的 system 提示词；无独立笔记/文件清单
+ *  - 工具执行（read_file/list_dir/run_command）见 docs/TOOLS.md：run_command
+ *    经 `shell` 服务（ctx.shell 沙箱执行器）执行，per-call sandboxPolicy
+ *    收紧到群工作区（workspace_write 档）或免受限（full_access 档）
  *  - 经 `webServer` 暴露 HTTP API：
  *      GET  /api/group-chat/state   全量快照
  *      POST /api/group-chat/action   { kind: mutate|send|stop|confirmCommand|models|efforts|browse|fileSearch, ... }
@@ -36,7 +39,7 @@ import { createGroupChatService, makeGroupChatRoutes } from './host/index.ts'
 
 export const name = 'group-chat'
 
-export const inject = ['llm', 'fs', 'webServer', 'workspaceRegistry']
+export const inject = ['llm', 'fs', 'shell', 'webServer', 'workspaceRegistry']
 
 /** 设置命名空间；浏览器半拼写同一值，两边不共享代码。 */
 export const SETTINGS_NAMESPACE = 'group-chat' as SettingsNamespace
@@ -65,10 +68,9 @@ export const apply = mountOnce('dsh-group-chat', (ctx: Context, config?: Config)
     }
   }, 'group-chat: host API routes')
 
-  // 插件卸载/热重载：唤醒确认等待 + kill 子进程 → 同步最终 flush → 释放锁
-  ctx.effect(() => () => {
-    service.dispose()
-  })
+  // 插件卸载/热重载：唤醒确认等待 + kill 子进程 → 异步最终 flush → 释放锁
+  // （返回 Promise，cordis 卸载时 await，保证新实例接管前锁已释放）
+  ctx.effect(() => () => service.dispose())
 
   // ---------- 设置（enabled 持久化于 settings.yaml） ----------
 

@@ -1,11 +1,11 @@
 /**
  * 工具执行（TOOLS.md §2：沙箱 / §3：确认闸门）：read_file / list_dir /
  * run_command 三件套；realpath 硬边界 + 分隔符比较；run_command 按群组
- * 权限档位走逐条确认或直接执行。
+ * 权限档位走逐条确认或直接执行，经 `shell` 服务（ctx.shell 沙箱执行器）
+ * 以 per-call sandboxPolicy 收紧到群工作区。
  * @module dsh-group-chat/host/tools
  */
 
-import { spawn, type ChildProcess } from 'node:child_process'
 import { closeSync, openSync, readSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { isAbsolute, join, sep } from 'node:path'
 import { CMD_CAPTURE_MAX_BYTES, CMD_OUTPUT_MAX_CHARS, READ_FILE_MAX_BYTES, RUN_CMD_TIMEOUT_MS, TOOL_SCHEMAS } from '../../core/tools.ts'
@@ -28,7 +28,7 @@ export interface Tools {
 
 /** 创建工具面。 */
 export function createTools(core: HostState, touch: () => void): Tools {
-  const { run } = core
+  const { run, shell } = core
 
   /** realpath 硬边界：目标必须在群组工作区内（带分隔符比较，防 /ws/foo 放行 /ws/foobar）。 */
   const resolveInWorkspace = (root: string, rawPath: unknown): { ok: true, target: string } | { ok: false, error: string } => {
@@ -92,45 +92,40 @@ export function createTools(core: HostState, touch: () => void): Tools {
     }
   }
 
-  const runCommandTool = (root: string, command: string): Promise<{ status: 'ok' | 'error', output: string }> => new Promise((resolve) => {
-    let child: ChildProcess
+  /**
+   * 经 `shell` 服务执行命令（TOOLS.md §2）：cwd 与沙箱均收紧到群工作区根
+   * （workspace_write 档经 sandboxPolicy 强制；full_access 档对齐 DSH
+   * danger-full-access 语义免受限）。超时/中止由执行器 kill 进程并按首因
+   * 分类报告；runner 失效（如 SANDBOX_UNAVAILABLE）经 catch 报错不执行。
+   */
+  const runCommandTool = async (g: GroupRecord, root: string, command: string): Promise<{ status: 'ok' | 'error', output: string }> => {
+    const abort = new AbortController()
+    run.commandAbort = abort
     try {
-      child = spawn('bash', ['-c', command], { cwd: root })
-    } catch (e) {
-      resolve({ status: 'error', output: '无法启动命令：' + String((e && (e as Error).message) || e) })
-      return
-    }
-    run.childProc = child
-    let out = ''
-    let dropped = 0
-    let timedOut = false
-    const onChunk = (chunk: Buffer) => {
-      if (out.length < CMD_CAPTURE_MAX_BYTES) out += chunk.toString('utf8')
-      else dropped += chunk.length
-    }
-    child.stdout?.on('data', onChunk)
-    child.stderr?.on('data', onChunk)
-    const timer = setTimeout(() => {
-      timedOut = true
-      try {
-        child.kill('SIGKILL')
-      } catch {}
-    }, RUN_CMD_TIMEOUT_MS)
-    const finish = (result: { status: 'ok' | 'error', output: string }) => {
-      clearTimeout(timer)
-      if (run.childProc === child) run.childProc = null
-      resolve(result)
-    }
-    child.on('error', (e) => finish({ status: 'error', output: '执行失败：' + String((e && e.message) || e) }))
-    child.on('close', (code) => {
-      let text = out.length > CMD_CAPTURE_MAX_BYTES ? out.slice(0, CMD_CAPTURE_MAX_BYTES) : out
-      if (dropped > 0) text += '\n[输出采集超限，已丢弃 ' + dropped + ' 字节]'
-      if (timedOut) text += '\n[执行超时（' + Math.round(RUN_CMD_TIMEOUT_MS / 1000) + 's），已强制终止]'
-      if (code !== 0 && code !== null && !timedOut) text += '\n[退出码 ' + code + ']'
+      const spec = shell.resolve({
+        command,
+        workdir: root,
+        timeoutMs: RUN_CMD_TIMEOUT_MS,
+        stdoutMaxBytes: CMD_CAPTURE_MAX_BYTES,
+        sandboxPolicy: g.permissionTier === 'full_access'
+          ? { mode: 'danger-full-access' as const, workspaceRoot: root }
+          : { mode: 'workspace-write' as const, workspaceRoot: root },
+        signal: abort.signal,
+      })
+      const r = await shell.run(spec)
+      let text = r.stdout.text + r.stderr.text
+      if (r.stdout.truncated || r.stderr.truncated) text += '\n[输出采集超限，已截断（保留末尾）]'
+      if (r.sandbox?.denied) text += '\n[沙箱拦截了越界的文件操作]'
+      if (r.timedOut) text += '\n[执行超时（' + Math.round(RUN_CMD_TIMEOUT_MS / 1000) + 's），已强制终止]'
+      if (r.exitCode !== 0 && r.exitCode !== null && !r.timedOut) text += '\n[退出码 ' + r.exitCode + ']'
       if (text.length > CMD_OUTPUT_MAX_CHARS) text = text.slice(0, CMD_OUTPUT_MAX_CHARS) + '\n…(输出超长，已截断)'
-      finish({ status: code === 0 ? 'ok' : 'error', output: text || '（无输出）' })
-    })
-  })
+      return { status: r.exitCode === 0 ? 'ok' : 'error', output: text || '（无输出）' }
+    } catch (e) {
+      return { status: 'error', output: '无法启动命令：' + String((e && (e as Error).message) || e) }
+    } finally {
+      if (run.commandAbort === abort) run.commandAbort = null
+    }
+  }
 
   /** run_command 确认闸门：置 pendingConfirm 后无限等待，confirmCommand/stop/dispose 唤醒。 */
   const requestConfirmation = (toolCallId: string, args: Record<string, unknown>): Promise<boolean> => new Promise((resolve) => {
@@ -151,11 +146,10 @@ export function createTools(core: HostState, touch: () => void): Tools {
   }
 
   const killChild = (): void => {
-    if (run.childProc) {
-      try {
-        run.childProc.kill('SIGKILL')
-      } catch {}
-    }
+    // 中止正在执行的命令：执行器收到 abort 信号后 kill 进程
+    try {
+      run.commandAbort?.abort()
+    } catch {}
   }
 
   const executeTool = async (g: GroupRecord, root: string, tc: { id: string, name: string, args: string }): Promise<ToolExecution> => {
@@ -175,9 +169,9 @@ export function createTools(core: HostState, touch: () => void): Tools {
         const allowed = await requestConfirmation(tc.id, args)
         if (run.stopping) res = { status: 'error', output: '对话已被用户停止，命令未执行' }
         else if (!allowed) res = { status: 'denied', output: '用户拒绝了这次命令执行' }
-        else res = await runCommandTool(root, String(args.command || ''))
+        else res = await runCommandTool(g, root, String(args.command || ''))
       } else {
-        res = await runCommandTool(root, String(args.command || ''))
+        res = await runCommandTool(g, root, String(args.command || ''))
       }
     } else {
       res = { status: 'error', output: '未知工具：' + tc.name }

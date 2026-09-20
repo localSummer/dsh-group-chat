@@ -192,7 +192,7 @@ export function Composer(props: ComposerProps): ReactNode {
                 )
               : null}
           {!input.trim()
-            ? <div className="dsgc-ph" aria-hidden="true">发消息给全群，@成员 点名让其回应（留空则让角色自由讨论）…</div>
+            ? <div className="dsgc-ph" aria-hidden="true">发消息给全群，@成员 点名让其回应…</div>
             : null}
           <div
             className="dsgc-edit"
@@ -233,7 +233,7 @@ export function Composer(props: ComposerProps): ReactNode {
               </P.Button>
               )
             : (
-              <P.Button variant="primary" onClick={() => { void sendMsg() }} disabled={(!participants.length && !mentionedRoles.length) || !sess}>
+              <P.Button variant="primary" onClick={() => { void sendMsg() }} disabled={!input.trim() || (!participants.length && !mentionedRoles.length) || !sess}>
                 {Icon(P.IconSendOutline16, 16)}发送
               </P.Button>
               )}

@@ -121,6 +121,8 @@ export function GroupChatPanel(): ReactNode {
 
   const sendMsg = useCallback(async (): Promise<void> => {
     if (busyNow || !sess || sendingRef.current) return
+    // 空内容不可发送（按钮 disabled 之外，Enter 路径在此静默拦截）
+    if (!input.trim()) return
     sendingRef.current = true
     try {
       if (!participants.length && !mentionedRoles.length) {

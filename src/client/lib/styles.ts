@@ -201,8 +201,12 @@ export const CSS = [
   /* @提及芯片（输入区内原子元素）：色点 + 角色色淡底胶囊——弹层候选行同语言 */
   '.dsgc-chipin{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--role-color,#888) 15%,transparent);border-radius:999px;padding:1px 7px 1px 5px;margin:0 1px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,inherit);white-space:nowrap;user-select:all}',
   '.dsgc-card .dsgc-sendrow{padding:0 12px 10px}',
-  '.dsgc-stopbtn{background:var(--dsw-alias-state-error-primary,#e5484d);border-color:transparent;color:#fff;font-weight:600}',
-  '.dsgc-stopbtn:hover:not(:disabled){filter:brightness(1.08);color:#fff}',
+  /* 停止/清空按钮：实心红（Button primitive outline 变体的 hover 规则
+     background:interactive-bg-hover 特异度 (0,3,0) 会盖掉 (0,1,0) 的红底，
+     悬停时按钮变透明；加 button 类型选择器提为 (0,1,1)/(0,3,1)，顺序无关
+     地压过变体，hover 补回红底并经 brightness 提亮） */
+  'button.dsgc-stopbtn{background:var(--dsw-alias-state-error-primary,#e5484d);border-color:transparent;color:#fff;font-weight:600}',
+  'button.dsgc-stopbtn:hover:not(:disabled){background:var(--dsw-alias-state-error-primary,#e5484d);filter:brightness(1.08);color:#fff}',
   /* 标签固定在左；芯片在右侧独立换行，后续行与首行芯片左缘对齐（不折到「参与角色」下面）。
      单行 24px；角色过多时随内容增高，避免固定高度把后续行溢出叠到下方输入卡上 */
   '.dsgc-parts{display:flex;align-items:flex-start;gap:6px;min-height:24px}',

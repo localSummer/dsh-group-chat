@@ -8,9 +8,10 @@
 
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
-// 类型合并：ctx.llm / ctx.fs / ctx.workspaceRegistry（宿主面）
+// 类型合并：ctx.llm / ctx.fs / ctx.shell / ctx.workspaceRegistry（宿主面）
 import type {} from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-fs'
+import type {} from '@deepseek-ai/dsh-shell'
 import type {} from '@deepseek-ai/dsh-workspace'
 import type { Store } from './persistence/store.ts'
 import type { GroupRecord, LastCreated, MessageRecord, RoleRecord, RunState, SessionRecord } from '../core/types.ts'
@@ -36,6 +37,7 @@ export interface HostState {
   ctx: Context
   llm: Context['llm']
   fs: Context['fs']
+  shell: Context['shell']
   groups: Map<string, GroupRecord>
   sessions: Map<string, SessionRecord>
   roles: Map<string, RoleRecord>
@@ -59,11 +61,12 @@ export function createHostState(ctx: Context): HostState {
     ctx,
     llm: ctx.llm,
     fs: ctx.fs,
+    shell: ctx.shell,
     groups: new Map(),
     sessions: new Map(),
     roles: new Map(),
     messages: new Map(),
-    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, childProc: null, finished: null, replaceMessageId: null },
+    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null },
     store: null,
     revision: 1,
     idSeq: 1,

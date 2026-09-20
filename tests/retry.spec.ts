@@ -84,9 +84,9 @@ beforeAll(async () => {
   }
 })
 
-afterAll(() => {
+afterAll(async () => {
   if (env) {
-    env.svc.dispose()
+    await env.svc.dispose()
     rmSync(env.storeDir, { recursive: true, force: true })
     env = null
   }

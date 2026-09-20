@@ -159,23 +159,26 @@ grill-me 确认项：
 
 ## 4. 原子写策略（atomicWriteGroup）
 
-沿用 v1 的 `tmp + fsync + rename` 原子写原语，升级为「按群组目录共享、按 flush 批量」：
+> **v2.2 变更（REUSE-AUDIT §2.1）**：运行时 flush 的原子写改为 `@deepseek-ai/dsh-atomic-write` 的 `writeFileAtomic`（wx 独占创建 + 随机后缀 tmp + rename；无 per-file fsync，崩溃持久性对齐 DSH 基座标准）。目录级批量 fsync 与下述其余语义不变；`Store.atomicWrite` 同步原语保留，仅供构造期 v1 迁移与测试直用。flush 因此异步化：经串行链排队（防同文件乱序 rename），脏标记带版本号（写成功且写入期间未被重新标脏才清除）；dispose 的最终 flush 随之异步（cordis await disposer）。
 
-1. **脏标记按文件记**：消息落盘/会话元数据变更 → 标脏该会话文件；角色变更 → 标脏该群 `roles.json`；清单变更 → 标脏 ledger。同一 tick 内多次变更合并为一次写（沿用 v1 事件驱动 + microtask 合并）
-2. **flush 时调用共享方法 `atomicWriteGroup(groupDir, files)`**：
-   - 对目录下每个脏文件依次执行：写 `<file>.tmp-<pid>` → `fsync` → `chmod 600` → `rename`
+沿用 v1 的原子写原语，升级为「按群组目录共享、按 flush 批量」：
+
+1. **脏标记按文件记**（值 = 版本号，标记时递增）：消息落盘/会话元数据变更 → 标脏该会话文件；角色变更 → 标脏该群 `roles.json`；清单变更 → 标脏 ledger。同一 tick 内多次变更合并为一次写（沿用 v1 事件驱动 + microtask 合并）
+2. **flush 时逐脏文件执行 `writeFileAtomic`（`{ mode: 0o600, dirMode: 0o700 }`）**：
+   - `wx` 独占创建随机后缀 tmp → rename 覆盖（拒绝符号链接预置、替换链接目标本身、Windows 瞬态错误有界重试）
    - **fsync 每个实际发生 rename 的目录**（v2.1 修复）：会话文件 rename 发生在 `<group>/sessions/` 内 → fsync `sessions/`；`workspaceDir`/`roles.json` 的 rename → fsync 群组根；ledger → fsync STORE 根。同一目录内 N 个 rename 合并为该目录一次 fsync——批量共享优化的落点是「每目录一次」，不是「每群组一次」
+   - **写成功且版本未变才清脏标记**（v2.2 修复异步竞态）：写期间被重新标脏的文件保留标记，下一轮 flush 重写；否则新变更会被误清丢失
 3. **序列化格式**（v2.1）：会话文件与 `roles.json` 紧凑序列化（`JSON.stringify(doc)`，不 pretty-print，省 10-20% 体积与写放大）；`ledger.json` 保留 pretty（小文件、便于人工检查）
 4. **写失败保留脏标记**（v2.1 修复，不继承 v1「先清脏再写」）：flush 中任一文件写抛异常 → 该文件脏标记保留，console.error 记录，下次任何触发点重试写（全量快照重写模型下零成本）；同 flush 中其余文件照常写
 5. 流式 partial 不落盘（沿用 v1：整条消息 append 完成后才标脏）
 
-### 卸载/热重载顺序（v2.1 修复）
+### 卸载/热重载顺序（v2.1 修复；v2.2 异步化）
 
-`ctx.effect` 清理函数按以下顺序执行，消除 v1「先置 store=null、在途 flush 抛 TypeError 丢待写数据」的交错窗口：
+dispose 按以下顺序执行（`ctx.effect` 清理函数返回 Promise，cordis 卸载时 await），消除 v1「先置 store=null、在途 flush 抛 TypeError 丢待写数据」的交错窗口：
 
-1. **同步执行最终 flush**：把当前全部脏标记写完（不再走 microtask 调度）
-2. `store.release()` 释放锁
-3. `store = null`
+1. **置 `store = null` 停止新调度**（持引用继续最终落盘）
+2. **等待串行链上的挂起 flush 完成 → 最终 flush** 把当前全部脏标记写完（不再走 microtask 调度）
+3. `store.release()` 释放锁
 
 此后任何迟到的 flush 调用先检查 `store === null` 直接返回，不抛异常、不丢已合并变更。
 

@@ -126,7 +126,11 @@ export class Store {
     } catch {}
   }
 
-  /** 原子写：tmp+fsync+rename；目录 fsync 由调用方按 flush 批量执行（每目录一次）。 */
+  /**
+   * 同步原子写（tmp+fsync+rename）：仅供构造期 v1 迁移（migrateV1）与测试
+   * 直用；运行时 flush 走 persistence.ts 的 writeFileAtomic（异步、wx 独占
+   * 创建 + 随机后缀 + 符号链接安全，无 per-file fsync，对齐 DSH 基座标准）。
+   */
   atomicWrite(file: string, text: string): void {
     mkdirSync(dirname(file), { recursive: true })
     const tmp = `${file}.tmp-${process.pid}`

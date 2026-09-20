@@ -171,7 +171,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
               <div className="dsgc-emptytitle">{sess && sess.topic ? '「' + sess.topic + '」' : '会话已就绪'}</div>
               <div className="dsgc-hint">
                 {enabledRoles.length
-                  ? '发送消息开始讨论；@成员 点名让其优先回应；留空直接发送可让角色自由讨论——每轮全体参与角色按顺序各发言一次，可用右下角轮数控制（1–10 轮）'
+                  ? '发送消息开始讨论；@成员 点名让其优先回应——每轮全体参与角色按顺序各发言一次，可用右下角轮数控制（1–10 轮）'
                   : '先在右侧添加角色（每个角色可绑定不同模型），再回到这里发起讨论。'}
               </div>
             </div>

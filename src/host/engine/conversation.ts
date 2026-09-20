@@ -379,7 +379,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       run.queue = []
       run.pendingConfirm = null
       run.confirmSignal = null
-      run.childProc = null
+      run.commandAbort = null
       run.stopping = false
       run.replaceMessageId = null
       touch()

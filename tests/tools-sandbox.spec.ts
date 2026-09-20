@@ -1,6 +1,8 @@
 /**
  * 工具沙箱边界（经 executeTool 公开面）：realpath 硬边界、分隔符比较
  * （/ws/foo 不得放行 /ws-evil）、软链越界、绝对路径注入、权限档位闸门。
+ * run_command 经 ctx.shell 桩（tests/shell-stub.ts）验证档位映射与输出
+ * 格式化；沙箱 policy 传递由 service 冒烟与运行时覆盖。
  */
 import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -10,11 +12,12 @@ import { READ_FILE_MAX_BYTES } from '../src/core/tools.ts'
 import { createTools } from '../src/host/tools/tools.ts'
 import type { GroupRecord, PermissionTier, RunState, ToolExecution } from '../src/core/types.ts'
 import type { HostState } from '../src/host/state.ts'
+import { fakeShell } from './shell-stub.ts'
 
-/** createTools 只消费 core.run；测试用最小容器。 */
+/** createTools 只消费 core.run 与 core.shell；测试用最小容器。 */
 function fakeCore(): HostState {
-  const run: RunState = { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, childProc: null, finished: null, replaceMessageId: null }
-  return { run } as unknown as HostState
+  const run: RunState = { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null }
+  return { run, shell: fakeShell() } as unknown as HostState
 }
 
 function group(tier: PermissionTier): GroupRecord {

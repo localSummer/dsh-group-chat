@@ -18,6 +18,17 @@ async function until(cond: () => boolean, ms = 8000): Promise<void> {
   throw new Error('等待超时')
 }
 
+/** 轮询读取 JSON 文件直到断言通过（flush 异步化后 sleep+直读有竞态）。 */
+async function untilDoc<T>(file: string, pred: (doc: T) => boolean, ms = 8000): Promise<T> {
+  const deadline = Date.now() + ms
+  for (;;) {
+    const doc = JSON.parse(readFileSync(file, 'utf8')) as T
+    if (pred(doc)) return doc
+    if (Date.now() > deadline) throw new Error('等待落盘超时：' + file)
+    await sleep(20)
+  }
+}
+
 interface StreamChunk { type: string, [key: string]: unknown }
 
 type Service = import('../src/host/service.ts').GroupChatService
@@ -118,7 +129,7 @@ beforeAll(async () => {
   }
 })
 
-afterAll(() => { if (env) { env.svc.dispose(); env = null } })
+afterAll(async () => { if (env) { await env.svc.dispose(); env = null } })
 
 const foldRound = (items: { kind: string, text: string }[]): StreamChunk[] => [
   { type: 'text-delta', text: '```json\n{"constraints":' + JSON.stringify(items) + '}\n```' },
@@ -145,11 +156,10 @@ describe('窗口外约束折叠', () => {
     expect(e.lastPurpose).toBe('session-title')
     const live = sessionOf(e)
     expect(live.constraintsUpToSeq).toBeUndefined()
-    await sleep(60)
-    const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as {
+    const doc = await untilDoc<{
       constraints?: { kind: string, text: string }[]
       constraintsUpToSeq?: number
-    }
+    }>(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), (d) => Array.isArray(d.constraints) && d.constraints.some((c) => c.text === '采用 Redis') && typeof d.constraintsUpToSeq === 'number' && d.constraintsUpToSeq > 0)
     expect(doc.constraints).toEqual([{ kind: 'decided', text: '采用 Redis' }])
     expect(doc.constraintsUpToSeq).toBeGreaterThan(0)
   })
@@ -178,12 +188,11 @@ describe('窗口外约束折叠', () => {
     const live = sessionOf(e)
     expect(live.messageIds).toEqual([])
     expect(live.constraints).toBeUndefined()
-    await sleep(60)
-    const doc = JSON.parse(readFileSync(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as {
+    const doc = await untilDoc<{
       constraints?: unknown
       constraintsUpToSeq?: unknown
       messages: unknown[]
-    }
+    }>(join(e.storeDir, 'grp-a', 'sessions', 'session-s-a.json'), (d) => Array.isArray(d.messages) && d.messages.length === 0 && d.constraints === undefined && d.constraintsUpToSeq === undefined)
     expect(doc.messages).toEqual([])
     expect(doc.constraints).toBeUndefined()
     expect(doc.constraintsUpToSeq).toBeUndefined()

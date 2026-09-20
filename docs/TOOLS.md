@@ -1,5 +1,6 @@
 # dsh-group-chat 工具执行设计（TOOLS）
 
+> **v1.2**：`run_command` 执行底座换成 `ctx.shell` 沙箱执行器（REUSE-AUDIT §2.2）：`workdir`/`timeoutMs`/`stdoutMaxBytes`/`sandboxPolicy`/`signal` per-call 传入；`workspace_write` 档经 sandboxPolicy OS 级收紧到群工作区（原 spawn 版仅固定 cwd 无强制力），`full_access` 档对齐 DSH danger-full-access 语义免受限；超时 kill / stop 中止经 AbortSignal 交执行器；stdout 采集超限改尾部保留（CollectedOutput 契约）；新增沙箱拒绝标记。已知风险：沙箱 runner 在异构环境失效时前台命令抛 `SANDBOX_UNAVAILABLE`（原 spawn 版永远能跑），经 grill-me 确认接受。
 > **v1.1**：经独立架构评审修订（B+ → A- 路径）。修复 3 个 Blocker：B1 空输出死循环绕过成本兜底、B2 降级触发与 dsh-llm 真实错误面错位、B3 确认等待缺唤醒机制；补全 dsh-llm 回注契约与流收集规则；采纳 3 项加固（路径分隔符、确认卡片全文、stdout 采集上限）。
 > **v1.0**：经逐项 grill-me 确认的 8 项决策。前置：`PERSISTENCE.md` v2.1（消息/存储结构在其上增量扩展）。目标：让工作区从「只读展示台」升级为「工作台」，兑现「讨论需求和代码方案 **并运行测试**」的完整闭环。
 
@@ -11,7 +12,7 @@ grill-me 确认项：
 |---|---|---|
 | 1 | 工具集 | `read_file` + `list_dir` + `run_command` 三件套（写文件由 bash 覆盖） |
 | 2 | 安全确认 | 只读工具随工作区自动可用；`run_command` 按群组权限档位（默认仅可查看）+ 工作区内修改档逐条确认 |
-| 3 | 沙箱约束 | 只读 realpath 硬约束工作区前缀；`run_command` 仅锚定 cwd，命令内容不过滤 |
+| 3 | 沙箱约束 | 只读 realpath 硬约束工作区前缀；`run_command` 经 `ctx.shell` 沙箱执行器执行——cwd 与 sandboxPolicy 均 per-call 收紧到群工作区（workspace_write 档 OS 级强制，full_access 档对齐 DSH danger-full-access 语义免受限），命令内容**不过滤** |
 | 4 | 护栏 | 120s 超时 / 100KB 读 / 8k 输出 / 32k 累计；**正常调用次数不设上限** |
 | 5 | 并发模型 | 串行 round-robin：一个角色完整走完「生成⇄工具⇄发言」才轮到下一个 |
 | 6 | 模型降级 | 运行时探测：不支持 tools 的错误 → 去 `tools` 重试一次 |
@@ -53,13 +54,13 @@ grill-me 确认项：
 | 风险 | 对策 |
 |---|---|
 | 只读越界（读工作区外文件） | 技术硬边界：`realpath` 解析后必须满足 `target === wsReal || target.startsWith(wsReal + path.sep)`（**带分隔符比较**，防 `/ws/foo` 放行 `/ws/foobar`）；`../` 逃逸、软链逃逸、绝对路径越界一律拒绝并返回错误说明；`workspaceDir` 未设置时两工具返回「群组未设置工作区目录」 |
-| 命令执行（任意 shell） | 权限档位 + 确认闸门：cwd 固定为 `workspaceDir`（`spawn('bash', ['-c', command], { cwd })`），命令内容**不过滤**——黑名单是无效防御；三档（对齐主会话 `/permission`）——`view_only` 仅可查看（run_command 从 schema 剔除，默认档）/ `workspace_write` 工作区内修改（每条命令逐条确认）/ `full_access` 完全权限（免确认直接执行，切换时经主会话同款风险确认弹窗） |
+| 命令执行（任意 shell） | 权限档位 + 确认闸门：经 `ctx.shell`（web profile 的 bash-sandbox 执行器；Windows 顶上 pwsh-sandbox）执行，`workdir`/`timeoutMs`/`stdoutMaxBytes`/`sandboxPolicy`/`signal` 均 per-call 传入——cwd 固定为 `workspaceDir` 的 realpath，sandboxPolicy 在 `workspace_write` 档为 `{mode:'workspace-write', workspaceRoot}`（OS 级强制，命令内容**不过滤**——黑名单是无效防御，越界文件操作由沙箱拦截并在输出中标注）、`full_access` 档为 `{mode:'danger-full-access'}`（对齐主会话完全权限语义）；三档（对齐主会话 `/permission`）——`view_only` 仅可查看（run_command 从 schema 剔除，默认档）/ `workspace_write` 工作区内修改（每条命令逐条确认）/ `full_access` 完全权限（免确认直接执行，切换时经主会话同款风险确认弹窗） |
 
 命令执行细节：
 
-- stdout/stderr 合并捕获；**采集上限 1MB**（超出停止缓冲、仅计数，标注「输出采集超限已丢弃」，8k 截断只作用于回注文本）
-- 超时 120s kill 并标注「执行超时」；退出码与输出一并回注
-- `run.stopping` 为真时：等待中的命令作废、**正在执行的子进程 kill**（不等待自然结束）
+- stdout/stderr 分别捕获后拼接回注（ctx.shell 的 CollectedOutput 契约）；**stdout 采集上限 1MB**（`stdoutMaxBytes` per-call 传入，超限**尾部保留**并标注截断；stderr 走执行器自身上限），8k 截断只作用于回注文本
+- 超时 120s 由执行器 kill 进程并按首因分类报告（`timedOut`）标注「执行超时」；退出码与输出一并回注；沙箱拒绝（`sandbox.denied`）标注「沙箱拦截了越界文件操作」
+- `run.stopping` 为真时：等待中的命令作废、**正在执行的子进程经 AbortSignal 由执行器 kill**（不等待自然结束）；沙箱 runner 失效等启动失败 catch 后回注「无法启动命令」（含 `SANDBOX_UNAVAILABLE`）
 
 已知并接受的风险（文档标注）：bash 继承宿主进程全部环境变量（含 DSH 进程自身的密钥），本地单用户 + 逐条确认下与 DSH 自身 bash 工具同级；提示注入面（工作区文件内容/其他角色话术操纵弱模型跑恶意命令）由确认闸门承接——**前提是确认 UI 完整显示命令全文**（§6 硬性约束）。`workspaceDir` 可设 `~` 或 `/`（设置处零校验），此时只读工具的可达范围等同全盘——UI 对极端取值给警示文案。
 

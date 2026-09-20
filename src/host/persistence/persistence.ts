@@ -5,6 +5,7 @@
  */
 
 import { existsSync } from 'node:fs'
+import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { repairFailedMessage } from '../../core/errors.ts'
 import { messageJson, roleJson } from '../../core/json.ts'
 import { sanitizeConstraints } from '../../core/constraints.ts'
@@ -25,6 +26,9 @@ interface SessionDocument {
   messages?: Partial<MessageRecord>[]
 }
 
+/** writeFileAtomic 权限位：私有数据 0o600、目录 0o700（对齐 Store.atomicWrite）。 */
+const WRITE_FILE_OPTS = { mode: 0o600, dirMode: 0o700 } as const
+
 /** 群组角色文件形态（hydrate 用）。 */
 interface RolesDocument {
   roles?: Partial<RoleRecord>[]
@@ -34,12 +38,10 @@ interface RolesDocument {
 export interface Persistence {
   /** 事件驱动落盘；同一 tick 内多次变更合并为一次写。 */
   schedulePersist: (targets?: { ledger?: boolean, session?: string | null, roles?: string | null, workspace?: string | null }) => void
-  /** 同步 flush：写全部脏文件（dispose 最终落盘用）。 */
-  flushNow: () => void
   /** 删除群组/会话后摘除脏标记（对应文件已删/将删，flush 跳过）。 */
   dropDirty: (targets: { session?: string | null, roles?: string | null, workspace?: string | null }) => void
-  /** dispose：同步最终 flush → 释放锁 → 摘除句柄。 */
-  release: () => void
+  /** dispose：停止新调度 → 等待挂起 flush → 最终 flush → 释放锁（异步）。 */
+  release: () => Promise<void>
 }
 
 /**
@@ -56,12 +58,20 @@ export function createPersistence(core: HostState): Persistence {
   }
   const store = (): Store | null => core.store
 
-  // 脏标记按文件记；flush 失败者保留脏标记，下次触发自动重试
-  const dirtySessions = new Set<string>()
-  const dirtyRoles = new Set<string>()
-  const dirtyWorkspace = new Set<string>()
-  let ledgerDirty = false
+  // 脏标记按文件记（值 = 版本号，标记时递增）；flush 期间被重新标脏的文件
+  // 保留标记待下一轮 flush（写成功后版本未变才清除），失败同理自动重试
+  const dirtySessions = new Map<string, number>()
+  const dirtyRoles = new Map<string, number>()
+  const dirtyWorkspace = new Map<string, number>()
+  let ledgerDirty = 0
   let flushScheduled = false
+  // flush 串行链：writeFileAtomic 异步化后，防止并发 flush 对同一文件乱序
+  // rename（后写的旧内容盖住先写的新内容）；链上任务逐个排队执行
+  let flushChain: Promise<void> = Promise.resolve()
+
+  const mark = (map: Map<string, number>, key: string): void => {
+    map.set(key, (map.get(key) ?? 0) + 1)
+  }
 
   const ledgerDocument = (): LedgerDocument & { savedAt: number } => ({
     schema: 3,
@@ -85,57 +95,61 @@ export function createPersistence(core: HostState): Persistence {
   })
   const rolesDocument = (g: GroupRecord) => ({ schema: 1, savedAt: Date.now(), roles: g.roleIds.map((rid) => core.roles.get(rid)).filter((r): r is RoleRecord => Boolean(r)).map((r) => roleJson(r)) })
 
-  /** 同步 flush：写全部脏文件；成功才清脏标记；每个实际发生 rename 的目录一次 fsync。 */
-  const flushNow = (): void => {
-    const s = store()
-    if (s === null) return
+  /**
+   * 异步 flush（writeFileAtomic：wx 独占创建 + 随机后缀 tmp + rename，无
+   * per-file fsync——崩溃持久性对齐 DSH 基座标准）：写全部脏文件；写成功且
+   * 写入期间未被重新标脏（版本未变）才清脏标记；每个实际发生 rename 的
+   * 目录一次 fsync（调用侧批量执行）。
+   */
+  const flushAll = async (s: Store): Promise<void> => {
     const fsyncDirs = new Set<string>()
-    for (const sid of [...dirtySessions]) {
+    for (const [sid, v] of [...dirtySessions]) {
       const sess = core.sessions.get(sid)
       if (!sess) {
         dirtySessions.delete(sid)
         continue
       }
       try {
-        s.atomicWrite(s.sessionFile(sess.groupId, sess.id), JSON.stringify(sessionDocument(sess)))
-        dirtySessions.delete(sid)
+        await writeFileAtomic(s.sessionFile(sess.groupId, sess.id), JSON.stringify(sessionDocument(sess)), WRITE_FILE_OPTS)
+        if (dirtySessions.get(sid) === v) dirtySessions.delete(sid)
         fsyncDirs.add(s.sessionsDir(sess.groupId))
       } catch (e) {
         console.error(`[dsh-group-chat] 会话 ${sid} 落盘失败（保留脏标记待重试）：`, e)
       }
     }
-    for (const gid of [...dirtyRoles]) {
+    for (const [gid, v] of [...dirtyRoles]) {
       const g = core.groups.get(gid)
       if (!g) {
         dirtyRoles.delete(gid)
         continue
       }
       try {
-        s.atomicWrite(s.rolesFile(gid), JSON.stringify(rolesDocument(g)))
-        dirtyRoles.delete(gid)
+        await writeFileAtomic(s.rolesFile(gid), JSON.stringify(rolesDocument(g)), WRITE_FILE_OPTS)
+        if (dirtyRoles.get(gid) === v) dirtyRoles.delete(gid)
         fsyncDirs.add(s.groupDir(gid))
       } catch (e) {
         console.error(`[dsh-group-chat] 群组 ${gid} roles.json 落盘失败（保留脏标记待重试）：`, e)
       }
     }
-    for (const gid of [...dirtyWorkspace]) {
+    for (const [gid, v] of [...dirtyWorkspace]) {
       const g = core.groups.get(gid)
       if (!g) {
         dirtyWorkspace.delete(gid)
         continue
       }
       try {
-        s.atomicWrite(s.workspaceFile(gid), (g.workspaceDir || '') + '\n')
-        dirtyWorkspace.delete(gid)
+        await writeFileAtomic(s.workspaceFile(gid), (g.workspaceDir || '') + '\n', WRITE_FILE_OPTS)
+        if (dirtyWorkspace.get(gid) === v) dirtyWorkspace.delete(gid)
         fsyncDirs.add(s.groupDir(gid))
       } catch (e) {
         console.error(`[dsh-group-chat] 群组 ${gid} workspaceDir 落盘失败（保留脏标记待重试）：`, e)
       }
     }
-    if (ledgerDirty) {
+    if (ledgerDirty > 0) {
+      const v = ledgerDirty
       try {
-        s.atomicWrite(s.ledgerFile, JSON.stringify(ledgerDocument(), null, 2))
-        ledgerDirty = false
+        await writeFileAtomic(s.ledgerFile, JSON.stringify(ledgerDocument(), null, 2), WRITE_FILE_OPTS)
+        if (ledgerDirty === v) ledgerDirty = 0
         fsyncDirs.add(s.dir)
       } catch (e) {
         console.error('[dsh-group-chat] ledger.json 落盘失败（保留脏标记待重试）：', e)
@@ -147,15 +161,22 @@ export function createPersistence(core: HostState): Persistence {
   /** 事件驱动落盘；同一 tick 内多次变更合并为一次写。 */
   const schedulePersist = ({ ledger = false, session = null, roles: roleGroup = null, workspace = null }: { ledger?: boolean, session?: string | null, roles?: string | null, workspace?: string | null } = {}): void => {
     if (store() === null) return
-    if (ledger) ledgerDirty = true
-    if (session) dirtySessions.add(session)
-    if (roleGroup) dirtyRoles.add(roleGroup)
-    if (workspace) dirtyWorkspace.add(workspace)
+    if (ledger) ledgerDirty++
+    if (session) mark(dirtySessions, session)
+    if (roleGroup) mark(dirtyRoles, roleGroup)
+    if (workspace) mark(dirtyWorkspace, workspace)
     if (flushScheduled) return
     flushScheduled = true
     void Promise.resolve().then(() => {
       flushScheduled = false
-      flushNow()
+      // 排队进串行链；flushAll 按文件吞错（保留脏标记），此处兜底意外
+      // 逃逸的异常并把链复位为健康态，后续 flush 不被跳过
+      flushChain = flushChain.then(async () => {
+        const s = store()
+        if (s !== null) await flushAll(s)
+      }).catch((e) => {
+        console.error('[dsh-group-chat] 落盘 flush 异常（脏标记保留待重试）：', e)
+      })
     })
   }
 
@@ -311,18 +332,20 @@ export function createPersistence(core: HostState): Persistence {
 
   return {
     schedulePersist,
-    flushNow,
     dropDirty,
-    release(): void {
+    async release(): Promise<void> {
       const s = store()
       if (s === null) return
+      // 立即停止新调度并摘除句柄（后续 schedulePersist 直接 no-op）；
+      // 持有的 store 引用继续完成最终落盘
+      core.store = null
       try {
-        flushNow()
+        await flushChain
+        await flushAll(s)
       } catch {}
       try {
         s.release()
       } catch {}
-      core.store = null
     },
   }
 }

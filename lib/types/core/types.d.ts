@@ -128,7 +128,8 @@ export interface RunState {
     confirmSignal: {
         resolve: (allowed: boolean) => void;
     } | null;
-    childProc: import('node:child_process').ChildProcess | null;
+    /** 正在执行的 run_command 的中止句柄（stop/dispose 时 abort，执行器 kill 进程）。 */
+    commandAbort: AbortController | null;
     /** 最近一次 run 的结束标记：会话列表「已完成/已出错」状态的数据源。 */
     finished: RunFinished | null;
     /** 原地重试时被覆盖的失败消息 id；普通 send 为 null。 */
@@ -200,7 +201,7 @@ export type SnapshotMessage = Omit<MessageRecord, 'reasoningFull' | 'thinkingSum
 /** 发到客户端的全量快照（wire 形态；各表行由领域记录派生，字段增删由编译器同步）。 */
 export interface Snapshot {
     revision: number;
-    run: Omit<RunState, 'stopping' | 'queue' | 'confirmSignal' | 'childProc'>;
+    run: Omit<RunState, 'stopping' | 'queue' | 'confirmSignal' | 'commandAbort'>;
     lastCreated: LastCreated | null;
     groups: GroupRecord[];
     sessions: SnapshotSession[];
