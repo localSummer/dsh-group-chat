@@ -66,7 +66,7 @@ export function createHostState(ctx: Context): HostState {
     sessions: new Map(),
     roles: new Map(),
     messages: new Map(),
-    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null },
+    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], queueIndex: 0, pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null },
     store: null,
     revision: 1,
     idSeq: 1,

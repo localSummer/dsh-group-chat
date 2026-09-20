@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react'
 import type { SessionConstraint } from '../../core/types.ts'
 import { KIND_LABEL } from '../../core/constraints.ts'
 import { ClipWell, Fold } from './Fold.tsx'
+import { RollingNumber } from './RollingNumber.tsx'
 
 interface ConstraintListProps {
   items: SessionConstraint[]
@@ -55,7 +56,7 @@ export function ConstraintList(props: ConstraintListProps): ReactNode {
             onClick={() => { setOpen(!open) }}
             aria-expanded={open}
           >
-            {open ? '收起' : '还有 ' + rest + ' 条约束'}
+            {open ? '收起' : <>还有 <RollingNumber value={rest} /> 条约束</>}
           </button>
           )
         : null}

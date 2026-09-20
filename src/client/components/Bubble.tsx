@@ -24,9 +24,11 @@ export interface BubbleProps {
   role: SnapshotRole | null
   busy?: boolean
   onRetry?: (messageId: string) => void
+  /** 表情回应（用户标注）经稳定回调下传；失败卡与系统通知不提供。 */
+  onToggleReaction?: (messageId: string, emoji: string) => void
 }
 
-function BubbleInner({ m, role, busy, onRetry }: BubbleProps): ReactNode {
+function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps): ReactNode {
   const isUser = m.speaker === 'user'
   const isFail = isSpeakFailure(m)
   const isSys = m.speaker === 'system' && !isFail && !role
@@ -73,6 +75,8 @@ function BubbleInner({ m, role, busy, onRetry }: BubbleProps): ReactNode {
           onRetry={isFail && onRetry ? () => { onRetry(m.id) } : undefined}
           retryDisabled={busy || !role || !role.enabled}
           retryTitle={retryTitle}
+          reactions={m.reactions}
+          onToggleReaction={!isFail && onToggleReaction ? (emoji) => { onToggleReaction(m.id, emoji) } : undefined}
         />
       </div>
     </div>
@@ -81,11 +85,14 @@ function BubbleInner({ m, role, busy, onRetry }: BubbleProps): ReactNode {
 
 /** 渲染相关字段的值比较（消息不可变；角色仅名/色参与渲染）。 */
 function bubblePropsEqual(a: BubbleProps, b: BubbleProps): boolean {
-  if (a.busy !== b.busy || (a.onRetry == null) !== (b.onRetry == null)) return false
+  if (a.busy !== b.busy || (a.onRetry == null) !== (b.onRetry == null) || (a.onToggleReaction == null) !== (b.onToggleReaction == null)) return false
   const x = a.m
   const y = b.m
   if (x !== y) {
     if (x.id !== y.id || x.speaker !== y.speaker || x.text !== y.text || x.reasoning !== y.reasoning || x.model !== y.model || x.error !== y.error || x.failedRoleId !== y.failedRoleId || x.ts !== y.ts) return false
+    const ra = Array.isArray(x.reactions) ? x.reactions.join('') : ''
+    const rb = Array.isArray(y.reactions) ? y.reactions.join('') : ''
+    if (ra !== rb) return false
     const ta = Array.isArray(x.toolCalls) ? x.toolCalls : []
     const tb = Array.isArray(y.toolCalls) ? y.toolCalls : []
     if (ta.length !== tb.length) return false

@@ -79,6 +79,10 @@ export interface ToolCallRecord {
     output: string;
     durationMs?: number;
 }
+/** 消息表情回应白名单（用户标注用；单用户无计数，顺序即展示顺序）。 */
+export declare const REACTION_EMOJIS: readonly string[];
+/** 回应集合安全化：仅保留白名单内条目、去重并按白名单顺序排列；空则 undefined。 */
+export declare function sanitizeReactions(value: unknown): string[] | undefined;
 /** 消息（user / system / 角色发言共用一条记录）。 */
 export interface MessageRecord {
     id: string;
@@ -94,6 +98,8 @@ export interface MessageRecord {
     /** 发言失败时的角色 id；刷新后仍可对该条点重试。角色消息 speaker 即角色 id，此字段冗余兼容旧系统错误行。 */
     failedRoleId?: string;
     toolCalls?: ToolCallRecord[];
+    /** 用户表情回应集合（仅标注展示，不注入角色上下文）。 */
+    reactions?: string[];
     ts: number;
 }
 /** run_command 确认闸门的待确认载荷。 */
@@ -123,7 +129,10 @@ export interface RunState {
     partial: string;
     partialReasoning: string;
     stopping: boolean;
+    /** 本次 run 的完整发言计划（轮次 × 参与角色，顺序展开）；run 结束清空。 */
     queue: string[];
+    /** 发言游标：下一个待发言位置的索引（queueIndex - 1 = 正在/最近发言的步）。 */
+    queueIndex: number;
     pendingConfirm: PendingConfirm | null;
     confirmSignal: {
         resolve: (allowed: boolean) => void;
@@ -201,7 +210,8 @@ export type SnapshotMessage = Omit<MessageRecord, 'reasoningFull' | 'thinkingSum
 /** 发到客户端的全量快照（wire 形态；各表行由领域记录派生，字段增删由编译器同步）。 */
 export interface Snapshot {
     revision: number;
-    run: Omit<RunState, 'stopping' | 'queue' | 'confirmSignal' | 'commandAbort'>;
+    /** run 的 wire 形态：暴露完整 queue + queueIndex 供进度轨道渲染。 */
+    run: Omit<RunState, 'stopping' | 'confirmSignal' | 'commandAbort'>;
     lastCreated: LastCreated | null;
     groups: GroupRecord[];
     sessions: SnapshotSession[];
@@ -259,6 +269,10 @@ export type MutateArgs = {
 } | {
     op: 'clearMessages';
     sessionId: string;
+} | {
+    op: 'reactMessage';
+    messageId: string;
+    emoji?: string;
 };
 /** send 动作的参数形态。 */
 export interface SendArgs {

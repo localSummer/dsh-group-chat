@@ -35,14 +35,6 @@ export declare function useGroupChatState(): {
         id: string;
         value: string;
     } | null>>;
-    confirmDel: {
-        kind: "group" | "session";
-        id: string;
-    } | null;
-    setConfirmDel: import("react").Dispatch<import("react").SetStateAction<{
-        kind: "group" | "session";
-        id: string;
-    } | null>>;
     confirmClear: boolean;
     setConfirmClear: import("react").Dispatch<import("react").SetStateAction<boolean>>;
     roleDraft: RoleDraft | null;

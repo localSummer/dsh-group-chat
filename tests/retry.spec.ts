@@ -112,6 +112,8 @@ describe('发言失败卡与原地重试', () => {
     const before = env!.svc.snapshot()
     const fail = before.messages.find((m) => m.error)!
     const count = before.messages.length
+    // 回应先行标注在失败卡上：重试覆盖正文后用户标注必须保留（正交数据）
+    await env!.svc.handleAction({ kind: 'mutate', op: 'reactMessage', messageId: fail.id, emoji: '👍' })
     env!.pushPlan([{ type: 'text-delta', text: '改用备选方案' }, { type: 'finish', reason: { kind: 'stop' } }])
     const res = await env!.svc.handleAction({ kind: 'retrySpeak', sessionId: 's-a', messageId: fail.id }) as { ok: boolean }
     expect(res.ok).toBe(true)
@@ -123,6 +125,7 @@ describe('发言失败卡与原地重试', () => {
     expect(same.failedRoleId).toBeFalsy()
     expect(same.text).toBe('改用备选方案')
     expect(same.speaker).toBe(fail.speaker)
+    expect(same.reactions).toEqual(['👍'])
   })
 
   it('重试只注入失败卡之前的记录，不含后续消息', async () => {

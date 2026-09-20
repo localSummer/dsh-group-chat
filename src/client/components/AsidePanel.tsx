@@ -6,6 +6,7 @@
 import { useState, type ReactNode } from 'react'
 import { Icon, P } from '../lib/ui.ts'
 import { api } from '../lib/api.ts'
+import { ConfirmDelete } from './ConfirmDelete.tsx'
 import { roleById, type ClientSnapshot, type SnapshotRole } from '../lib/model.ts'
 import type { BrowseResult } from '../../core/types.ts'
 
@@ -123,14 +124,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                         >
                           {Icon(P.IconEditOutline16, 14)}
                         </button>
-                        <button
-                          className="dsgc-opbtn danger"
-                          title="移除角色"
-                          aria-label="移除角色"
-                          onClick={(e) => { e.stopPropagation(); void mutate({ op: 'deleteRole', roleId: r.id }) }}
-                        >
-                          {Icon(P.IconTrashOutline16, 14)}
-                        </button>
+                        <ConfirmDelete label="移除角色" onConfirm={() => { void mutate({ op: 'deleteRole', roleId: r.id }) }} />
                       </span>
                     </div>
                   </div>

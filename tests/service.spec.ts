@@ -169,6 +169,27 @@ describe('权限档位（host 冒烟，顺序场景）', () => {
     expect(tc.output).toContain('用户拒绝了这次命令执行')
   })
 
+  it('run 快照暴露完整 queue + 游标 queueIndex；结束后复位（进度轨道数据面）', async () => {
+    const e = env!
+    await e.svc.handleAction({ kind: 'mutate', op: 'setPermissionTier', groupId: 'grp-a', tier: 'workspace_write' })
+    e.pushPlan(cmdRound('echo t-qgate'))
+    e.pushPlan(textRound('gate 收尾'))
+    const send = await e.svc.handleAction({ kind: 'send', sessionId: 's-a', text: '请跑 echo t-qgate', rounds: 2 }) as { ok: boolean }
+    expect(send.ok).toBe(true)
+    // 命令挂起等待确认 = 稳定的运行中观察窗口
+    await until(() => (e.svc.snapshot() as { run: { pendingConfirm: unknown } }).run.pendingConfirm !== null)
+    const mid = e.svc.snapshot() as { run: { queue: string[], queueIndex: number, currentRoleId: string | null } }
+    expect(mid.run.queue.length).toBe(2)
+    expect(mid.run.queueIndex).toBe(1)
+    expect(mid.run.currentRoleId).toBe(mid.run.queue[0])
+    // 降档自动拒绝 → run 跑完 → queue/queueIndex 复位
+    await e.svc.handleAction({ kind: 'mutate', op: 'setPermissionTier', groupId: 'grp-a', tier: 'view_only' })
+    await until(() => !(e.svc.snapshot() as { run: { running: boolean } }).run.running)
+    const end = e.svc.snapshot() as { run: { queue: string[], queueIndex: number } }
+    expect(end.run.queue.length).toBe(0)
+    expect(end.run.queueIndex).toBe(0)
+  })
+
   it('dispose 后 ledger 落盘 schema 3 + permissionTier（最后场景：dispose 即终结）', async () => {
     const e = env!
     await e.svc.handleAction({ kind: 'mutate', op: 'setPermissionTier', groupId: 'grp-b', tier: 'full_access' })

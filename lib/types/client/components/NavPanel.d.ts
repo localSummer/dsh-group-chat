@@ -23,14 +23,6 @@ interface NavPanelProps {
     setPartsSel: (val: string[] | null) => void;
     renameDraft: NodeEdit | null;
     setRenameDraft: (val: NodeEdit | null) => void;
-    confirmDel: {
-        kind: 'group' | 'session';
-        id: string;
-    } | null;
-    setConfirmDel: (val: {
-        kind: 'group' | 'session';
-        id: string;
-    } | null) => void;
     mutate: (args: Record<string, unknown>) => Promise<unknown>;
     navOpen: boolean;
 }

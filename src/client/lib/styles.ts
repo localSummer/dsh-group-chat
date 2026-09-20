@@ -42,6 +42,25 @@ export const CSS = [
   '.dsgc-opbtn{border:none;background:none;color:var(--dsw-alias-label-tertiary,inherit);cursor:pointer;padding:2px;border-radius:4px;line-height:0;transition:background-color .12s,color .12s}',
   '.dsgc-opbtn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15));color:var(--dsw-alias-label-primary,inherit)}',
   '.dsgc-opbtn.danger{color:var(--dsw-alias-state-error-primary,#e5484d)}',
+  /* ===== 原地确认删除（RareUI Delete button 重写）：掀盖 + 侧滑 ✓/✗ 微面板 ===== */
+  '.dsgc-cdel{display:inline-flex;align-items:center;flex:none}',
+  /* armed 态常驻操作钮：行 hover 才显现的容器不再隐藏进行中的确认 */
+  '.dsgc-nodeops:has(.dsgc-cdel.armed){display:inline-flex}',
+  '.dsgc-roleops:has(.dsgc-cdel.armed){opacity:1}',
+  '.dsgc-cdel-bin{border:none;background:none;cursor:pointer;padding:2px;border-radius:4px;line-height:0;color:var(--dsw-alias-label-tertiary,inherit);transition:background-color .12s,color .12s}',
+  '.dsgc-cdel-bin:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15))}',
+  '.dsgc-cdel.armed .dsgc-cdel-bin{color:var(--dsw-alias-state-error-primary,#e5484d)}',
+  /* 盖子掀转：铰链在盖线左端 */
+  '.dsgc-cdel-lid{transform-origin:2.4px 4.4px;transition:transform .16s cubic-bezier(.16,1,.3,1)}',
+  '.dsgc-cdel.armed .dsgc-cdel-lid{transform:translateY(-1.4px) rotate(-16deg)}',
+  /* 确认面板：max-width + opacity 纯 CSS 双向动画；收起后 visibility 延迟切断键盘焦点 */
+  '.dsgc-cdel-panel{display:inline-flex;gap:2px;overflow:hidden;max-width:0;opacity:0;visibility:hidden;transition:max-width .12s ease-in,opacity .12s ease-in,margin .12s ease-in,visibility 0s .12s}',
+  '.dsgc-cdel.armed .dsgc-cdel-panel{max-width:40px;opacity:1;visibility:visible;margin-right:2px;transition:max-width .16s cubic-bezier(.16,1,.3,1),opacity .16s ease,margin .16s cubic-bezier(.16,1,.3,1),visibility 0s}',
+  '.dsgc-cdel-yes,.dsgc-cdel-no{border:none;background:none;cursor:pointer;padding:2px;border-radius:4px;line-height:0;transition:background-color .12s,color .12s;flex:none}',
+  '.dsgc-cdel-yes{color:var(--dsw-alias-state-error-primary,#e5484d)}',
+  '.dsgc-cdel-no{color:var(--dsw-alias-label-tertiary,inherit)}',
+  '.dsgc-cdel-yes:hover{background:color-mix(in srgb,var(--dsw-alias-state-error-primary,#e5484d) 10%,transparent)}',
+  '.dsgc-cdel-no:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15));color:var(--dsw-alias-label-primary,inherit)}',
   '.dsgc-sess-list{display:flex;flex-direction:column;gap:2px;margin:4px 0 2px 4px;padding-left:12px;border-left:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.15))}',
   '.dsgc-sess-row{display:flex;align-items:center;gap:6px;min-width:0;border:none;background:none;border-radius:6px;padding:6px 8px;font-size:12.5px;line-height:1.5;color:var(--dsw-alias-label-secondary,inherit);transition:background-color .12s,color .12s;cursor:pointer;text-align:left;font-family:inherit}',
   '.dsgc-sess-row:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit)}',
@@ -237,6 +256,38 @@ export const CSS = [
   '.dsgc-rounds .dsgc-roundbtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15));color:var(--dsw-alias-label-primary,inherit)}',
   '.dsgc-rounds .dsgc-roundbtn:disabled{opacity:.4;cursor:default}',
   '.dsgc-rounds .dsgc-roundnum{width:26px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;color:var(--dsw-alias-label-primary,inherit)}',
+  /* ===== 数字滚轮（RareUI Animated counter 重写）：列内 0-9 数字条滚动 ===== */
+  '.dsgc-roll{display:inline-flex;font-variant-numeric:tabular-nums;line-height:1}',
+  '.dsgc-roll-col{display:inline-block;height:1em;overflow:hidden;line-height:1}',
+  '.dsgc-roll-strip{display:block;transition:transform .15s cubic-bezier(.16,1,.3,1)}',
+  '.dsgc-roll-d{display:block;height:1em;line-height:1;text-align:center}',
+  /* ===== 多轮进度轨道（RareUI Step player 重写）：步点 = 发言计划 ===== */
+  '.dsgc-rtrack{display:flex;align-items:center;gap:4px;padding:0 24px 4px;flex:none;animation:dsgc-rtrack-in .18s ease-out}',
+  '@keyframes dsgc-rtrack-in{from{opacity:0}}',
+  '.dsgc-rtrack-step{flex:none;width:6px;height:6px;border-radius:999px;transition:width .16s cubic-bezier(.16,1,.3,1),background-color .16s ease,border-color .16s ease}',
+  '.dsgc-rtrack-step.done{background:var(--role-color,#888)}',
+  '.dsgc-rtrack-step.todo{border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3))}',
+  /* 当前步：拉伸小条 + 角色色微光扫动填充（弱化 shimmer，随流式交棒） */
+  '.dsgc-rtrack-step.cur{width:28px;height:6px;background:color-mix(in srgb,var(--role-color,#888) 22%,transparent);position:relative;overflow:hidden}',
+  '.dsgc-rtrack-step.cur::after{content:"";position:absolute;inset:0;border-radius:999px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--role-color,#888) 65%,transparent),transparent);animation:dsgc-rtrack-sweep 1.8s linear infinite}',
+  '@keyframes dsgc-rtrack-sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}',
+  '.dsgc-rtrack-step.roundsep{margin-left:10px}',
+  /* ===== 表情回应（RareUI Emoji reaction 重写）：触发钮 + 浮层 + 胶囊 + 漂浮副本 ===== */
+  /* emoji 是消息内容（用户标注）而非界面 chrome，用 Unicode 字符文本渲染——记录在案的图标规则例外 */
+  '.dsgc-rewrap{position:relative;display:inline-flex}',
+  '.dsgc-repick{position:fixed;z-index:30;display:flex;gap:2px;padding:4px;background:var(--dsw-alias-bg-layer-3,rgba(128,128,128,.06));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));border-radius:10px;box-shadow:var(--dsw-shadow-lv3,0 8px 24px rgba(0,0,0,.18));outline:none;animation:dsgc-repick-in .16s cubic-bezier(.16,1,.3,1)}',
+  '@keyframes dsgc-repick-in{from{opacity:0;transform:translateY(4px)}}',
+  '.dsgc-repickitem{border:none;background:none;cursor:pointer;padding:3px 4px;border-radius:6px;font-size:15px;line-height:1;transition:background-color .12s,transform .12s}',
+  '.dsgc-repickitem:hover,.dsgc-repickitem.on{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12))}',
+  '.dsgc-repickitem.on{transform:translateY(-1px)}',
+  /* 已回应候选：品牌色淡底（区别于中性 hover） */
+  '.dsgc-repickitem.has{background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f6ef7) 12%,transparent)}',
+  /* 已回应胶囊：中性淡底、12px emoji，点击取消 */
+  '.dsgc-repill{border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:var(--dsw-alias-bg-layer-3,rgba(128,128,128,.06));cursor:pointer;padding:0 6px;border-radius:999px;font-size:12px;line-height:18px;transition:background-color .12s,border-color .12s;font-family:inherit;color:inherit}',
+  '.dsgc-repill:hover{border-color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.5))}',
+  /* 漂浮副本：从触发钮上浮飘散（一次性，reduced-motion 由 JS 跳过生成） */
+  '.dsgc-refly{position:absolute;left:50%;bottom:0;font-size:14px;line-height:1;pointer-events:none;animation:dsgc-refly-up var(--dur,.6s) ease-out forwards}',
+  '@keyframes dsgc-refly-up{from{opacity:1;transform:translate(-50%,0) scale(1)}to{opacity:0;transform:translate(calc(-50% + var(--dx,0px)),var(--fly,-52px)) scale(.4);filter:blur(2px)}}',
   /* hover 气泡：对齐宿主 Tooltip.module.css，portal 到 body 以躲开 container-type */
   '.dsgc-hovertip{position:fixed;z-index:100;width:max-content;max-width:50vw;padding:3px 7px;border-radius:8px;background:var(--dsw-alias-tooltip-bg,#1f1f1f);color:var(--dsw-static-neutral-bluish-00,#fff);font-size:13px;line-height:20px;white-space:pre-line;overflow-wrap:break-word;pointer-events:none;animation:dsgc-hovertip-in 150ms var(--ds-ease-in-out,ease)}',
   '.dsgc-hovertip[data-side="right"]{transform:translateY(-50%)}',
@@ -361,7 +412,7 @@ export const CSS = [
   '.dsgc-entryIcon svg{width:18px;height:18px;display:block}',
   '[data-sidebar-collapsed] .dsgc-entryOverlay,[class*="collapsed"] .dsgc-entryOverlay{justify-content:center;padding:0}',
   '[data-sidebar-collapsed] [class*="panelRow"]:has(.dsgc-entryOverlay),[class*="collapsed"] [class*="panelRow"]:has(.dsgc-entryOverlay){margin:0 auto}',
-  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,.dsgc-cmore,.dsgc-msgops,.dsgc-msgop,.dsgc-failmore,.dsgc-clip::before,.dsgc-clip::after,.dsgc-fold,.dsgc-fold-inner,.dsgc-fold.open,.dsgc-fold.open .dsgc-fold-inner,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-msg.live .dsgc-avatar,.dsgc-loading svg,.dsgc-pendingdots i,.dsgc-typing,.dsgc-constraints,.dsgc-hovertip,.dsgc-fail{animation:none}.dsgc-typing{background-position:0 0;background-size:100% 100%}}',
+  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,.dsgc-cmore,.dsgc-msgops,.dsgc-msgop,.dsgc-failmore,.dsgc-clip::before,.dsgc-clip::after,.dsgc-fold,.dsgc-fold-inner,.dsgc-fold.open,.dsgc-fold.open .dsgc-fold-inner,.dsgc-cdel-bin,.dsgc-cdel-yes,.dsgc-cdel-no,.dsgc-cdel-lid,.dsgc-cdel-panel,.dsgc-cdel.armed .dsgc-cdel-panel,.dsgc-roll-col,.dsgc-roll-strip,.dsgc-rtrack,.dsgc-rtrack-step,.dsgc-repick,.dsgc-repickitem,.dsgc-repills,.dsgc-repill,.dsgc-refly,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-msg.live .dsgc-avatar,.dsgc-loading svg,.dsgc-pendingdots i,.dsgc-typing,.dsgc-constraints,.dsgc-hovertip,.dsgc-fail,.dsgc-rtrack,.dsgc-rtrack-step.cur::after,.dsgc-refly{animation:none}.dsgc-typing{background-position:0 0;background-size:100% 100%}}',
   /* ===== 设置页（同一卡片语言） ===== */
   '.dgcs-page{display:flex;flex-direction:column;gap:14px;padding:4px 0}',
   '.dgcs-head{display:flex;flex-direction:column;gap:6px}',

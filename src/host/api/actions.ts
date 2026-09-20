@@ -1,13 +1,13 @@
 /**
  * 动作分发（handleAction，POST /api/group-chat/action 的载荷）：
- * mutate（12 种 CRUD/配置操作）| send | retrySpeak | stop | confirmCommand | models | efforts。
+ * mutate（13 种 CRUD/配置/回应操作）| send | retrySpeak | stop | confirmCommand | models | efforts。
  * @module dsh-group-chat/host/api/actions
  */
 
 import { rmSync, unlinkSync } from 'node:fs'
 import { isSpeakFailure, repairFailedMessage } from '../../core/errors.ts'
 import type { BrowseResult, EffortOptions, GroupRecord, ModelCatalog, MutateArgs, RoleRecord, SendArgs, Snapshot } from '../../core/types.ts'
-import { asEffort, asNumber, asPermissionTier } from '../../core/types.ts'
+import { asEffort, asNumber, asPermissionTier, REACTION_EMOJIS } from '../../core/types.ts'
 import { PALETTE } from '../state.ts'
 import type { HostState } from '../state.ts'
 import type { Conversation } from '../engine/index.ts'
@@ -217,6 +217,19 @@ export function createActions(core: HostState, deps: {
         schedulePersist({ session: sess.id })
         touch()
       }
+    } else if (op === 'reactMessage') {
+      // 表情回应（仅用户标注）：toggle 语义——已带则移除、未带则加入（按白名单顺序）；
+      // run 进行中允许回应（不拦）
+      const msg = messages.get(String(args.messageId || ''))
+      if (!msg) return { ...snapshot(), error: '消息不存在' }
+      const emoji = typeof args.emoji === 'string' ? args.emoji : ''
+      if (!REACTION_EMOJIS.includes(emoji)) return { ...snapshot(), error: '未知的回应表情' }
+      const cur = Array.isArray(msg.reactions) ? msg.reactions : []
+      msg.reactions = cur.includes(emoji)
+        ? (cur.length > 1 ? cur.filter((e) => e !== emoji) : undefined)
+        : REACTION_EMOJIS.filter((e) => e === emoji || cur.includes(e))
+      schedulePersist({ session: msg.sessionId })
+      touch()
     }
     return snapshot()
   }
@@ -245,6 +258,7 @@ export function createActions(core: HostState, deps: {
     run.running = true
     run.sessionId = sess.id
     run.queue = queue
+    run.queueIndex = 0
     run.stopping = false
     run.finished = null // 新 run 覆盖旧的「输出完毕」未读标记
     run.replaceMessageId = null
@@ -274,6 +288,7 @@ export function createActions(core: HostState, deps: {
     run.running = true
     run.sessionId = sess.id
     run.queue = [role.id]
+    run.queueIndex = 0
     run.stopping = false
     run.finished = null
     run.replaceMessageId = msg.id

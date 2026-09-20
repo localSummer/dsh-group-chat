@@ -1,6 +1,6 @@
 /**
  * 动作分发（handleAction，POST /api/group-chat/action 的载荷）：
- * mutate（12 种 CRUD/配置操作）| send | retrySpeak | stop | confirmCommand | models | efforts。
+ * mutate（13 种 CRUD/配置/回应操作）| send | retrySpeak | stop | confirmCommand | models | efforts。
  * @module dsh-group-chat/host/api/actions
  */
 import type { Snapshot } from '../../core/types.ts';

@@ -16,7 +16,9 @@ export interface BubbleProps {
     role: SnapshotRole | null;
     busy?: boolean;
     onRetry?: (messageId: string) => void;
+    /** 表情回应（用户标注）经稳定回调下传；失败卡与系统通知不提供。 */
+    onToggleReaction?: (messageId: string, emoji: string) => void;
 }
-declare function BubbleInner({ m, role, busy, onRetry }: BubbleProps): ReactNode;
+declare function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps): ReactNode;
 export declare const Bubble: import("react").MemoExoticComponent<typeof BubbleInner>;
 export {};

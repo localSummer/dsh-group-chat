@@ -35,8 +35,6 @@ export function GroupChatPanel(): ReactNode {
     setCollapsedGroups,
     renameDraft,
     setRenameDraft,
-    confirmDel,
-    setConfirmDel,
     confirmClear,
     setConfirmClear,
     roleDraft,
@@ -184,6 +182,13 @@ export function GroupChatPanel(): ReactNode {
     if (res && !res.ok && res.error) setToast({ text: res.error, seq: Date.now() })
   }
 
+  // 表情回应（仅用户标注）：toggle 语义由 host 承载（普通函数即可——
+  // Bubble memo 只判回调存在性，不要求稳定引用；不可用 useCallback：
+  // 本处在条件早退之后，Hook 数量随快照态漂移会触发 React #310）
+  const toggleReaction = (messageId: string, emoji: string): void => {
+    void mutate({ op: 'reactMessage', messageId, emoji })
+  }
+
   // 清空确认：不可清空（对话进行中）走 toast 提示，不再落到输入框上方的红字
   const doClear = async (): Promise<void> => {
     if (!sess) return
@@ -239,8 +244,6 @@ export function GroupChatPanel(): ReactNode {
         setPartsSel={setPartsSel}
         renameDraft={renameDraft}
         setRenameDraft={setRenameDraft}
-        confirmDel={confirmDel}
-        setConfirmDel={setConfirmDel}
         mutate={mutate}
         navOpen={navOpen}
       />
@@ -292,6 +295,7 @@ export function GroupChatPanel(): ReactNode {
         mutate={mutate}
         setMention={setMention}
         onRetrySpeak={(messageId) => { void retrySpeak(messageId) }}
+        onToggleReaction={toggleReaction}
       />
       <AsidePanel
         snap={snap}

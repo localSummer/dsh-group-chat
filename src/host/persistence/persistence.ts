@@ -9,7 +9,7 @@ import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { repairFailedMessage } from '../../core/errors.ts'
 import { messageJson, roleJson } from '../../core/json.ts'
 import { sanitizeConstraints } from '../../core/constraints.ts'
-import { asNumber, migrateTier } from '../../core/types.ts'
+import { asNumber, migrateTier, sanitizeReactions } from '../../core/types.ts'
 import type { GroupRecord, MessageRecord, RoleRecord, SessionRecord } from '../../core/types.ts'
 import { emptyGroup, LedgerDocument, scanGroupIds, scanSessionIds, STORE_DIR, Store } from './store.ts'
 import type { HostState } from '../state.ts'
@@ -226,6 +226,7 @@ export function createPersistence(core: HostState): Persistence {
           error: m.error,
           failedRoleId: typeof m.failedRoleId === 'string' && m.failedRoleId ? m.failedRoleId : undefined,
           toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
+          reactions: sanitizeReactions(m.reactions),
           ts: typeof m.ts === 'number' ? m.ts : Date.now(),
         })
         sess.messageIds.push(m.id)

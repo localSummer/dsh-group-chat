@@ -331,8 +331,10 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       // 群组在 run 期间不可删（send 已校验 + deleteGroup 拦截运行中群组）；
       // 防御性早退——置空让 finally 走统一复位路径
       if (!g) return
-      while (run.queue.length > 0 && !run.stopping) {
-        const roleId = run.queue.shift()!
+      // queue 为完整发言计划（进度轨道按 queueIndex 渲染游标），游标推进不破坏计划
+      while (run.queueIndex < run.queue.length && !run.stopping) {
+        const roleId = run.queue[run.queueIndex]
+        run.queueIndex++
         const role = roles.get(roleId)
         run.currentRoleId = roleId
         run.partial = ''
@@ -377,6 +379,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       run.partial = ''
       run.partialReasoning = ''
       run.queue = []
+      run.queueIndex = 0
       run.pendingConfirm = null
       run.confirmSignal = null
       run.commandAbort = null

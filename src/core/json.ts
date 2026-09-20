@@ -16,6 +16,7 @@ export function messageJson(m: Partial<MessageRecord> | undefined): Record<strin
   if (m.error !== undefined) o.error = m.error
   if (typeof m.failedRoleId === 'string' && m.failedRoleId) o.failedRoleId = m.failedRoleId
   if (Array.isArray(m.toolCalls) && m.toolCalls.length > 0) o.toolCalls = m.toolCalls
+  if (Array.isArray(m.reactions) && m.reactions.length > 0) o.reactions = m.reactions
   return o
 }
 

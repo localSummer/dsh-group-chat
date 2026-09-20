@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 import { Icon, P } from '../lib/ui.ts'
 import { MessageFlow } from './MessageFlow.tsx'
 import { Composer } from './Composer.tsx'
+import { RoundTrack } from './RoundTrack.tsx'
 import type { ClientSnapshot, SnapshotRole } from '../lib/model.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
@@ -55,6 +56,7 @@ interface ChatPanelProps {
   mutate: (args: Record<string, unknown>) => Promise<unknown>
   setMention: (val: AtToken | null) => void
   onRetrySpeak: (messageId: string) => void
+  onToggleReaction: (messageId: string, emoji: string) => void
 }
 
 export function ChatPanel(props: ChatPanelProps): ReactNode {
@@ -103,6 +105,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
     mutate,
     setMention,
     onRetrySpeak,
+    onToggleReaction,
   } = props
 
   const commitTopic = (): void => {
@@ -118,6 +121,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
       msgById={msgById}
       action={action}
       onRetrySpeak={onRetrySpeak}
+      onToggleReaction={onToggleReaction}
     />
   )
 
@@ -178,6 +182,9 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
             )}
       </div>
       
+      {/* 多轮进度轨道：run 进行时常驻的一行临时态（步点 = 发言计划） */}
+      {busyNow && snap.run.queue.length ? <RoundTrack snap={snap} /> : null}
+
       <Composer
         snap={snap}
         sess={sess}

@@ -11,6 +11,8 @@ interface MessageFlowProps {
     msgById: Record<string, ClientSnapshot['messages'][number]>;
     action: (payload: Record<string, unknown>) => Promise<unknown>;
     onRetrySpeak: (messageId: string) => void;
+    /** 表情回应（用户标注）：经 Bubble/MsgActions 触发 toggle。 */
+    onToggleReaction: (messageId: string, emoji: string) => void;
 }
 export declare function MessageFlow(props: MessageFlowProps): ReactNode;
 export {};

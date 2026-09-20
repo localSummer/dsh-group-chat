@@ -7,6 +7,7 @@ import type { ReactNode, KeyboardEvent as ReactKeyboardEvent, ClipboardEvent as 
 import { Icon, P } from '../lib/ui.ts'
 import { PermissionSelect } from './PermissionSelect.tsx'
 import { HoverTip } from './HoverTip.tsx'
+import { RollingNumber } from './RollingNumber.tsx'
 import { escapeRegExp, type ClientSnapshot, type SnapshotRole } from '../lib/model.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 
@@ -220,7 +221,7 @@ export function Composer(props: ComposerProps): ReactNode {
             <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
               {Icon(P.IconChevronLeftOutline14, 12)}
             </button>
-            <span className="dsgc-roundnum">{rounds}</span>
+            <span className="dsgc-roundnum"><RollingNumber value={rounds} /></span>
             <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
               {Icon(P.IconChevronRightOutline14, 12)}
             </button>

@@ -136,6 +136,8 @@ grill-me 确认项：
 | `thinkingSummary` | string | ✗ | 思考摘要；省略同上 |
 | `error` | boolean | ✗ | 发言失败卡；无则省略 |
 | `failedRoleId` | string | ✗ | 失败卡对应角色 id，刷新后可重试；无则省略 |
+| `toolCalls` | `{tool,args,status,output,durationMs?}[]` | ✗ | 工具调用记录；无则省略 |
+| `reactions` | string[] | ✗ | 用户表情回应（标注用，不注入角色上下文）；白名单 `REACTION_EMOJIS`（👍 👎 ❤️ 😂 🤔 🎉），空则省略 |
 
 会话级约束备忘（可选，schema 仍为 1）：
 
@@ -149,6 +151,7 @@ grill-me 确认项：
 - 可选字段「无则省略」，不写 `null`（对齐 v1 的 undefined 序列化行为）
 - `error: true` 标记发言失败卡；现形态 `speaker` 为角色 id，并写可选 `failedRoleId`（刷新后可重试）。兼容读取旧系统错误行（`speaker:"system"` + `error:true`、文案「角色「名」发言失败：…」）：hydrate 时按群内恰好一名命中迁到该角色并补 `failedRoleId`、剥前缀；对不上则保留系统行。客户端同样按角色名解析，重试按钮不依赖重启。可选字段无则省略
 - `constraints` hydrate 走 `sanitizeConstraints`（非法 kind / 空 text 丢条目；最多 12 条、总长 1200）；快照只推 `constraints`，不推水位
+- `reactions` hydrate 走 `sanitizeReactions`（白名单过滤 + 去重 + 按白名单顺序排列；全非法/空 → 省略字段）；`reactMessage` 为 toggle 语义（已带移除、未带按白名单顺序并入），原地重试覆盖消息正文时保留该字段
 - `clearMessages` 同时清 `constraints` 与 `constraintsUpToSeq`
 
 ### 3.4 workspaceDir（群组工作区目录设置）

@@ -16,7 +16,7 @@ import { fakeShell } from './shell-stub.ts'
 
 /** createTools 只消费 core.run 与 core.shell；测试用最小容器。 */
 function fakeCore(): HostState {
-  const run: RunState = { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null }
+  const run: RunState = { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], queueIndex: 0, pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null }
   return { run, shell: fakeShell() } as unknown as HostState
 }
 

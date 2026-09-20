@@ -21,10 +21,12 @@ interface MessageFlowProps {
   msgById: Record<string, ClientSnapshot['messages'][number]>
   action: (payload: Record<string, unknown>) => Promise<unknown>
   onRetrySpeak: (messageId: string) => void
+  /** 表情回应（用户标注）：经 Bubble/MsgActions 触发 toggle。 */
+  onToggleReaction: (messageId: string, emoji: string) => void
 }
 
 export function MessageFlow(props: MessageFlowProps): ReactNode {
-  const { snap, sess, busyNow, msgById, action, onRetrySpeak } = props
+  const { snap, sess, busyNow, msgById, action, onRetrySpeak, onToggleReaction } = props
 
   const bubbles: ReactNode[] = []
   const replaceId = busyNow ? snap.run.replaceMessageId : null
@@ -114,7 +116,7 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
         livePlaced = true
         continue
       }
-      bubbles.push(<Bubble key={m.id} m={m} role={role} busy={!!snap.run.running} onRetry={onRetrySpeak} />)
+      bubbles.push(<Bubble key={m.id} m={m} role={role} busy={!!snap.run.running} onRetry={onRetrySpeak} onToggleReaction={onToggleReaction} />)
     }
   }
 

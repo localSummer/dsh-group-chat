@@ -166,7 +166,7 @@ describe('权限档位', () => {
 describe('会话状态派生（sessStatus）', () => {
   /** run 视图的最小构造（sessStatus 只读 running/sessionId/pendingConfirm/finished）。 */
   const run = (o: Partial<import('../src/core/types.ts').Snapshot['run']>): import('../src/core/types.ts').Snapshot['run'] => ({
-    running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', pendingConfirm: null, finished: null, replaceMessageId: null, ...o,
+    running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', queue: [], queueIndex: 0, pendingConfirm: null, finished: null, replaceMessageId: null, ...o,
   })
 
   it('优先级：等待确认 > 进行中 > 已完成/已出错 > 默认无点', () => {

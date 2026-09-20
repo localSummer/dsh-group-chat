@@ -5,6 +5,7 @@
 
 import type { ReactNode, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Icon, P } from '../lib/ui.ts'
+import { ConfirmDelete } from './ConfirmDelete.tsx'
 import { HoverTip } from './HoverTip.tsx'
 import { groupById, sessById, sessStatus, SESS_STATUS_LABEL, type ClientSnapshot } from '../lib/model.ts'
 
@@ -24,8 +25,6 @@ interface NavPanelProps {
   setPartsSel: (val: string[] | null) => void
   renameDraft: NodeEdit | null
   setRenameDraft: (val: NodeEdit | null) => void
-  confirmDel: { kind: 'group' | 'session', id: string } | null
-  setConfirmDel: (val: { kind: 'group' | 'session', id: string } | null) => void
   mutate: (args: Record<string, unknown>) => Promise<unknown>
   navOpen: boolean
 }
@@ -46,9 +45,9 @@ function RenameField(props: { draft: NodeEdit, set: (d: NodeEdit | null) => void
   )
 }
 
-/** 行尾操作钮：重命名 + 两次点击确认删除（群组行/会话行同款）。 */
-function NodeOps(props: { renameLabel: string, deleteLabel: string, deleteTitle: string, danger: boolean, onRename: () => void, onDelete: () => void }): ReactNode {
-  const { renameLabel, deleteLabel, deleteTitle, danger, onRename, onDelete } = props
+/** 行尾操作钮：重命名 + 原地确认删除（群组行/会话行同款）。 */
+function NodeOps(props: { renameLabel: string, deleteLabel: string, onRename: () => void, onDelete: () => void }): ReactNode {
+  const { renameLabel, deleteLabel, onRename, onDelete } = props
   return (
     <span className="dsgc-nodeops">
       <button
@@ -59,20 +58,13 @@ function NodeOps(props: { renameLabel: string, deleteLabel: string, deleteTitle:
       >
         {Icon(P.IconEditOutline16, 14)}
       </button>
-      <button
-        className={'dsgc-opbtn' + (danger ? ' danger' : '')}
-        title={deleteTitle}
-        aria-label={deleteLabel}
-        onClick={(e) => { e.stopPropagation(); onDelete() }}
-      >
-        {Icon(P.IconTrashOutline16, 14)}
-      </button>
+      <ConfirmDelete label={deleteLabel} onConfirm={onDelete} />
     </span>
   )
 }
 
 export function NavPanel(props: NavPanelProps): ReactNode {
-  const { snap, search, setSearch, collapsedGroups, setCollapsedGroups, gid, sid, setGid, setSid, setPartsSel, renameDraft, setRenameDraft, confirmDel, setConfirmDel, mutate, navOpen } = props
+  const { snap, search, setSearch, collapsedGroups, setCollapsedGroups, gid, sid, setGid, setSid, setPartsSel, renameDraft, setRenameDraft, mutate, navOpen } = props
 
   const commitRename = async (): Promise<void> => {
     if (!renameDraft) return
@@ -94,18 +86,9 @@ export function NavPanel(props: NavPanelProps): ReactNode {
     }
   }
 
-  const doDelete = async (): Promise<void> => {
-    if (!confirmDel) return
-    const d = confirmDel
-    setConfirmDel(null)
-    if (d.kind === 'group') await mutate({ op: 'deleteGroup', groupId: d.id })
-    else await mutate({ op: 'deleteSession', sessionId: d.id })
-  }
-
-  // 选中即清编辑态（四连调用收敛为一处）
+  // 选中即清编辑态（三连调用收敛为一处）
   const clearEdits = (): void => {
     setPartsSel(null)
-    setConfirmDel(null)
     setRenameDraft(null)
   }
   const pickGroup = (id: string): void => {
@@ -135,7 +118,6 @@ export function NavPanel(props: NavPanelProps): ReactNode {
     if (!match.show) continue
     const expanded = q ? true : !collapsedGroups.has(g.id)
     const isRenameGroup = renameDraft && renameDraft.kind === 'group' && renameDraft.id === g.id
-    const isConfirmGroup = confirmDel && confirmDel.kind === 'group' && confirmDel.id === g.id
     const groupChildren: ReactNode[] = []
 
     if (expanded) {
@@ -145,7 +127,6 @@ export function NavPanel(props: NavPanelProps): ReactNode {
         if (match.filterSessions && !s.name.toLowerCase().includes(q)) continue
         const isActive = selected && s.id === selected.id && g.id === group?.id
         const isRenameSess = renameDraft && renameDraft.kind === 'session' && renameDraft.id === s.id
-        const isConfirm = confirmDel && confirmDel.kind === 'session' && confirmDel.id === s.id
         // 会话状态（对齐主 GUI StateDot：idle 不渲染点）
         const st = sessStatus(snap.run, s.id)
 
@@ -183,13 +164,8 @@ export function NavPanel(props: NavPanelProps): ReactNode {
             <NodeOps
               renameLabel="重命名会话"
               deleteLabel="删除会话"
-              deleteTitle={isConfirm ? '再次点击确认删除' : '删除会话'}
-              danger={!!isConfirm}
               onRename={() => { setRenameDraft({ kind: 'session', id: s.id, value: s.name }) }}
-              onDelete={() => {
-                if (isConfirm) void doDelete()
-                else setConfirmDel({ kind: 'session', id: s.id })
-              }}
+              onDelete={() => { void mutate({ op: 'deleteSession', sessionId: s.id }) }}
             />
           </div>,
         )
@@ -238,13 +214,8 @@ export function NavPanel(props: NavPanelProps): ReactNode {
           <NodeOps
             renameLabel="重命名群组"
             deleteLabel="删除群组"
-            deleteTitle={isConfirmGroup ? '再次点击确认删除' : '删除群组'}
-            danger={!!isConfirmGroup}
             onRename={() => { setRenameDraft({ kind: 'group', id: g.id, value: g.name }) }}
-            onDelete={() => {
-              if (isConfirmGroup) void doDelete()
-              else setConfirmDel({ kind: 'group', id: g.id })
-            }}
+            onDelete={() => { void mutate({ op: 'deleteGroup', groupId: g.id }) }}
           />
         </div>
         {expanded ? <div className="dsgc-sess-list">{groupChildren}</div> : null}

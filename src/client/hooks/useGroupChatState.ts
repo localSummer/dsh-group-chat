@@ -67,7 +67,6 @@ export function useGroupChatState() {
   
   // 编辑态
   const [renameDraft, setRenameDraft] = useState<{ kind: 'group' | 'session', id: string, value: string } | null>(null)
-  const [confirmDel, setConfirmDel] = useState<{ kind: 'group' | 'session', id: string } | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
   const [topicDraft, setTopicDraft] = useState<string | null>(null)
 
@@ -163,8 +162,6 @@ export function useGroupChatState() {
     setCollapsedGroups,
     renameDraft,
     setRenameDraft,
-    confirmDel,
-    setConfirmDel,
     confirmClear,
     setConfirmClear,
     roleDraft,
