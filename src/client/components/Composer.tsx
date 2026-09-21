@@ -214,7 +214,7 @@ export function Composer(props: ComposerProps): ReactNode {
         <div className="dsgc-sendrow">
           <PermissionSelect
             tier={group.permissionTier}
-            onSelect={(tier) => { void mutate({ op: 'setPermissionTier', groupId: group.id, tier }) }}
+            onSelect={(tier) => { mutate({ op: 'setPermissionTier', groupId: group.id, tier }) }}
           />
           <span style={{ flex: 1 }} />
           <HoverTip label={ROUNDS_HINT} side="top" delayMs={500} maxWidth={280} className="dsgc-rounds">
@@ -229,12 +229,12 @@ export function Composer(props: ComposerProps): ReactNode {
           </HoverTip>
           {busyNow
             ? (
-              <P.Button variant="outline" className="dsgc-stopbtn" onClick={() => { void stopRun() }}>
+              <P.Button variant="outline" className="dsgc-stopbtn" onClick={() => { stopRun() }}>
                 {Icon(P.IconStopFill16, 16)}停止
               </P.Button>
               )
             : (
-              <P.Button variant="primary" onClick={() => { void sendMsg() }} disabled={!input.trim() || (!participants.length && !mentionedRoles.length) || !sess}>
+              <P.Button variant="primary" onClick={() => { sendMsg() }} disabled={!input.trim() || (!participants.length && !mentionedRoles.length) || !sess}>
                 {Icon(P.IconSendOutline16, 16)}发送
               </P.Button>
               )}

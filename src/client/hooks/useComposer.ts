@@ -262,7 +262,7 @@ export function useInputKeyboard(
     
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      void sendMsg()
+      sendMsg()
     }
   }, [mention, mentionCandidates, mentionIdxC, fileCandidates, setMentionIdx, insertChip, insertFileChip, setMention, sendMsg])
 

@@ -99,7 +99,7 @@ export function GroupChatPanel(): ReactNode {
   // （host 幂等清除 + 广播；覆盖点击/键盘/重挂恢复/lastCreated 定位全部选中路径）
   const finishedRun = snap ? snap.run.finished : null
   useEffect(() => {
-    if (finishedRun && sess && finishedRun.sessionId === sess.id) void mutate({ op: 'ackFinish' })
+    if (finishedRun && sess && finishedRun.sessionId === sess.id) mutate({ op: 'ackFinish' })
   }, [finishedRun, sess])
 
   // 提及状态：角色候选、文件搜索、索引安全化
@@ -186,7 +186,7 @@ export function GroupChatPanel(): ReactNode {
   // Bubble memo 只判回调存在性，不要求稳定引用；不可用 useCallback：
   // 本处在条件早退之后，Hook 数量随快照态漂移会触发 React #310）
   const toggleReaction = (messageId: string, emoji: string): void => {
-    void mutate({ op: 'reactMessage', messageId, emoji })
+    mutate({ op: 'reactMessage', messageId, emoji })
   }
 
   // 清空确认：不可清空（对话进行中）走 toast 提示，不再落到输入框上方的红字
@@ -294,7 +294,7 @@ export function GroupChatPanel(): ReactNode {
         action={action}
         mutate={mutate}
         setMention={setMention}
-        onRetrySpeak={(messageId) => { void retrySpeak(messageId) }}
+        onRetrySpeak={(messageId) => { retrySpeak(messageId) }}
         onToggleReaction={toggleReaction}
       />
       <AsidePanel
@@ -315,7 +315,7 @@ export function GroupChatPanel(): ReactNode {
             footer={(
               <>
                 <P.Button variant="outline" size="sm" onClick={() => { setConfirmClear(false) }}>取消</P.Button>
-                <P.Button variant="outline" size="sm" className="dsgc-stopbtn" onClick={() => { void doClear() }}>清空</P.Button>
+                <P.Button variant="outline" size="sm" className="dsgc-stopbtn" onClick={() => { doClear() }}>清空</P.Button>
               </>
             )}
           >
@@ -346,7 +346,7 @@ export function GroupChatPanel(): ReactNode {
             groupId={group.id}
             models={models}
             modelsError={modelsError}
-            onRetryModels={() => { void fetchModels() }}
+            onRetryModels={() => { fetchModels() }}
             mutate={mutate}
             onCancel={() => { setRoleDraft(null) }}
           />

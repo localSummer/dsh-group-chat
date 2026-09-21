@@ -17,5 +17,7 @@ export interface MsgActionsProps {
     reactions?: string[];
     /** 提供时渲染回应触发钮与胶囊（失败卡与系统通知不提供）。 */
     onToggleReaction?: (emoji: string) => void;
+    /** 该次发言的生成总耗时（仅角色消息）；展示在操作组末尾。 */
+    durationMs?: number;
 }
 export declare function MsgActions(props: MsgActionsProps): ReactNode;

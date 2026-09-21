@@ -56,6 +56,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       if (extra.error !== undefined) msg.error = extra.error
       if (extra.failedRoleId !== undefined) msg.failedRoleId = extra.failedRoleId
       if (Array.isArray(extra.toolCalls) && extra.toolCalls.length > 0) msg.toolCalls = extra.toolCalls
+      if (typeof extra.durationMs === 'number' && extra.durationMs > 0) msg.durationMs = extra.durationMs
     }
     messages.set(msg.id, msg)
     sess.messageIds.push(msg.id)
@@ -75,11 +76,14 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
     return true
   }
 
+  /** 该次发言的生成总耗时（回话开始 → 落卡时刻）；锚缺失时兜底 0。 */
+  const speakDuration = (): number => Math.max(0, Date.now() - (run.turnStartedAt ?? Date.now()))
+
   /** 把失败回合写成该角色的消息（speaker = 角色 id），不再用系统胶囊顶替。 */
   const writeFailure = (sess: SessionRecord, role: RoleRecord, err: unknown, replaceId?: string): void => {
     const raw = unwrapSpeakFailure(String((err && (err as Error).message) || err))
     const model = role.provider + ' / ' + role.model
-    const extra: Partial<MessageRecord> = { error: true, failedRoleId: role.id, model }
+    const extra: Partial<MessageRecord> = { error: true, failedRoleId: role.id, model, durationMs: speakDuration() }
     if (overwriteMessage(sess, replaceId, {
       speaker: role.id,
       text: raw,
@@ -96,6 +100,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
   const writeSuccess = (sess: SessionRecord, role: RoleRecord, out: SpeakResult, replaceId?: string): void => {
     const model = role.provider + ' / ' + role.model
     const toolCalls = Array.isArray(out.toolCalls) && out.toolCalls.length > 0 ? out.toolCalls : undefined
+    const durationMs = speakDuration()
     if (overwriteMessage(sess, replaceId, {
       speaker: role.id,
       text: out.text,
@@ -106,8 +111,9 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       reasoningFull: undefined,
       thinkingSummary: undefined,
       toolCalls,
+      durationMs,
     })) return
-    appendMessage(sess, role.id, out.text, { model, reasoning: out.reasoning, toolCalls: out.toolCalls })
+    appendMessage(sess, role.id, out.text, { model, reasoning: out.reasoning, toolCalls: out.toolCalls, durationMs })
   }
 
   /** 群聊记录 → 角色上下文块（最近 40 条 + 未折入临时原文）。失败卡不进上下文。重试截到该条之前。 */
@@ -337,6 +343,8 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
         run.queueIndex++
         const role = roles.get(roleId)
         run.currentRoleId = roleId
+        // 回合计时锚点（对齐主会话 TurnStatus 的 turn.start.time）：换发言人重锚
+        run.turnStartedAt = Date.now()
         run.partial = ''
         run.partialReasoning = ''
         touch()
@@ -380,6 +388,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       run.partialReasoning = ''
       run.queue = []
       run.queueIndex = 0
+      run.turnStartedAt = null
       run.pendingConfirm = null
       run.confirmSignal = null
       run.commandAbort = null
@@ -389,8 +398,8 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
     }
     // 本轮有新消息落盘，或原地重试覆盖了失败卡 → 后台整理标题/主题 + 窗口外约束
     if (sess.messageIds.length > startCount || (opts && opts.replaceMessageId)) {
-      void retitle(sess)
-      void fold(sess)
+      retitle(sess)
+      fold(sess)
     }
   }
 

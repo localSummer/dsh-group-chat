@@ -56,7 +56,13 @@ export declare function groupById(s: ClientSnapshot, id: string): SnapshotGroup 
 export declare function escapeRegExp(v: string): string;
 export declare function firstLine(text: string): string;
 export declare function latestLine(text: string): string;
-export declare function fmtTime(ts: number): string;
+/** 消息绝对时钟（对齐主会话 formatMessageClock / clock.md / clock.ymd zh 模板）：
+ * 同日 → HH:mm；同年更早 → M月D日 HH:mm；跨年 → Y年M月D日 HH:mm。
+ * 绝对时钟不随时间推移失真——Bubble 值比较 memo 冻结首渲字符串无害。 */
+export declare function fmtClock(ts: number): string;
+/** 发言生成总耗时（对齐插件内 ToolRow 耗时语汇 + 轨道计时的分钟段）：
+ * <1s → `800ms`；<60s → `3.2s`（一位小数）；≥60s → `1分58秒`（秒补零 2 位）。 */
+export declare function fmtSpeakDuration(ms: number): string;
 /** 角色编辑抽屉的草稿形态（编辑与新建共用）。 */
 export interface RoleDraft {
     id?: string;

@@ -72,15 +72,31 @@ export function latestLine(text: string): string {
   return i === -1 ? visible : visible.slice(i + 1)
 }
 
-export function fmtTime(ts: number): string {
-  const delta = Math.max(0, Date.now() - ts)
-  if (delta < 60000) return '刚刚'
-  if (delta < 3600000) return Math.floor(delta / 60000) + ' 分钟前'
-  if (delta < 86400000) return Math.floor(delta / 3600000) + ' 小时前'
+/** 消息绝对时钟（对齐主会话 formatMessageClock / clock.md / clock.ymd zh 模板）：
+ * 同日 → HH:mm；同年更早 → M月D日 HH:mm；跨年 → Y年M月D日 HH:mm。
+ * 绝对时钟不随时间推移失真——Bubble 值比较 memo 冻结首渲字符串无害。 */
+export function fmtClock(ts: number): string {
   const d = new Date(ts)
-  const sameYear = d.getFullYear() === new Date().getFullYear()
   const pad = (n: number): string => (n < 10 ? '0' + n : '' + n)
-  return sameYear ? (d.getMonth() + 1) + '月' + d.getDate() + '日' : d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate()
+  const clock = pad(d.getHours()) + ':' + pad(d.getMinutes())
+  const now = new Date()
+  const sameYear = d.getFullYear() === now.getFullYear()
+  if (sameYear && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()) return clock
+  const md = (d.getMonth() + 1) + '月' + d.getDate() + '日'
+  return sameYear ? md + ' ' + clock : d.getFullYear() + '年' + md + ' ' + clock
+}
+
+/** 发言生成总耗时（对齐插件内 ToolRow 耗时语汇 + 轨道计时的分钟段）：
+ * <1s → `800ms`；<60s → `3.2s`（一位小数）；≥60s → `1分58秒`（秒补零 2 位）。 */
+export function fmtSpeakDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return ''
+  if (ms < 1000) return Math.round(ms) + 'ms'
+  if (ms < 60000) return (ms / 1000).toFixed(1) + 's'
+  const total = Math.floor(ms / 1000)
+  const minutes = Math.floor(total / 60)
+  const seconds = total % 60
+  const pad = (n: number): string => (n < 10 ? '0' + n : '' + n)
+  return minutes + '分' + pad(seconds) + '秒'
 }
 
 /** 角色编辑抽屉的草稿形态（编辑与新建共用）。 */

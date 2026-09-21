@@ -138,6 +138,7 @@ grill-me 确认项：
 | `failedRoleId` | string | ✗ | 失败卡对应角色 id，刷新后可重试；无则省略 |
 | `toolCalls` | `{tool,args,status,output,durationMs?}[]` | ✗ | 工具调用记录；无则省略 |
 | `reactions` | string[] | ✗ | 用户表情回应（标注用，不注入角色上下文）；白名单 `REACTION_EMOJIS`（👍 👎 ❤️ 😂 🤔 🎉），空则省略 |
+| `durationMs` | number | ✗ | 该次发言的生成总耗时（回话开始 → 落卡时刻）；≤0/缺省省略；用户/系统消息无 |
 
 会话级约束备忘（可选，schema 仍为 1）：
 

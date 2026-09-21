@@ -9,5 +9,7 @@ import type { ReactNode } from 'react';
 export interface RollingNumberProps {
     value: number;
     className?: string;
+    /** 前导零补位到固定位数（对齐 RareUI padStart）：如 pad=2 时 7 → "07"。 */
+    pad?: number;
 }
 export declare function RollingNumber(props: RollingNumberProps): ReactNode;

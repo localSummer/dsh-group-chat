@@ -11,7 +11,7 @@
 import { memo, type ReactNode } from 'react'
 import { P } from '../lib/ui.ts'
 import { classifySpeakFailure, formatSpeakFailureCopy, isSpeakFailure } from '../../core/errors.ts'
-import { fmtTime, MD_LABELS, type SnapshotRole } from '../lib/model.ts'
+import { fmtClock, MD_LABELS, type SnapshotRole } from '../lib/model.ts'
 import type { SnapshotMessage } from '../lib/model.ts'
 import { ThinkRow } from './ThinkRow.tsx'
 import { ToolRow } from './ToolRow.tsx'
@@ -56,7 +56,7 @@ function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps):
         <div className="dsgc-msghead">
           <span className="dsgc-msgname">{name}</span>
           {m.model ? <span className="dsgc-msgmodel" title={m.model}>{m.model}</span> : null}
-          {m.ts ? <span className="dsgc-msgtime">{fmtTime(m.ts)}</span> : null}
+          {m.ts ? <span className="dsgc-msgtime">{fmtClock(m.ts)}</span> : null}
         </div>
         {isFail
           ? <FailCard raw={m.text} />
@@ -77,6 +77,7 @@ function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps):
           retryTitle={retryTitle}
           reactions={m.reactions}
           onToggleReaction={!isFail && onToggleReaction ? (emoji) => { onToggleReaction(m.id, emoji) } : undefined}
+          durationMs={!isUser ? m.durationMs : undefined}
         />
       </div>
     </div>
@@ -89,7 +90,7 @@ function bubblePropsEqual(a: BubbleProps, b: BubbleProps): boolean {
   const x = a.m
   const y = b.m
   if (x !== y) {
-    if (x.id !== y.id || x.speaker !== y.speaker || x.text !== y.text || x.reasoning !== y.reasoning || x.model !== y.model || x.error !== y.error || x.failedRoleId !== y.failedRoleId || x.ts !== y.ts) return false
+    if (x.id !== y.id || x.speaker !== y.speaker || x.text !== y.text || x.reasoning !== y.reasoning || x.model !== y.model || x.error !== y.error || x.failedRoleId !== y.failedRoleId || x.ts !== y.ts || x.durationMs !== y.durationMs) return false
     const ra = Array.isArray(x.reactions) ? x.reactions.join('') : ''
     const rb = Array.isArray(y.reactions) ? y.reactions.join('') : ''
     if (ra !== rb) return false

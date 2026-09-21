@@ -167,7 +167,7 @@ export function createPersistence(core: HostState): Persistence {
     if (workspace) mark(dirtyWorkspace, workspace)
     if (flushScheduled) return
     flushScheduled = true
-    void Promise.resolve().then(() => {
+    Promise.resolve().then(() => {
       flushScheduled = false
       // 排队进串行链；flushAll 按文件吞错（保留脏标记），此处兜底意外
       // 逃逸的异常并把链复位为健康态，后续 flush 不被跳过
@@ -227,6 +227,7 @@ export function createPersistence(core: HostState): Persistence {
           failedRoleId: typeof m.failedRoleId === 'string' && m.failedRoleId ? m.failedRoleId : undefined,
           toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
           reactions: sanitizeReactions(m.reactions),
+          durationMs: typeof m.durationMs === 'number' && m.durationMs > 0 ? m.durationMs : undefined,
           ts: typeof m.ts === 'number' ? m.ts : Date.now(),
         })
         sess.messageIds.push(m.id)

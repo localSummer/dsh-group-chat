@@ -77,7 +77,7 @@ export function useFileSearch(
     const controller = new AbortController()
     setFileSearchLoading(true)
     const timer = window.setTimeout(() => {
-      void (async () => {
+      const run = async () => {
         try {
           const res = await api.action({
             kind: 'fileSearch',
@@ -102,7 +102,8 @@ export function useFileSearch(
         } finally {
           if (!controller.signal.aborted) setFileSearchLoading(false)
         }
-      })()
+      }
+      run()
     }, DEBOUNCE_MS)
 
     return () => {

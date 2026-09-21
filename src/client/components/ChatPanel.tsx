@@ -109,7 +109,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
   } = props
 
   const commitTopic = (): void => {
-    if (topicDraft !== null && sess && topicDraft !== sess.topic) void mutate({ op: 'setTopic', sessionId: sess.id, topic: topicDraft })
+    if (topicDraft !== null && sess && topicDraft !== sess.topic) mutate({ op: 'setTopic', sessionId: sess.id, topic: topicDraft })
     setTopicDraft(null)
   }
 

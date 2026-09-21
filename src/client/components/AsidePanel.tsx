@@ -33,7 +33,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
 
   const commitWsDir = (): void => {
     if (wsDraft !== null && group && wsDraft !== (group.workspaceDir || '')) {
-      void mutate({ op: 'setWorkspaceDir', groupId: group.id, path: wsDraft })
+      mutate({ op: 'setWorkspaceDir', groupId: group.id, path: wsDraft })
     }
     setWsDraft(null)
   }
@@ -52,7 +52,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
   const selectCurrentDir = (): void => {
     if (!fileBrowser || !fileBrowser.list || !group) return
     const path = fileBrowser.list.path!
-    void mutate({ op: 'setWorkspaceDir', groupId: group.id, path })
+    mutate({ op: 'setWorkspaceDir', groupId: group.id, path })
     setWsDraft(null)
     setFileBrowser(null)
   }
@@ -95,7 +95,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                         >
                           <P.Switch
                             checked={r.enabled}
-                            onChange={() => { void mutate({ op: 'setRoleEnabled', roleId: r.id, enabled: !r.enabled }) }}
+                            onChange={() => { mutate({ op: 'setRoleEnabled', roleId: r.id, enabled: !r.enabled }) }}
                             label={r.enabled ? '停用该角色' : '启用该角色'}
                             aria-label={(r.enabled ? '停用' : '启用') + '角色 ' + r.name}
                           />
@@ -124,7 +124,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                         >
                           {Icon(P.IconEditOutline16, 14)}
                         </button>
-                        <ConfirmDelete label="移除角色" onConfirm={() => { void mutate({ op: 'deleteRole', roleId: r.id }) }} />
+                        <ConfirmDelete label="移除角色" onConfirm={() => { mutate({ op: 'deleteRole', roleId: r.id }) }} />
                       </span>
                     </div>
                   </div>
@@ -146,7 +146,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
               onBlur={commitWsDir}
               onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
             />
-            <P.Button variant="outline" size="sm" onClick={() => { void openBrowser(wsDraft === null ? group.workspaceDir : wsDraft) }}>
+            <P.Button variant="outline" size="sm" onClick={() => { openBrowser(wsDraft === null ? group.workspaceDir : wsDraft) }}>
               {Icon(P.IconFolderOpenOutline16, 14)}浏览
             </P.Button>
           </div>
@@ -165,10 +165,10 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                 <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                   <P.Button variant="primary" size="sm" disabled={!fileBrowser.list} onClick={selectCurrentDir}>选定此目录</P.Button>
                   {fileBrowser.list
-                    ? <P.Button variant="outline" size="sm" title="上一级" aria-label="上一级" onClick={() => { void openBrowser(fileBrowser.list!.parent) }}>{Icon(P.IconChevronUpOutline14, 14)}</P.Button>
+                    ? <P.Button variant="outline" size="sm" title="上一级" aria-label="上一级" onClick={() => { openBrowser(fileBrowser.list!.parent) }}>{Icon(P.IconChevronUpOutline14, 14)}</P.Button>
                     : null}
                   {fileBrowser.list
-                    ? <P.Button variant="outline" size="sm" title="主目录" aria-label="主目录" onClick={() => { void openBrowser(fileBrowser.list!.home) }}>{Icon(P.IconFolderClose16, 14)}</P.Button>
+                    ? <P.Button variant="outline" size="sm" title="主目录" aria-label="主目录" onClick={() => { openBrowser(fileBrowser.list!.home) }}>{Icon(P.IconFolderClose16, 14)}</P.Button>
                     : null}
                   <P.Button variant="ghost" size="sm" onClick={() => { setFileBrowser(null) }} aria-label="关闭浏览器">{Icon(P.IconCloseOutline16, 14)}</P.Button>
                 </span>
@@ -184,7 +184,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                             key={e.path}
                             type="button"
                             className={'dsgc-fbrow' + (e.hidden ? ' dim' : '') + ' dir'}
-                            onClick={() => { void openBrowser(e.path) }}
+                            onClick={() => { openBrowser(e.path) }}
                           >
                             {Icon(e.hidden ? P.IconFolderClose16 : P.IconFolderOpenOutline16, 14)}
                             <span className="dsgc-fbname">{e.name}/</span>

@@ -263,7 +263,7 @@ export function createActions(core: HostState, deps: {
     run.finished = null // 新 run 覆盖旧的「输出完毕」未读标记
     run.replaceMessageId = null
     touch()
-    void runLoop(sess).catch((e) => console.error('group-chat run failed', e))
+    runLoop(sess).catch((e) => console.error('group-chat run failed', e))
     return { ok: true }
   }
 
@@ -293,7 +293,7 @@ export function createActions(core: HostState, deps: {
     run.finished = null
     run.replaceMessageId = msg.id
     touch()
-    void runLoop(sess, { replaceMessageId: msg.id }).catch((e) => console.error('group-chat retry failed', e))
+    runLoop(sess, { replaceMessageId: msg.id }).catch((e) => console.error('group-chat retry failed', e))
     return { ok: true }
   }
 

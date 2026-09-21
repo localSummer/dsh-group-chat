@@ -199,7 +199,7 @@ components:
 - **Label**（500, 12px）：表单标签、chips、提示、区块头（600）、轮数。
 - **Caption**（400, 11.5px, 1.5）：系统通知、思考摘要（44ch 截断）、角色人设（2 行钳制）、结论备忘说明与条目。
 - **Micro**（500, 11px, line-height 17）：角色卡模型徽章。
-- **Micro-tiny**（500, 10.5px）：流内模型徽章（line-height 16）、相对时间、文件尺寸。
+- **Micro-tiny**（500, 10.5px）：流内模型徽章（line-height 16）、绝对时钟消息时间（对齐主会话 formatMessageClock：同日 HH:mm / 同年 M月D日 HH:mm / 跨年 Y年M月D日 HH:mm）、发言总用时（操作条尾部「耗时 3.2s」）、文件尺寸。
 
 ### Named Rules
 **窄梯规则。** 不引入 15px 以上的字号；层级升级优先用 600 字重和颜色（secondary→primary），其次才是 +1px。徽章类永远 ≤11px。
@@ -270,13 +270,13 @@ components:
 会话状态点 = 宿主 P.StateDot（8px，主题变量 + reduced-motion 由原语自带；点外层 span 带 title/aria-label 悬停文案，StateDot 自身 aria-hidden），落在**恒在的固定宽度状态槽**（8px，对齐主会话列表 `.slot` 模式——有无状态点的行间文案 x 坐标一致）：进行中 = `ongoing` 蓝像素追逐动画（含用户已点停止、run 未真正停完的窗口）、等待确认 = `warning` 琥珀（run_command 确认闸门挂起，优先级最高）、已完成 = `done` 绿 / 已出错 = `error` 红（run 结束标记 run.finished：正常跑完/停止 → ok，发言失败 → error）；idle 槽内无点。标记生命周期见 PRODUCT.md（内存态、查看即清、新 run 覆盖）。
 
 ### 消息流（签名组件）
-角色消息 = 28px 圆头像（2px 角色色环，无角色时 `border-l3`/用户头像 info 填充透明环）+ 头部行（名字 600 + 模型徽章 10.5px + 相对时间）+ layer-3 卡内 MarkdownText（宿主同源渲染，labels 冻结对象：复制/已复制/脚注）。用户消息 = info 填充行反转气泡，纯文本 pre-wrap。系统通知 = 居中 `bg-module` 胶囊（11.5px；停止等普通通知，不再承载发言失败）。**操作条**（`.dsgc-msgops`）在气泡**外**下方，角色消息左齐、自己的消息右齐：用户/角色消息悬停出「复制」与「回应」（表情微钮 + 已回应胶囊，见表情回应）；失败卡常驻「复制 / 重试」（图标+文字，不依赖悬停）。触控无 hover 时常驻。**失败卡** = 仍是该角色的消息行（头像/名字/模型保留）+ 淡错误底圆角卡（无左侧色条）：警告圆标 + 人话标题（额度已用尽 / 请求过于频繁 / 鉴权失败…）+ 可选短因 + 「查看原始错误」展开供应商原文。存量 `speaker:system` 失败行启动时按「角色「名」发言失败」反推角色并补 `failedRoleId`。重试进行中该失败卡让位给 live 流式行（插在原槽位，不钉在列表末尾），成功后原地覆盖为正常发言。**流式行**：时间槽显示「深度求索...」（`dsgc-typing`——DeepSeek 品牌蓝微光扫动，见 Motion 签名循环）+ streaming MarkdownText（opacity .92）+ 运行中的思考折叠（摘要实时跟随最新一行）；首个 delta 到达前卡内渲染「思考中」占位行（ThinkRow 同语言：思考图标 + 次要色 12px + 三点交错呼吸 1.2s，`dsgc-dot-breathe`；深度思考模型首字节可能等数秒到数十秒，空白气泡会被感知为卡死）。空态 = 居中 40ch（20px 描边图标 50% 透明度 + 13px/600 标题 + 提示）。
+角色消息 = 28px 圆头像（2px 角色色环，无角色时 `border-l3`/用户头像 info 填充透明环）+ 头部行（名字 600 + 模型徽章 10.5px + 绝对时钟 `fmtClock`）+ layer-3 卡内 MarkdownText（宿主同源渲染，labels 冻结对象：复制/已复制/脚注）。用户消息 = info 填充行反转气泡，纯文本 pre-wrap。系统通知 = 居中 `bg-module` 胶囊（11.5px；停止等普通通知，不再承载发言失败）。**操作条**（`.dsgc-msgops`）在气泡**外**下方，角色消息左齐、自己的消息右齐：用户/角色消息悬停出「复制」与「回应」（表情微钮 + 已回应胶囊，见表情回应）；失败卡常驻「复制 / 重试」（图标+文字，不依赖悬停）。**总用时**（`.dsgc-msgdur`）：角色消息（含失败卡）操作组末尾的静态元数据「耗时 3.2s」——按钮是动作、耗时是读数，8px 间距分组；`fmtSpeakDuration`（<1s → `800ms`、<60s → `3.2s` 一位小数、≥60s → `1分58秒`）；10.5px 身份信息档 + tabular，随操作条 hover 显隐；数据 = 落卡时刻 - `turnStartedAt`，retry 覆盖时更新。触控无 hover 时常驻。**失败卡** = 仍是该角色的消息行（头像/名字/模型保留）+ 淡错误底圆角卡（无左侧色条）：警告圆标 + 人话标题（额度已用尽 / 请求过于频繁 / 鉴权失败…）+ 可选短因 + 「查看原始错误」展开供应商原文。存量 `speaker:system` 失败行启动时按「角色「名」发言失败」反推角色并补 `failedRoleId`。重试进行中该失败卡让位给 live 流式行（插在原槽位，不钉在列表末尾），成功后原地覆盖为正常发言。**流式行**：时间槽显示「深度求索...」（`dsgc-typing`——DeepSeek 品牌蓝微光扫动，见 Motion 签名循环）+ streaming MarkdownText（opacity .92）+ 运行中的思考折叠（摘要实时跟随最新一行）；首个 delta 到达前卡内渲染「思考中」占位行（ThinkRow 同语言：思考图标 + 次要色 12px + 三点交错呼吸 1.2s，`dsgc-dot-breathe`；深度思考模型首字节可能等数秒到数十秒，空白气泡会被感知为卡死）。空态 = 居中 40ch（20px 描边图标 50% 透明度 + 13px/600 标题 + 提示）。
 
 ### 表情回应（签名组件，RareUI Emoji reaction 重写）
 操作条上的回应微钮（自绘微笑描边 SVG——原语无表情类图标的内联回退，PermissionSelect 内联 SVG 同先例）弹出 `ReactionPicker`：portal `document.body`（躲开 `container-type` 对 fixed 的容器化）、按触发钮 rect 定位向上弹（空间不足向下翻）、z-index 30、视觉对齐 @弹层（layer-3 + `border-l2` + 圆角 10 + `shadow-lv3`）；6 个 Unicode emoji 候选（**内容非 chrome，记录在案的图标规则例外**——不引入图片资产）；已回应候选品牌色 12% 淡底高亮，再点取消；键盘 ←→/Enter、Esc/外点关闭。选中（新增）后 5 份 emoji 副本从触发钮上浮飘散（`.6s` 一次性：上移 44–68px + 随机横漂 ±18px + 收缩 .4 + blur 2px + 淡出，40ms 交错；reduced-motion 由 JS 跳过生成）。已回应以中性淡底胶囊（12px emoji、999px）常驻操作条，点击取消。
 
 ### 多轮进度轨道（RareUI Step player 重写）
-run 进行时常驻消息流与 composer 之间的一行临时态（`aria-hidden` 装饰——当前发言者由 live 行承载）：步点 = 快照 `run.queue` 完整发言计划；已完成 = 6px **角色色**实心点（记录在案的 PALETTE 用法扩展，见 Named Rules）、当前 = 拉伸 28px 小条（角色色 22% 底 + 角色色 65% 高光 `1.8s` 线性扫动，弱化版 shimmer）+ 未开始 = `border-l2` 空心点；轮间加大间距（步点宽度/底色 `.16s` 过渡交棒）。步点 hover 出「第 x/y 位：角色名」title。run 结束随组件卸载（fade `.18s`）。无播放/暂停控件（停止按钮在 composer）、步点不可点。
+run 进行时常驻消息流与 composer 之间的一行临时态（`aria-hidden` 装饰——当前发言者由 live 行承载）：步点 = 快照 `run.queue` 完整发言计划；已完成 = 6px **角色色**实心点（记录在案的 PALETTE 用法扩展，见 Named Rules）、当前 = 拉伸 28px 小条（角色色 22% 淡底 + 角色色 65% 高光 `1.8s` 线性扫动——静态淡底会被感知为卡住）+ 未开始 = `border-l2` 空心点；轮间加大间距（步点宽度/底色 `.16s` 过渡交棒）。步点 hover 出「第 x/y 位：角色名」title。**尾部计时**（对齐主会话 TurnStatus 时钟）：当前发言人回合计时，锚定 host `run.turnStartedAt`（换人重锚）、1s tick、≥15s 才显示、`N秒` / `M分SS秒`（SS 补零 2 位）格式，数字走 `RollingNumber` 滚轮（分钟段仅 ≥60s 出现）；紧随步点左对齐（8px 间距，与步点同属「当前进度」语义组），11px tabular。run 结束随组件卸载（fade `.18s`）。无播放/暂停控件（停止按钮在 composer）、步点不可点。
 
 ### 思考折叠行（签名组件）
 P.DisclosureRow 只管摘要行：12px 行（hover 换底），IconThinkOutline14 + 「思考」+ 折叠摘要（剥离 markdown 标记的纯文本，44ch 截断，11.5px）。展开体走共用 `Fold` + `ClipWell`：pre-wrap 纯文本 12.5px/1.7，左缘 2px `border-l2` 规线，max-height 320px；超出上下沿 14px 裁切遮罩。展开 `.22s` 到达曲线 / 收起 `.16s` ease-in（`0fr→1fr` + 淡入）。宿主 DisclosureRow 关闭即卸载子节点，高度动画挂在行外。
@@ -297,14 +297,14 @@ P.DisclosureRow 只管摘要行：12px 行（hover 换底），IconThinkOutline1
 
 动效只为反馈、状态与连续性服务；流式正文零逐帧动画（SSE 120ms 高频更新不叠加效果）。统一到达曲线 `cubic-bezier(0.16,1,.3,1)`，退场恒短于入场（ease-in 出）。
 
-- **签名循环**：`dsgc-presence` 1.8s ease-in-out infinite——正在流式发言的角色头像以 `--role-color`（color-mix 22%）呼吸 4px 光环；随 live 行卸载即停。`dsgc-typing-shimmer` 1.8s linear infinite——live 行「深度求索...」时间槽的品牌蓝微光扫动（对标宿主 TurnStatus「深度求索中...」：`--dsw-static-deepseek-500/200` 渐变带 + `background-clip:text` + `background-position` 扫动；reduced-motion 降级为静态渐变）。`dsgc-dot-breathe` 1.2s（0/.2/.4s 交错）——首个 delta 前「思考中」占位行的三点呼吸。`dsgc-rtrack-sweep` 1.8s linear infinite——多轮进度轨道当前步小条的角色色高光扫动（reduced-motion 停用，保留 22% 淡底状态）。
-- **微反馈（一次性/滚轮）**：数字滚轮（轮数步进器与「还有 N 条约束」计数）每位数字经 `translateY` 数字条滚到目标位 `.15s` 到达曲线（`RollingNumber`，reduced-motion 直接跳变）；表情回应漂浮副本 `.6s` ease-out（5 份交错 40ms，上移 + 横漂 + 收缩 + blur + 淡出；reduced-motion 不生成）。
+- **签名循环**：`dsgc-typing-shimmer` 1.2s linear infinite——live 行「深度求索...」时间槽的品牌蓝微光扫动（对标宿主 TurnStatus「深度求索中...」：`--dsw-static-deepseek-500/200` 渐变带 + `background-clip:text` + `background-position` 扫动；reduced-motion 降级为静态渐变）。`dsgc-dot-breathe` 1.2s（0/.2/.4s 交错）——首个 delta 前「思考中」占位行的三点呼吸。`dsgc-rtrack-sweep` 1.8s linear infinite——多轮进度轨道当前步小条的角色色高光扫动（静态淡底会被感知为卡住——深度思考模型首字节可等数十秒；reduced-motion 停用，保留 22% 淡底状态）。live 头像动画由 `SpeakerOrb` 独占（原 `dsgc-presence` 呼吸光晕与 Orb 信号完全重叠，已裁撤）。
+- **微反馈（一次性/滚轮）**：数字滚轮（轮数步进器、「还有 N 条约束」计数与轨道尾部的当前发言人运行计时）每位数字经 `translateY` 数字条滚到目标位 `.15s` 到达曲线（`RollingNumber` 支持 `pad` 前导零补位，reduced-motion 直接跳变；计时是状态不是动画，interval 照常 tick）；表情回应漂浮副本 `.6s` ease-out（5 份交错 40ms，上移 + 横漂 + 收缩 + blur + 淡出；reduced-motion 不生成）。
 - **出现确认**（fade + 轻微位移）：消息 `.22s`（6px 上浮）、@弹层 `.16s`（4px）、回到底部 `.18s`（6px，保留 translateX(-50%) 定位）、原地确认删除面板 `.16s`（4px 侧滑；收起 `.12s` ease-in）、回应弹层 `.16s`（4px）、进度轨道 `.18s`（纯 fade）、错误 `.18s` / 文件浏览器 `.2s` / 空状态 `.3s`（纯 fade）、系统消息 `.24s`（scale .96）、结论备忘卡 `.18s`（纯 fade）。
 - **会话内折叠（共用）**：思考全文、工具输出、失败原文、结论备忘额外条目走同一套 `Fold`：`grid-template-rows 0fr→1fr`（开 `.22s` 到达曲线 / 合 `.16s` ease-in）+ 内容淡入。超出 max-height 后 `ClipWell` 上下沿 14px 渐变遮罩（有溢出才显现，opacity `.12s`）——是裁切提示，不是卡片投影。
 - **布局连续性（唯一的 layout 动画，左右对称两处）**：左右栏折叠，同一配方。宽模式 `width →0` + opacity（开 `.28s` 曲线到 / 合 `.24s` ease-in），子元素经 flex 列默认 stretch 填满内容区（不写死宽度——面板为 content-box，宿主无全局 border-box，写死像素会与内容区实宽脱节致左右内距失衡；收合期间内容随面板收缩，行内 ellipsis 渐进截断 + nowrap 元素 `overflow:hidden` 防涂抹），`visibility` 延迟 `.22s` 切换（关闭时键盘焦点安全）；窄容器（≤880px）右栏覆盖层 `translateX` 滑行（开 `.3s` / 合 `.26s`），左栏在 ≤640px 下收窄至 200px。**接缝收合钮随接缝滑行**：宽模式由布局驱动（中栏连续变宽，贴缘绝对定位的钮自动同步，无自有动画）；窄模式右钮以同曲线 `right` 过渡（`.3s`）跟踪覆盖层左缘。
 - **抽屉**：入 `.22s`（32px 滑入 + 淡入）；出 `.14s` ease-in + `pointer-events:none`——取消/Esc 走 140ms 退场后卸载，保存成功为即时确认。
 - **时长纪律**：微反馈 ≤150ms（色彩过渡 `.12/.16s` 沿用）→ 出现 160–240ms → 布局 260–300ms。
-- **Reduced motion**：全部过渡与动画停用（含 presence 光环、右栏与抽屉），保留承载意义的颜色/透明度状态；加载旋转亦停；表情回应漂浮副本不生成。
+- **Reduced motion**：全部过渡与动画停用（含头像 Orb 静帧、右栏与抽屉），保留承载意义的颜色/透明度状态；加载旋转亦停；表情回应漂浮副本不生成。
 
 ## Do's and Don'ts
 
@@ -315,8 +315,8 @@ P.DisclosureRow 只管摘要行：12px 行（hover 换底），IconThinkOutline1
 - **Do** 响应式用容器查询（880px / 640px 两级），新面板不依赖视口媒体查询。
 - **Do** 所有滚动容器给 `scrollbar-width:thin` + `scrollbar` 色；所有自有可交互控件给 `focus-visible` 2px 品牌描边 + offset 1px。
 - **Do** 破坏性操作二次确认，两档形态：树节点与角色卡删除用原地确认（`ConfirmDelete` 掀盖 + ✓/✗ 微面板）；清空会话用确认弹窗（体量大且不可恢复，需说明范围与后果）。Esc 关闭临时层，键盘可达（Enter/Space/↑↓/Tab）。
-- **Do** `prefers-reduced-motion:reduce` 下关闭全部过渡与动画（含 presence 光环、右栏折叠、抽屉与加载旋转）。
-- **Do** 时间显示用相对时间（刚刚 / N 分钟前 / N 小时前 / M月D日）。
+- **Do** `prefers-reduced-motion:reduce` 下关闭全部过渡与动画（含头像 Orb 静帧、右栏折叠、抽屉与加载旋转）。
+- **Do** 消息时间用绝对时钟（对齐主会话 formatMessageClock：同日 HH:mm、同年 M月D日 HH:mm、跨年 Y年M月D日 HH:mm）——相对时间会被 Bubble 值比较 memo 冻结在首渲时刻而失真，绝对时钟无此问题。
 
 ### Don't:
 - **Don't** 在 PALETTE 之外引入字面色（danger 上的 `#fff` 与令牌回退值除外）；也不要把 PALETTE 用在环/点之外的任何地方。

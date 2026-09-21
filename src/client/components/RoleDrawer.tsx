@@ -201,7 +201,7 @@ export function RoleDrawer(props: RoleDrawerProps): ReactNode {
       </div>
       <div className="dsgc-drawerfoot">
         <P.Button variant="outline" onClick={close}>取消</P.Button>
-        <P.Button variant="primary" onClick={() => { void save() }}>{draft.id ? '保存' : '添加'}</P.Button>
+        <P.Button variant="primary" onClick={() => { save() }}>{draft.id ? '保存' : '添加'}</P.Button>
       </div>
     </div>
   )

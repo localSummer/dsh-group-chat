@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Icon, P } from '../lib/ui.ts'
+import { fmtSpeakDuration } from '../lib/model.ts'
 import { ReactionPicker } from './ReactionPicker.tsx'
 
 export interface MsgActionsProps {
@@ -21,6 +22,8 @@ export interface MsgActionsProps {
   reactions?: string[]
   /** 提供时渲染回应触发钮与胶囊（失败卡与系统通知不提供）。 */
   onToggleReaction?: (emoji: string) => void
+  /** 该次发言的生成总耗时（仅角色消息）；展示在操作组末尾。 */
+  durationMs?: number
 }
 
 /** 微笑触发图标（描边风格对齐宿主 Icon*Outline；原语无表情类图标的内联回退）。 */
@@ -70,7 +73,7 @@ async function writeClipboard(text: string): Promise<boolean> {
 }
 
 export function MsgActions(props: MsgActionsProps): ReactNode {
-  const { copyText, onRetry, retryDisabled, retryTitle, always, reactions, onToggleReaction } = props
+  const { copyText, onRetry, retryDisabled, retryTitle, always, reactions, onToggleReaction, durationMs } = props
   const [copied, setCopied] = useState(false)
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (copiedTimer.current) clearTimeout(copiedTimer.current) }, [])
@@ -172,7 +175,7 @@ export function MsgActions(props: MsgActionsProps): ReactNode {
         className={'dsgc-msgop' + (copied ? ' done' : '')}
         title={copied ? '已复制' : '复制'}
         aria-label={copied ? '已复制' : '复制'}
-        onClick={(e) => { e.stopPropagation(); void copy() }}
+        onClick={(e) => { e.stopPropagation(); copy() }}
       >
         {Icon(copied ? P.IconCheckOutline14 : P.IconCopyOutline16, 14)}
         <span>{copied ? '已复制' : '复制'}</span>
@@ -191,6 +194,11 @@ export function MsgActions(props: MsgActionsProps): ReactNode {
             <span>重试</span>
           </button>
           )
+        : null}
+      {/* 总用时（元数据，非按钮）：按钮是动作、耗时是读数——尾部放置分组清晰；
+          随操作条 hover 显隐，10.5px 身份信息档不抢正文注意力 */}
+      {durationMs && durationMs > 0
+        ? <span className="dsgc-msgdur" title="本次发言生成总用时">耗时 {fmtSpeakDuration(durationMs)}</span>
         : null}
     </div>
   )

@@ -42,7 +42,7 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
       <div key="__live" className="dsgc-msg live">
         <div
           className="dsgc-avatar"
-          style={{ border: '2px solid ' + liveColor, '--role-color': liveColor } as CSSProperties}
+          style={{ border: '2px solid ' + liveColor } as CSSProperties}
         >
           <SpeakerOrb state={orbState} color={liveColor} />
         </div>
@@ -83,8 +83,8 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
         <div className="dsgc-confirmcmd">{String((pc.args && pc.args.command) || '')}</div>
         <div className="dsgc-hint">允许后将在工作区目录执行；拒绝后角色将继续纯文本讨论</div>
         <div className="dsgc-confirmops">
-          <P.Button variant="primary" size="sm" onClick={() => { void action({ kind: 'confirmCommand', toolCallId: pc.toolCallId, allow: true }) }}>允许</P.Button>
-          <P.Button variant="outline" size="sm" onClick={() => { void action({ kind: 'confirmCommand', toolCallId: pc.toolCallId, allow: false }) }}>拒绝</P.Button>
+          <P.Button variant="primary" size="sm" onClick={() => { action({ kind: 'confirmCommand', toolCallId: pc.toolCallId, allow: true }) }}>允许</P.Button>
+          <P.Button variant="outline" size="sm" onClick={() => { action({ kind: 'confirmCommand', toolCallId: pc.toolCallId, allow: false }) }}>拒绝</P.Button>
         </div>
       </div>
       )

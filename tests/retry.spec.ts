@@ -126,6 +126,9 @@ describe('发言失败卡与原地重试', () => {
     expect(same.text).toBe('改用备选方案')
     expect(same.speaker).toBe(fail.speaker)
     expect(same.reactions).toEqual(['👍'])
+    // 重试覆盖写入新的发言总耗时（stub 流式极快，只断言字段存在且非负）
+    expect(typeof same.durationMs).toBe('number')
+    expect(same.durationMs).toBeGreaterThanOrEqual(0)
   })
 
   it('重试只注入失败卡之前的记录，不含后续消息', async () => {
@@ -156,7 +159,7 @@ describe('发言失败卡与原地重试', () => {
     await until(() => !env!.svc.snapshot().run.running)
     const fail = env!.svc.snapshot().messages.find((m) => m.error)!
     const release = env!.hang()
-    void env!.svc.handleAction({ kind: 'send', sessionId: 's-a', text: '并行' })
+    env!.svc.handleAction({ kind: 'send', sessionId: 's-a', text: '并行' })
     await until(() => env!.svc.snapshot().run.running)
     const busy = await env!.svc.handleAction({ kind: 'retrySpeak', sessionId: 's-a', messageId: fail.id }) as { ok: boolean, error?: string }
     expect(busy.ok).toBe(false)

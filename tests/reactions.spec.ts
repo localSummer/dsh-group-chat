@@ -98,6 +98,12 @@ describe('messageJson（序列化）', () => {
     expect('reactions' in messageJson({ id: 'm1', reactions: [] })!).toBe(false)
     expect('reactions' in messageJson({ id: 'm1' })!).toBe(false)
   })
+
+  it('durationMs：正数序列化；0/负数/缺省省略', () => {
+    expect(messageJson({ id: 'm1', durationMs: 2500 })!.durationMs).toBe(2500)
+    expect('durationMs' in messageJson({ id: 'm1', durationMs: 0 })!).toBe(false)
+    expect('durationMs' in messageJson({ id: 'm1' })!).toBe(false)
+  })
 })
 
 describe('reactMessage（服务）', () => {
@@ -127,17 +133,23 @@ describe('reactMessage（服务）', () => {
     await svc!.handleAction({ kind: 'mutate', op: 'reactMessage', messageId: targetId, emoji: '❤️' })
     await svc!.dispose()
     svc = null
-    const doc = JSON.parse(readFileSync(join(storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { messages: { id: string, reactions?: string[] }[] }
+    const doc = JSON.parse(readFileSync(join(storeDir, 'grp-a', 'sessions', 'session-s-a.json'), 'utf8')) as { messages: { id: string, reactions?: string[], durationMs?: number }[] }
     expect(doc.messages.find((m) => m.id === targetId)!.reactions).toEqual(['❤️'])
+    // 发言总耗时随会话文件落盘（stub 流式极快，存在性即可）
+    expect('durationMs' in doc.messages.find((m) => m.id === targetId)!).toBe(true)
   })
 
   it('hydrate 安全化：磁盘上的非法/重复条目被清洗', async () => {
     // 在落盘文件基础上注入非法与重复条目后重建（锁已随 dispose 释放）
     const file = join(storeDir, 'grp-a', 'sessions', 'session-s-a.json')
-    const doc = JSON.parse(readFileSync(file, 'utf8')) as { messages: { id: string, reactions?: string[] }[] }
+    const doc = JSON.parse(readFileSync(file, 'utf8')) as { messages: { id: string, reactions?: string[], durationMs?: number }[] }
     doc.messages.find((m) => m.id === targetId)!.reactions = ['👍', '😈', '👍', '❤️']
+    // durationMs 负数 → 清洗为省略
+    doc.messages.find((m) => m.id === targetId)!.durationMs = -5
     writeFileSync(file, JSON.stringify(doc))
     svc = await makeService()
     expect(svc.snapshot().messages.find((m) => m.id === targetId)!.reactions).toEqual(['👍', '❤️'])
+    // 负数 durationMs 被 hydrate 清洗为省略
+    expect(svc.snapshot().messages.find((m) => m.id === targetId)!.durationMs).toBeUndefined()
   })
 })

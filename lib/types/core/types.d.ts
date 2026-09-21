@@ -100,6 +100,8 @@ export interface MessageRecord {
     toolCalls?: ToolCallRecord[];
     /** 用户表情回应集合（仅标注展示，不注入角色上下文）。 */
     reactions?: string[];
+    /** 该次发言的生成总耗时（回话开始 turnStartedAt → 落卡时刻），毫秒；用户/系统消息无。 */
+    durationMs?: number;
     ts: number;
 }
 /** run_command 确认闸门的待确认载荷。 */
@@ -133,6 +135,8 @@ export interface RunState {
     queue: string[];
     /** 发言游标：下一个待发言位置的索引（queueIndex - 1 = 正在/最近发言的步）。 */
     queueIndex: number;
+    /** 当前发言人回合的开始时刻（进度轨道运行计时锚点，对齐主会话 TurnStatus 的 turn.start.time）；run 结束清 null。 */
+    turnStartedAt: number | null;
     pendingConfirm: PendingConfirm | null;
     confirmSignal: {
         resolve: (allowed: boolean) => void;

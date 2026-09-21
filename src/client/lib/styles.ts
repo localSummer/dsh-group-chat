@@ -141,7 +141,7 @@ export const CSS = [
   '.dsgc-msgtext{background:var(--dsw-alias-bg-layer-3,rgba(128,128,128,.06));border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.15));padding:10px 14px;border-radius:12px;line-height:1.6;text-align:left;color:var(--dsw-alias-label-primary,inherit);min-width:0;overflow-wrap:anywhere}',
   '.dsgc-msg.mine .dsgc-msgtext{background:var(--dsw-alias-button-info-fill,#4f6ef7);border-color:transparent;color:var(--dsw-alias-label-primary-foreground,#fff);white-space:pre-wrap;word-break:break-word}',
   '.dsgc-msgtext.live{opacity:.92}',
-  '.dsgc-msg.live .dsgc-avatar{--presence-ring:color-mix(in srgb,var(--role-color,#4f6ef7) 22%,transparent);animation:dsgc-presence 1.8s ease-in-out infinite}',
+  /* live 头像动画由 SpeakerOrb 独占（原 dsgc-presence 呼吸光晕与其信号重叠，已裁撤） */
   '.dsgc-think{margin:2px 0}',
   '.dsgc-think .dsgc-thinkrow{font-size:12px;color:var(--dsw-alias-label-secondary,inherit);border-radius:8px;padding:3px 8px;transition:background-color .12s}',
   '.dsgc-think .dsgc-thinkrow:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.1))}',
@@ -164,6 +164,9 @@ export const CSS = [
   '.dsgc-msg:hover .dsgc-msgops,.dsgc-msg:focus-within .dsgc-msgops,.dsgc-msgops.always{visibility:visible;opacity:1}',
   '@media (hover:none){.dsgc-msg .dsgc-msgops{visibility:visible;opacity:1}}',
   '.dsgc-msg.mine .dsgc-msgops{justify-content:flex-end}',
+  /* 总用时（元数据，非按钮）：按钮组末尾、8px 间距（按钮是动作、耗时是读数，分组清晰）；
+     10.5px 身份信息档 + tabular-nums，随操作条 hover 显隐 */
+  '.dsgc-msgdur{margin-left:8px;flex:none;font-size:10.5px;font-weight:500;color:var(--dsw-alias-label-tertiary,inherit);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}',
   '.dsgc-msgop{border:none;background:none;color:var(--dsw-alias-label-tertiary,inherit);cursor:pointer;padding:3px 6px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:11.5px;line-height:16px;transition:background-color .12s,color .12s}',
   '.dsgc-msgop svg{flex:none}',
   '.dsgc-msgop:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15));color:var(--dsw-alias-label-primary,inherit)}',
@@ -267,11 +270,15 @@ export const CSS = [
   '.dsgc-rtrack-step{flex:none;width:6px;height:6px;border-radius:999px;transition:width .16s cubic-bezier(.16,1,.3,1),background-color .16s ease,border-color .16s ease}',
   '.dsgc-rtrack-step.done{background:var(--role-color,#888)}',
   '.dsgc-rtrack-step.todo{border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3))}',
-  /* 当前步：拉伸小条 + 角色色微光扫动填充（弱化 shimmer，随流式交棒） */
+  /* 当前步：拉伸小条 + 角色色微光扫动填充（静态淡底会被感知为卡住——
+     深度思考模型首字节可等数十秒，扫动是「仍在进行」的常驻信号） */
   '.dsgc-rtrack-step.cur{width:28px;height:6px;background:color-mix(in srgb,var(--role-color,#888) 22%,transparent);position:relative;overflow:hidden}',
   '.dsgc-rtrack-step.cur::after{content:"";position:absolute;inset:0;border-radius:999px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--role-color,#888) 65%,transparent),transparent);animation:dsgc-rtrack-sweep 1.8s linear infinite}',
   '@keyframes dsgc-rtrack-sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}',
   '.dsgc-rtrack-step.roundsep{margin-left:10px}',
+  /* 当前发言人运行计时（对齐主会话 TurnStatus 时钟）：≥15s 显示，紧随步点
+     左对齐（与步点同属「当前进度」语义组——行尾右对齐会在步点少时留大段空档） */
+  '.dsgc-rtrack-elapsed{margin-left:8px;flex:none;font-size:11px;font-weight:500;color:var(--dsw-alias-label-tertiary,inherit);font-variant-numeric:tabular-nums;line-height:1}',
   /* ===== 表情回应（RareUI Emoji reaction 重写）：触发钮 + 浮层 + 胶囊 + 漂浮副本 ===== */
   /* emoji 是消息内容（用户标注）而非界面 chrome，用 Unicode 字符文本渲染——记录在案的图标规则例外 */
   '.dsgc-rewrap{position:relative;display:inline-flex}',
@@ -362,7 +369,6 @@ export const CSS = [
   '@keyframes dsgc-pop-in{from{opacity:0;transform:translateY(4px)}}',
   '@keyframes dsgc-rise-in{from{opacity:0;transform:translate(-50%,6px)}}',
   '@keyframes dsgc-fade-in{from{opacity:0}}',
-  '@keyframes dsgc-presence{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--role-color,#4f6ef7) 0%,transparent)}50%{box-shadow:0 0 0 4px var(--presence-ring)}}',
   '.dsgc-drawerhead{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));flex:none}',
   '.dsgc-drawertitle{flex:1;font-size:14px;font-weight:600;color:var(--dsw-alias-label-primary,inherit)}',
   '.dsgc-drawerbody{flex:1;overflow-y:auto;padding:16px;min-height:0;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2,rgba(128,128,128,.35)) transparent}',
@@ -412,7 +418,7 @@ export const CSS = [
   '.dsgc-entryIcon svg{width:18px;height:18px;display:block}',
   '[data-sidebar-collapsed] .dsgc-entryOverlay,[class*="collapsed"] .dsgc-entryOverlay{justify-content:center;padding:0}',
   '[data-sidebar-collapsed] [class*="panelRow"]:has(.dsgc-entryOverlay),[class*="collapsed"] [class*="panelRow"]:has(.dsgc-entryOverlay){margin:0 auto}',
-  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,.dsgc-cmore,.dsgc-msgops,.dsgc-msgop,.dsgc-failmore,.dsgc-clip::before,.dsgc-clip::after,.dsgc-fold,.dsgc-fold-inner,.dsgc-fold.open,.dsgc-fold.open .dsgc-fold-inner,.dsgc-cdel-bin,.dsgc-cdel-yes,.dsgc-cdel-no,.dsgc-cdel-lid,.dsgc-cdel-panel,.dsgc-cdel.armed .dsgc-cdel-panel,.dsgc-roll-col,.dsgc-roll-strip,.dsgc-rtrack,.dsgc-rtrack-step,.dsgc-repick,.dsgc-repickitem,.dsgc-repills,.dsgc-repill,.dsgc-refly,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-msg.live .dsgc-avatar,.dsgc-loading svg,.dsgc-pendingdots i,.dsgc-typing,.dsgc-constraints,.dsgc-hovertip,.dsgc-fail,.dsgc-rtrack,.dsgc-rtrack-step.cur::after,.dsgc-refly{animation:none}.dsgc-typing{background-position:0 0;background-size:100% 100%}}',
+  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-twist svg,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,.dsgc-cmore,.dsgc-msgops,.dsgc-msgop,.dsgc-failmore,.dsgc-clip::before,.dsgc-clip::after,.dsgc-fold,.dsgc-fold-inner,.dsgc-fold.open,.dsgc-fold.open .dsgc-fold-inner,.dsgc-cdel-bin,.dsgc-cdel-yes,.dsgc-cdel-no,.dsgc-cdel-lid,.dsgc-cdel-panel,.dsgc-cdel.armed .dsgc-cdel-panel,.dsgc-roll-col,.dsgc-roll-strip,.dsgc-rtrack,.dsgc-rtrack-step,.dsgc-repick,.dsgc-repickitem,.dsgc-repills,.dsgc-repill,.dsgc-refly,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-loading svg,.dsgc-pendingdots i,.dsgc-typing,.dsgc-constraints,.dsgc-hovertip,.dsgc-fail,.dsgc-rtrack,.dsgc-rtrack-step.cur::after,.dsgc-refly{animation:none}.dsgc-typing{background-position:0 0;background-size:100% 100%}}',
   /* ===== 设置页（同一卡片语言） ===== */
   '.dgcs-page{display:flex;flex-direction:column;gap:14px;padding:4px 0}',
   '.dgcs-head{display:flex;flex-direction:column;gap:6px}',

@@ -63,7 +63,7 @@ export function GroupChatSettingsSection(props: { settingsScope: SettingsScope<G
         </div>
         <P.Switch
           checked={enabled}
-          onChange={() => { void toggle() }}
+          onChange={() => { toggle() }}
           disabled={!writable || pending}
           label="模型群聊启停"
           title={pending ? '正在写入…' : enabled ? '点击停用' : '点击启用'}

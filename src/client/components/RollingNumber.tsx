@@ -11,16 +11,18 @@ import type { ReactNode } from 'react'
 export interface RollingNumberProps {
   value: number
   className?: string
+  /** 前导零补位到固定位数（对齐 RareUI padStart）：如 pad=2 时 7 → "07"。 */
+  pad?: number
 }
 
 const DIGIT_STRIP: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 export function RollingNumber(props: RollingNumberProps): ReactNode {
-  const { value, className } = props
+  const { value, className, pad } = props
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
     return <span className={className}>{String(value)}</span>
   }
-  const chars = String(value).split('')
+  const chars = (pad && pad > 1 ? String(value).padStart(pad, '0') : String(value)).split('')
   return (
     <span
       className={'dsgc-roll' + (className ? ' ' + className : '')}
