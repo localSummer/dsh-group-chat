@@ -127,7 +127,8 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
 
   return (
     <section className="dsgc-chat">
-      {/* 接缝收合钮 */}
+      {/* 接缝收合钮：图标随状态切换——展开态箭头指向面板侧（收起方向）、
+          折叠态指向内容区（展开方向）；位置即语义（钮在哪一侧就控制哪一侧面板） */}
       <button
         type="button"
         className={'dsgc-seambtn left' + (navOpen ? '' : ' closed')}
@@ -136,7 +137,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
         aria-expanded={navOpen}
         onClick={() => { setNavOpen(!navOpen) }}
       >
-        {Icon(P.IconChevronLeftOutline14, 16)}
+        {Icon(navOpen ? P.IconChevronLeftOutline14 : P.IconChevronRightOutline14, 16)}
       </button>
       <button
         type="button"
@@ -146,7 +147,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
         aria-expanded={asideOpen}
         onClick={() => { setAsideOpen(!asideOpen) }}
       >
-        {Icon(P.IconChevronRightOutline14, 16)}
+        {Icon(asideOpen ? P.IconChevronRightOutline14 : P.IconChevronLeftOutline14, 16)}
       </button>
       
       <div className="dsgc-chathead">
