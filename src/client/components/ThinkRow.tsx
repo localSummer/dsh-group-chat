@@ -18,7 +18,7 @@ export function ThinkRow(props: { text: string, running?: boolean }): ReactNode 
     <div className="dsgc-think">
       <P.DisclosureRow
         rowClassName="dsgc-thinkrow"
-        icon={<P.IconThinkOutline14 size={14} />}
+        icon={<P.IconThinkOutlineMedium size={14} />}
         title="思考"
         open={expanded}
         expandable

@@ -22,8 +22,9 @@
  *      POST /api/group-chat/action   { kind: mutate|send|stop|confirmCommand|models|efforts|browse|fileSearch, ... }
  *      GET  /api/group-chat/events   SSE，状态变化时推送节流后的全量快照
  *
- * 设置命名空间 `group-chat`（settings.yaml 持久化）：`enabled` 控制浏览器半
- * 的侧边栏入口与主面板挂载；关闭时会中止正在进行的群聊。
+ * 设置命名空间 `group-chat`（即 profile 条目 id，写入 profile 的 cordis.patch.yml）：
+ * volatile 字段 `enabled` 控制浏览器半的侧边栏入口与主面板挂载；关闭时会中止
+ * 正在进行的群聊。
  *
  * @module dsh-group-chat
  */
@@ -33,7 +34,7 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 // 类型合并：ctx.settings（宿主面）
 import type {} from '@deepseek-ai/dsh-settings'
-import z from 'schemastery'
+import z from '@deepseek-ai/schemastery'
 import { mountOnce } from './mount-once.ts'
 import { createGroupChatService, makeGroupChatRoutes } from './host/index.ts'
 
@@ -44,20 +45,23 @@ export const inject = ['llm', 'fs', 'shell', 'webServer', 'workspaceRegistry']
 /** 设置命名空间；浏览器半拼写同一值，两边不共享代码。 */
 export const SETTINGS_NAMESPACE = 'group-chat' as SettingsNamespace
 
-export interface Config {
-  enabled?: boolean
-}
-
-/** 设置 schema：目前只有启停一个开关。 */
-export const Config: z<Config> = z.object({
-  enabled: z.boolean().default(true),
+/** 设置 schema：目前只有启停一个开关；volatile 字段才会出现在设置表单中并可在线修改。 */
+export const Config = z.object({
+  enabled: z.boolean().default(true).volatile(),
 })
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /** Loader 在线提交 volatile 字段后通知所属插件实例。 */
+    'loader/volatile-update'(paths: readonly (readonly string[])[]): void
+  }
+}
 
 /**
  * Host 半插件体：状态机服务 + HTTP 路由 + 设置接入。
  * mountOnce 保证同名包每进程至多挂载一次（bundle 聚合与独立安装并存场景）。
  */
-export const apply = mountOnce('dsh-group-chat', (ctx: Context, config?: Config): void => {
+export const apply = mountOnce('dsh-group-chat', (ctx: Context, config?: { enabled?: { get(): boolean | undefined } }): void => {
   const service = createGroupChatService(ctx)
 
   // ---------- HTTP 路由 ----------
@@ -72,32 +76,15 @@ export const apply = mountOnce('dsh-group-chat', (ctx: Context, config?: Config)
   // （返回 Promise，cordis 卸载时 await，保证新实例接管前锁已释放）
   ctx.effect(() => () => service.dispose())
 
-  // ---------- 设置（enabled 持久化于 settings.yaml） ----------
+  // ---------- 设置（enabled 为 volatile 字段，设置页写入 profile 补丁后在线生效） ----------
 
-  let current = (): Config => config ?? {}
   const sync = (): void => {
-    const enabled = current().enabled ?? true
-    if (!enabled) service.stopAll()
+    if (config?.enabled?.get() === false) service.stopAll()
   }
-  ctx.inject(['settings'], (settingsCtx) => {
-    try {
-      if (typeof settingsCtx.settings?.installSection === 'function') {
-        settingsCtx.settings.installSection(ctx, SETTINGS_NAMESPACE, Config, config ?? {}, {
-          setSource: (source: () => Config) => {
-            current = source
-          },
-          onChange: sync,
-        })
-      } else if (typeof settingsCtx.settings?.register === 'function') {
-        const scope = settingsCtx.settings.register(SETTINGS_NAMESPACE, Config, { base: config ?? {} })
-        current = () => scope?.get?.() ?? (config ?? {})
-        scope?.watch?.(() => {
-          sync()
-        })
-      }
-    } catch {
-      /* 设置面不可用时插件照常工作，始终视为启用 */
-    }
+  ctx.on('loader/volatile-update', sync)
+  // 自带设置页：关闭宿主按 schema 自动生成的页面
+  ctx.inject(['settings'], (child) => {
+    child.effect(() => child.settings.configure({ auto: false }, ctx.fiber))
   })
   sync()
 })

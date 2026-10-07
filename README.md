@@ -4,7 +4,7 @@
 
 DSH Web GUI 的「模型群聊」插件：多模型角色群组对话面板。
 
-兼容：`dsh >= 0.1.5-rc.1`（Web profile）
+兼容：`dsh >= 0.2.0-rc.2`（Web profile）
 
 ## 功能
 
@@ -21,7 +21,7 @@ DSH Web GUI 的「模型群聊」插件：多模型角色群组对话面板。
 - **三区工作台**：左栏导航（搜索 + 目录树）；中栏会话流（色环头像 + 模型徽章 + 绝对时钟消息时间〔对齐主会话：同日 HH:mm / 同年 M月D日 HH:mm / 跨年 Y年M月D日 HH:mm〕，贴底自动跟随、可回到底部）；右栏上下文（角色卡 + 工作区目录）。左右栏均可经接缝钮收起，窄面板时右栏覆盖式呈现
 - **群组工作区目录**：每个群组指定一个目录（群级、全会话共享；无独立笔记或文件清单）。角色发言时自动读取目录**根下一层**文本文件（扩展名白名单、跳过隐藏项、最多 20 个；单文件 16k / 总量 48k 截断）注入全体角色 system 提示词的「共享资料」块；支持 `~`、绝对路径与相对 DSH 工作区根解析，右栏内置目录选择浏览器；未设置则不注入、不暴露工具
 - **工具执行（docs/TOOLS.md）**：设置工作区后角色可调用 `read_file` / `list_dir` 主动查看工作区（realpath 硬边界，逃逸/软链越界一律拒绝）；**权限档位**于消息输入框下方左下角芯片切换（对齐主会话 `/permission` 三档：仅可查看 / 工作区内修改 / 完全权限；默认仅可查看，按群组记忆持久化）——工作区内修改档角色可请求执行 shell 命令（经 DSH `ctx.shell` 沙箱执行器：cwd 与沙箱策略均收紧到工作区、超时 120s），**每条命令在会话流内逐条确认**（允许 / 拒绝 / 停止，命令全文展示不截断）；完全权限档免确认直接执行（对齐 DSH danger-full-access 语义），切换时经主会话同款风险确认弹窗；工具调用以折叠行内嵌于角色消息（含耗时与状态），摘要注入后续发言上下文；不支持 tools 的模型自动降级为纯文本
-- **设置启用**：设置页「模型群聊」分区提供启停开关（持久化于 settings.yaml）；关闭时隐藏侧边栏入口并中止进行中的对话
+- **设置启用**：设置页「模型群聊」分区提供启停开关（持久化于 profile 的 cordis.patch.yml）；关闭时隐藏侧边栏入口并中止进行中的对话
 
 ## 架构
 
@@ -41,7 +41,7 @@ dual-face 插件（对齐 [dsh-web](https://github.com/zhu1090093659/dsh-web) �
   - `POST /api/group-chat/action` — `{kind: mutate|send|retrySpeak|stop|confirmCommand|models|efforts|browse|fileSearch, ...}`（`retrySpeak` 原地覆盖失败卡；`mutate` 含 `reactMessage` 表情回应 toggle；`efforts` 查 provider/model 推理级别，60s 缓存；`browse` 为右栏目录浏览器；`fileSearch` 为输入框 @ 文件检索）；快照 `run` 暴露完整发言计划 `queue` + 游标 `queueIndex`（进度轨道数据面）
   - `GET /api/group-chat/events` — SSE，状态变化推送（120ms 节流）
   - 路由带回环 + 同源信任栏（`src/host/api/http.ts`，语义对齐 dsh-web 家族的 loopback fence）
-- **client**（`src/client/`，`dsh.client` 模块，`inject = ['slots', 'settingsScope']`）：侧边栏 `sidebar.panellist` 入口 + `main` 键面板 + `settings.section` 设置页；经 fetch/SSE 访问 host API，按 `sessionId` 本地过滤渲染。UI 使用 DSW 原语（`@deepseek-ai/dsh-client-ui-primitives`，shell 静态种子模块）——Button/Input/Switch/Tooltip/统一描边图标与 `MarkdownText` 渲染器。未发送草稿按会话分槽、模块级跨挂载存活（主会话⇄群聊会卸载 composer）。
+- **client**（`src/client/`，`dsh.client` 模块，`inject = ['slots', 'configForms']`）：侧边栏 `sidebar.panellist` 入口 + `main` 键面板 + `settings.section` 设置页；经 fetch/SSE 访问 host API，按 `sessionId` 本地过滤渲染。UI 使用 DSW 原语（`@deepseek-ai/dsh-client-ui-primitives`，shell 静态种子模块）——Button/Input/Switch/Tooltip/统一描边图标与 `MarkdownText` 渲染器。未发送草稿按会话分槽、模块级跨挂载存活（主会话⇄群聊会卸载 composer）。
 
 设计文档位于 `docs/`：`PRODUCT.md`（产品定义）、`DESIGN.md`（界面设计契约）、`PERSISTENCE.md`（持久化契约）、`TOOLS.md`（工具执行护栏）。
 
@@ -119,4 +119,4 @@ dsh plugin --profile web remove @roaming-ai/dsh-group-chat
 - 损坏处理：单会话文件坏仅丢该会话消息（隔离 `.corrupt-*`，每前缀保留最近 1 份）；ledger 有 id 而文件缺失则空消息重建；`roles.json` 坏仅空该群角色；ledger 坏可扫描群组目录回收（仅丢群组名）；行级校验丢弃孤儿条目；hydrate 清 `.tmp-*`
 - v1 双文件布局（ledger.json + messages.json）首次启动自动迁移（幂等；旧 messages.json 归档为 `.migrated-*`，从不删除）
 - 锁不可得（双进程）时降级为内存态运行并告警
-- 设置页的 `enabled` 开关经 settings 服务持久化于 `settings.yaml` 的 `group-chat` 段；进行中的对话运行态（run，含「输出完毕」标记）不持久化，重启即清
+- 设置页的 `enabled` 开关经 settings 服务持久化于 profile `cordis.patch.yml` 的 `group-chat` 条目；进行中的对话运行态（run，含「输出完毕」标记）不持久化，重启即清

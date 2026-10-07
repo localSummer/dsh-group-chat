@@ -12,9 +12,9 @@ DSH Web GUI 的「模型群聊」插件（`@roaming-ai/dsh-group-chat`）：多�
 
 - **类型**：DSH dual-face 插件（host ESM + client 闭包工厂），不是独立 Web App。
 - **包名 / bundle id**：`@roaming-ai/dsh-group-chat` / `group-chat`（`cordis.patch.yml`）。
-- **兼容**：`dsh >= 0.1.5-rc.1`（web profile）；Node `^22.19.0 || >=24`；包管理器 pnpm。
+- **兼容**：`dsh >= 0.2.0-rc.2`（web profile）；Node `^22.19.0 || >=24`；包管理器 pnpm。
 - **数据模型**：Group 1..N Session；消息挂在会话上；角色与工作区目录挂在群组上。
-- **设置命名空间**：`group-chat`（`settings.yaml` 的 `enabled` 开关）。
+- **设置命名空间**：`group-chat`（profile `cordis.patch.yml` 中该条目 `config.enabled`，volatile 字段）。
 
 ---
 

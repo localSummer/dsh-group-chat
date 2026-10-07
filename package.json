@@ -5,7 +5,8 @@
   "type": "module",
   "packageManager": "pnpm@11.1.0",
   "engines": {
-    "node": "^22.19.0 || >=24.0.0"
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.0-rc.2"
   },
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -41,9 +42,6 @@
     "deepseek-harness"
   ],
   "dsh": {
-    "engines": {
-      "dsh": ">=0.1.5-rc.1"
-    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
@@ -65,10 +63,10 @@
     "pack:check": "pnpm build && pnpm pack --dry-run"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-atomic-write": "0.1.5-rc.2",
-    "@deepseek-ai/dsh-file-reference": "0.1.5-rc.2",
-    "@deepseek-ai/dsh-file-reference-local": "0.1.5-rc.2",
-    "schemastery": "^3.18.0"
+    "@deepseek-ai/dsh-atomic-write": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-file-reference": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-file-reference-local": "0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "~3.18.4"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
@@ -80,17 +78,17 @@
     }
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-client-ui-renderer": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-client-ui-settings": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-client-ui-slots": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-fs": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-host-webserver": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-llm": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-settings": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-shell": "^0.1.5-rc.1",
-    "@deepseek-ai/dsh-workspace": "^0.1.5-rc.1",
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-fs": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-settings": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-shell": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-workspace": "0.2.0-rc.2",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "lightningcss": "^1.32.0",

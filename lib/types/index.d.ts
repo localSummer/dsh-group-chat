@@ -22,25 +22,37 @@
  *      POST /api/group-chat/action   { kind: mutate|send|stop|confirmCommand|models|efforts|browse|fileSearch, ... }
  *      GET  /api/group-chat/events   SSE，状态变化时推送节流后的全量快照
  *
- * 设置命名空间 `group-chat`（settings.yaml 持久化）：`enabled` 控制浏览器半
- * 的侧边栏入口与主面板挂载；关闭时会中止正在进行的群聊。
+ * 设置命名空间 `group-chat`（即 profile 条目 id，写入 profile 的 cordis.patch.yml）：
+ * volatile 字段 `enabled` 控制浏览器半的侧边栏入口与主面板挂载；关闭时会中止
+ * 正在进行的群聊。
  *
  * @module dsh-group-chat
  */
 import type { Context } from '@deepseek-ai/cordis';
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings';
-import z from 'schemastery';
+import z from '@deepseek-ai/schemastery';
 export declare const name = "group-chat";
 export declare const inject: string[];
 /** 设置命名空间；浏览器半拼写同一值，两边不共享代码。 */
 export declare const SETTINGS_NAMESPACE: SettingsNamespace;
-export interface Config {
-    enabled?: boolean;
+/** 设置 schema：目前只有启停一个开关；volatile 字段才会出现在设置表单中并可在线修改。 */
+export declare const Config: z<Schemastery.ObjectS<NoInfer<{
+    enabled: z<boolean, boolean, "volatile-defined">;
+}>>, Schemastery.ObjectT<NoInfer<{
+    enabled: z<boolean, boolean, "volatile-defined">;
+}>>, "plain">;
+declare module '@deepseek-ai/cordis' {
+    interface Events {
+        /** Loader 在线提交 volatile 字段后通知所属插件实例。 */
+        'loader/volatile-update'(paths: readonly (readonly string[])[]): void;
+    }
 }
-/** 设置 schema：目前只有启停一个开关。 */
-export declare const Config: z<Config>;
 /**
  * Host 半插件体：状态机服务 + HTTP 路由 + 设置接入。
  * mountOnce 保证同名包每进程至多挂载一次（bundle 聚合与独立安装并存场景）。
  */
-export declare const apply: (ctx: Context, config?: Config) => void;
+export declare const apply: (ctx: Context, config?: {
+    enabled?: {
+        get(): boolean | undefined;
+    };
+}) => void;

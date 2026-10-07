@@ -3,7 +3,7 @@
  * @module dsh-group-chat/client/components
  */
 
-import type { ReactNode, KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Icon, P } from '../lib/ui.ts'
 import { ConfirmDelete } from './ConfirmDelete.tsx'
 import { HoverTip } from './HoverTip.tsx'
@@ -11,6 +11,42 @@ import { groupById, sessById, sessStatus, SESS_STATUS_LABEL, type ClientSnapshot
 
 /** 目录树节点编辑态形状（群组/会话共用）。 */
 type NodeEdit = { kind: 'group' | 'session', id: string, value: string }
+
+/** 群组行文件夹：hover 扇出微型卡，展开时翻盖。 */
+function FolderGlyph(): ReactNode {
+  return (
+    <svg className="dsgc-folder" viewBox="0 0 15 13" fill="none" aria-hidden="true">
+      <rect className="card2" x="4.5" y="5.5" width="9" height="6.4" rx="1.2" fill="currentColor" opacity="0" />
+      <rect className="card1" x="3" y="4" width="9" height="6.4" rx="1.2" fill="currentColor" opacity="0" />
+      <path className="flap" d="M1.5 4.6 L1.5 3.4 Q1.5 2.4 2.5 2.4 H5.2 L6.6 4.2" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="none" />
+      <rect x="1.5" y="4.2" width="12" height="6.6" rx="1.4" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    </svg>
+  )
+}
+
+/**
+ * 会话列表收合：展开挂载后翻到 1fr；收合先缓存最后一帧播完高度动画再卸载。
+ */
+function Collapse(props: { open: boolean, children: ReactNode }): ReactNode {
+  const [cached, setCached] = useState<ReactNode | null>(() => (props.open ? props.children : null))
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    if (props.open) {
+      setCached(props.children)
+      const raf = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)))
+      return () => cancelAnimationFrame(raf)
+    }
+    setShown(false)
+    const t = setTimeout(() => setCached(null), 380)
+    return () => clearTimeout(t)
+  }, [props.open, props.children])
+  if (cached === null) return null
+  return (
+    <div className={'dsgc-tcollapse' + (shown && props.open ? ' open' : '')}>
+      <div className="dsgc-tcollapse-in">{cached}</div>
+    </div>
+  )
+}
 
 interface NavPanelProps {
   snap: ClientSnapshot
@@ -49,14 +85,14 @@ function RenameField(props: { draft: NodeEdit, set: (d: NodeEdit | null) => void
 function NodeOps(props: { renameLabel: string, deleteLabel: string, onRename: () => void, onDelete: () => void }): ReactNode {
   const { renameLabel, deleteLabel, onRename, onDelete } = props
   return (
-    <span className="dsgc-nodeops">
+    <span className="dsgc-nodeops" onClick={(e) => { e.stopPropagation() }}>
       <button
         className="dsgc-opbtn"
         title={renameLabel}
         aria-label={renameLabel}
         onClick={(e) => { e.stopPropagation(); onRename() }}
       >
-        {Icon(P.IconEditOutline16, 14)}
+        {Icon(P.IconEditOutlineMedium, 14)}
       </button>
       <ConfirmDelete label={deleteLabel} onConfirm={onDelete} />
     </span>
@@ -100,6 +136,14 @@ export function NavPanel(props: NavPanelProps): ReactNode {
     setSid(sidToSet)
     clearEdits()
   }
+  const toggleGroup = (id: string): void => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const q = search.trim().toLowerCase()
   const groupMatches = (g: ClientSnapshot['groups'][number]): { show: boolean, filterSessions: boolean } => {
@@ -120,63 +164,61 @@ export function NavPanel(props: NavPanelProps): ReactNode {
     const isRenameGroup = renameDraft && renameDraft.kind === 'group' && renameDraft.id === g.id
     const groupChildren: ReactNode[] = []
 
-    if (expanded) {
-      for (const sessionId of g.sessionIds) {
-        const s = sessById(snap, sessionId)
-        if (!s) continue
-        if (match.filterSessions && !s.name.toLowerCase().includes(q)) continue
-        const isActive = selected && s.id === selected.id && g.id === group?.id
-        const isRenameSess = renameDraft && renameDraft.kind === 'session' && renameDraft.id === s.id
-        // 会话状态（对齐主 GUI StateDot：idle 不渲染点）
-        const st = sessStatus(snap.run, s.id)
-
-        groupChildren.push(
-          <div
-            key={s.id}
-            className={'dsgc-sess-row' + (isActive ? ' on' : '')}
-            role="button"
-            tabIndex={0}
-            onClick={() => { pickSession(g.id, s.id) }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                pickSession(g.id, s.id)
-              }
-            }}
-          >
-            {/* 固定宽度状态槽（对齐主 GUI：槽恒在、点按状态渲染——行间文案对齐） */}
-            <span className="dsgc-sess-status">
-              {st !== 'idle'
-                ? (
-                  <span role="img" title={SESS_STATUS_LABEL[st]} aria-label={SESS_STATUS_LABEL[st]}>
-                    <P.StateDot state={st} size={8} />
-                  </span>
-                )
-                : null}
-            </span>
-            {isRenameSess
-              ? <RenameField draft={renameDraft!} set={setRenameDraft} commit={() => { commitRename() }} keyDown={renameKeyDown} />
-              : (
-                <HoverTip label={s.name} side="right" delayMs={500} className="dsgc-sess-name">
-                  {s.name}
-                </HoverTip>
-                )}
-            <NodeOps
-              renameLabel="重命名会话"
-              deleteLabel="删除会话"
-              onRename={() => { setRenameDraft({ kind: 'session', id: s.id, value: s.name }) }}
-              onDelete={() => { mutate({ op: 'deleteSession', sessionId: s.id }) }}
-            />
-          </div>,
-        )
-      }
+    for (const sessionId of g.sessionIds) {
+      const s = sessById(snap, sessionId)
+      if (!s) continue
+      if (match.filterSessions && !s.name.toLowerCase().includes(q)) continue
+      const isActive = selected && s.id === selected.id && g.id === group?.id
+      const isRenameSess = renameDraft && renameDraft.kind === 'session' && renameDraft.id === s.id
+      // 会话状态（对齐主 GUI StateDot：idle 不渲染点）
+      const st = sessStatus(snap.run, s.id)
 
       groupChildren.push(
-        <button key="__add" className="dsgc-addsess" onClick={() => { mutate({ op: 'createSession', groupId: g.id }) }}>
-          {Icon(P.IconPlusOutline16, 14)}新会话
-        </button>,
+        <div
+          key={s.id}
+          className={'dsgc-sess-row' + (isActive ? ' on' : '')}
+          role="button"
+          tabIndex={0}
+          onClick={() => { pickSession(g.id, s.id) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              pickSession(g.id, s.id)
+            }
+          }}
+        >
+          {/* 固定宽度状态槽（对齐主 GUI：槽恒在、点按状态渲染——行间文案对齐） */}
+          <span className="dsgc-sess-status">
+            {st !== 'idle'
+              ? (
+                <span role="img" title={SESS_STATUS_LABEL[st]} aria-label={SESS_STATUS_LABEL[st]}>
+                  <P.StateDot state={st} size={8} />
+                </span>
+              )
+              : null}
+          </span>
+          {isRenameSess
+            ? <RenameField draft={renameDraft!} set={setRenameDraft} commit={() => { commitRename() }} keyDown={renameKeyDown} />
+            : (
+              <HoverTip label={s.name} side="right" delayMs={500} className="dsgc-sess-name">
+                {s.name}
+              </HoverTip>
+              )}
+          <NodeOps
+            renameLabel="重命名会话"
+            deleteLabel="删除会话"
+            onRename={() => { setRenameDraft({ kind: 'session', id: s.id, value: s.name }) }}
+            onDelete={() => { mutate({ op: 'deleteSession', sessionId: s.id }) }}
+          />
+        </div>,
       )
     }
+
+    groupChildren.push(
+      <button key="__add" className="dsgc-addsess" onClick={() => { mutate({ op: 'createSession', groupId: g.id }) }}>
+        {Icon(P.IconPlusOutlineMedium, 14)}新会话
+      </button>,
+    )
 
     treeNodes.push(
       <div key={g.id} className="dsgc-gnode">
@@ -184,30 +226,21 @@ export function NavPanel(props: NavPanelProps): ReactNode {
           className={'dsgc-grow-row' + (g.id === group?.id ? ' on' : '')}
           role="button"
           tabIndex={0}
-          onClick={() => { pickGroup(g.id) }}
+          aria-expanded={expanded}
+          onClick={() => { pickGroup(g.id); toggleGroup(g.id) }}
           onKeyDown={(e) => {
+            if (e.target !== e.currentTarget) return
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
               pickGroup(g.id)
+              toggleGroup(g.id)
             }
           }}
         >
-          <button
-            className={'dsgc-twist' + (expanded ? '' : ' closed')}
-            title={expanded ? '收起' : '展开'}
-            aria-label={expanded ? '收起' : '展开'}
-            onClick={(e) => {
-              e.stopPropagation()
-              setCollapsedGroups((prev) => {
-                const next = new Set(prev)
-                if (next.has(g.id)) next.delete(g.id)
-                else next.add(g.id)
-                return next
-              })
-            }}
-          >
-            {Icon(P.IconChevronDownOutline14, 14)}
-          </button>
+          <span className="dsgc-twist" aria-hidden="true">
+            <span className="dsgc-tcaret">{Icon(P.IconTriangleRightFillMedium, 10)}</span>
+          </span>
+          <FolderGlyph />
           {isRenameGroup
             ? <RenameField draft={renameDraft!} set={setRenameDraft} commit={() => { commitRename() }} keyDown={renameKeyDown} />
             : <span className="dsgc-gname">{g.name}</span>}
@@ -218,7 +251,9 @@ export function NavPanel(props: NavPanelProps): ReactNode {
             onDelete={() => { mutate({ op: 'deleteGroup', groupId: g.id }) }}
           />
         </div>
-        {expanded ? <div className="dsgc-sess-list">{groupChildren}</div> : null}
+        <Collapse open={expanded}>
+          <div className="dsgc-sess-list">{groupChildren}</div>
+        </Collapse>
       </div>,
     )
   }
@@ -226,7 +261,7 @@ export function NavPanel(props: NavPanelProps): ReactNode {
   return (
     <div className={'dsgc-nav' + (navOpen ? '' : ' closed')} aria-hidden={navOpen ? undefined : 'true'}>
       <P.Input
-        icon={Icon(P.IconSearchOutline16, 16)}
+        icon={Icon(P.IconSearchOutlineMedium, 16)}
         className="dsgc-search"
         placeholder="搜索群组与会话…"
         value={search}
@@ -236,7 +271,7 @@ export function NavPanel(props: NavPanelProps): ReactNode {
         ? <div className="dsgc-tree">{treeNodes}</div>
         : <div className="dsgc-hint">{q ? '没有匹配「' + search.trim() + '」的群组或会话' : '暂无群组'}</div>}
       <P.Button variant="outline" onClick={() => { mutate({ op: 'createGroup' }) }}>
-        {Icon(P.IconPlusOutline16, 16)}新建群组
+        {Icon(P.IconPlusOutlineMedium, 16)}新建群组
       </P.Button>
     </div>
   )

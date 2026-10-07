@@ -64,7 +64,7 @@ export function ConfirmDelete(props: ConfirmDeleteProps): ReactNode {
           aria-label={confirmLabel}
           onClick={(e) => { e.stopPropagation(); setArmed(false); onConfirm() }}
         >
-          {Icon(P.IconCheckOutline14, 14)}
+          {Icon(P.IconCheckOutlineMedium, 14)}
         </button>
         <button
           type="button"
@@ -73,7 +73,7 @@ export function ConfirmDelete(props: ConfirmDeleteProps): ReactNode {
           aria-label="取消删除"
           onClick={(e) => { e.stopPropagation(); setArmed(false) }}
         >
-          {Icon(P.IconCloseOutline16, 14)}
+          {Icon(P.IconCloseOutlineMedium, 14)}
         </button>
       </span>
       <button

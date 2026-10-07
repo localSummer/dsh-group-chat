@@ -8,7 +8,7 @@ import { Icon, P, pickPrimitive } from '../lib/ui.ts'
 import type { ToolCallRecord } from '../../core/types.ts'
 import { ClipWell, Fold } from './Fold.tsx'
 
-const TOOL_ICONS: Record<string, string> = { read_file: 'IconBrowseOutline16', list_dir: 'IconFolderOpenOutline16', run_command: 'IconCodeOutline16' }
+const TOOL_ICONS: Record<string, string> = { read_file: 'IconBrowseOutlineMedium', list_dir: 'IconFolderOpenOutlineMedium', run_command: 'IconCodeOutlineMedium' }
 
 export function ToolRow(props: { c: ToolCallRecord }): ReactNode {
   const c = props.c
@@ -20,9 +20,9 @@ export function ToolRow(props: { c: ToolCallRecord }): ReactNode {
     brief = ''
   }
   if (brief.length > 40) brief = brief.slice(0, 40) + '…'
-  const IconOf = pickPrimitive(TOOL_ICONS[c.tool] || 'IconCodeOutline16')
+  const IconOf = pickPrimitive(TOOL_ICONS[c.tool] || 'IconCodeOutlineMedium')
   const statusText = c.status === 'ok' ? '成功' : c.status === 'denied' ? '用户拒绝' : '失败'
-  const StatusIcon = c.status === 'ok' ? P.IconCheckOutline14 : c.status === 'denied' ? P.IconCloseOutline16 : P.IconWarningOutline16
+  const StatusIcon = c.status === 'ok' ? P.IconCheckOutlineMedium : c.status === 'denied' ? P.IconCloseOutlineMedium : P.IconWarningOutlineMedium
   const dur = c.durationMs ? (c.durationMs >= 1000 ? (c.durationMs / 1000).toFixed(1) + 's' : c.durationMs + 'ms') : ''
   return (
     <div className="dsgc-tool">

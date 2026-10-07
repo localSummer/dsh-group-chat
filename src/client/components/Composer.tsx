@@ -99,7 +99,7 @@ export function Composer(props: ComposerProps): ReactNode {
               className="dsgc-tobtn"
               onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }) }}
             >
-              {Icon(P.IconChevronDownOutline14, 14)}回到底部
+              {Icon(P.IconChevronDownOutlineMedium, 14)}回到底部
             </button>
           </div>
           )
@@ -174,7 +174,7 @@ export function Composer(props: ComposerProps): ReactNode {
                             : <P.FileTypeIcon path={item.path} size={16} />}
                         </span>
                         <span className="dsgc-mentionname">{item.path}</span>
-                        {item.isDir ? <span className="dsgc-filedrill">{Icon(P.IconChevronRightOutline14, 12)}</span> : null}
+                        {item.isDir ? <span className="dsgc-filedrill">{Icon(P.IconChevronRightOutlineMedium, 12)}</span> : null}
                       </button>
                     ))
                     : fileSearchLoading
@@ -219,23 +219,23 @@ export function Composer(props: ComposerProps): ReactNode {
           <span style={{ flex: 1 }} />
           <HoverTip label={ROUNDS_HINT} side="top" delayMs={500} maxWidth={280} className="dsgc-rounds">
             <button type="button" className="dsgc-roundbtn" aria-label="减少轮数" disabled={rounds <= 1} onClick={() => { setRounds(Math.max(1, rounds - 1)) }}>
-              {Icon(P.IconChevronLeftOutline14, 12)}
+              {Icon(P.IconChevronLeftOutlineMedium, 12)}
             </button>
             <span className="dsgc-roundnum"><RollingNumber value={rounds} /></span>
             <button type="button" className="dsgc-roundbtn" aria-label="增加轮数" disabled={rounds >= 10} onClick={() => { setRounds(Math.min(10, rounds + 1)) }}>
-              {Icon(P.IconChevronRightOutline14, 12)}
+              {Icon(P.IconChevronRightOutlineMedium, 12)}
             </button>
             <span style={{ padding: '0 6px 0 2px' }}>轮</span>
           </HoverTip>
           {busyNow
             ? (
               <P.Button variant="outline" className="dsgc-stopbtn" onClick={() => { stopRun() }}>
-                {Icon(P.IconStopFill16, 16)}停止
+                {Icon(P.IconStopFillMedium, 16)}停止
               </P.Button>
               )
             : (
               <P.Button variant="primary" onClick={() => { sendMsg() }} disabled={!input.trim() || (!participants.length && !mentionedRoles.length) || !sess}>
-                {Icon(P.IconSendOutline16, 16)}发送
+                {Icon(P.IconSendOutlineMedium, 16)}发送
               </P.Button>
               )}
         </div>

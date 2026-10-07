@@ -177,7 +177,7 @@ export function MsgActions(props: MsgActionsProps): ReactNode {
         aria-label={copied ? '已复制' : '复制'}
         onClick={(e) => { e.stopPropagation(); copy() }}
       >
-        {Icon(copied ? P.IconCheckOutline14 : P.IconCopyOutline16, 14)}
+        {Icon(copied ? P.IconCheckOutlineMedium : P.IconCopyOutlineMedium, 14)}
         <span>{copied ? '已复制' : '复制'}</span>
       </button>
       {onRetry
@@ -190,7 +190,7 @@ export function MsgActions(props: MsgActionsProps): ReactNode {
             disabled={retryDisabled}
             onClick={(e) => { e.stopPropagation(); if (!retryDisabled) onRetry() }}
           >
-            {Icon(P.IconRefreshOutline14, 14)}
+            {Icon(P.IconRefreshOutlineMedium, 14)}
             <span>重试</span>
           </button>
           )

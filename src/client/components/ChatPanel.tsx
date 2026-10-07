@@ -137,7 +137,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
         aria-expanded={navOpen}
         onClick={() => { setNavOpen(!navOpen) }}
       >
-        {Icon(navOpen ? P.IconChevronLeftOutline14 : P.IconChevronRightOutline14, 16)}
+        {Icon(navOpen ? P.IconChevronLeftOutlineMedium : P.IconChevronRightOutlineMedium, 16)}
       </button>
       <button
         type="button"
@@ -147,7 +147,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
         aria-expanded={asideOpen}
         onClick={() => { setAsideOpen(!asideOpen) }}
       >
-        {Icon(asideOpen ? P.IconChevronRightOutline14 : P.IconChevronLeftOutline14, 16)}
+        {Icon(asideOpen ? P.IconChevronRightOutlineMedium : P.IconChevronLeftOutlineMedium, 16)}
       </button>
       
       <div className="dsgc-chathead">
@@ -172,7 +172,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
           ? bubbles
           : (
             <div className="dsgc-empty">
-              {Icon(P.IconSparkle16, 20)}
+              {Icon(P.IconSparkleMedium, 20)}
               <div className="dsgc-emptytitle">{sess && sess.topic ? '「' + sess.topic + '」' : '会话已就绪'}</div>
               <div className="dsgc-hint">
                 {enabledRoles.length

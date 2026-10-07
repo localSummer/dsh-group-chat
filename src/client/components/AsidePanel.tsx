@@ -65,7 +65,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
           <span className="dsgc-secspacer" />
           <span className="dsgc-seccount">{group.roleIds.length ? group.roleIds.length + ' 个' : ''}</span>
           <P.Button variant="ghost" size="sm" onClick={() => { openRoleEditor(null) }} aria-label="添加角色">
-            {Icon(P.IconPlusOutline16, 14)}添加
+            {Icon(P.IconPlusOutlineMedium, 14)}添加
           </P.Button>
         </div>
         {group.roleIds.length
@@ -112,7 +112,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                           {r.provider} / {r.model}
                         </span>
                         {r.thinking
-                          ? <span className="dsgc-rolethink" title="深度思考">{Icon(P.IconThinkOutline14, 14)}</span>
+                          ? <span className="dsgc-rolethink" title="深度思考">{Icon(P.IconThinkOutlineMedium, 14)}</span>
                           : null}
                       </span>
                       <span className="dsgc-roleops">
@@ -122,7 +122,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                           aria-label="编辑角色"
                           onClick={(e) => { e.stopPropagation(); openRoleEditor(r) }}
                         >
-                          {Icon(P.IconEditOutline16, 14)}
+                          {Icon(P.IconEditOutlineMedium, 14)}
                         </button>
                         <ConfirmDelete label="移除角色" onConfirm={() => { mutate({ op: 'deleteRole', roleId: r.id }) }} />
                       </span>
@@ -147,7 +147,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
               onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
             />
             <P.Button variant="outline" size="sm" onClick={() => { openBrowser(wsDraft === null ? group.workspaceDir : wsDraft) }}>
-              {Icon(P.IconFolderOpenOutline16, 14)}浏览
+              {Icon(P.IconFolderOpenOutlineMedium, 14)}浏览
             </P.Button>
           </div>
           <div className="dsgc-hint">发送时读取目录内文本文件，注入本群全体角色上下文；角色也可用工具主动查看</div>
@@ -165,12 +165,12 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                 <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                   <P.Button variant="primary" size="sm" disabled={!fileBrowser.list} onClick={selectCurrentDir}>选定此目录</P.Button>
                   {fileBrowser.list
-                    ? <P.Button variant="outline" size="sm" title="上一级" aria-label="上一级" onClick={() => { openBrowser(fileBrowser.list!.parent) }}>{Icon(P.IconChevronUpOutline14, 14)}</P.Button>
+                    ? <P.Button variant="outline" size="sm" title="上一级" aria-label="上一级" onClick={() => { openBrowser(fileBrowser.list!.parent) }}>{Icon(P.IconChevronUpOutlineMedium, 14)}</P.Button>
                     : null}
                   {fileBrowser.list
-                    ? <P.Button variant="outline" size="sm" title="主目录" aria-label="主目录" onClick={() => { openBrowser(fileBrowser.list!.home) }}>{Icon(P.IconFolderClose16, 14)}</P.Button>
+                    ? <P.Button variant="outline" size="sm" title="主目录" aria-label="主目录" onClick={() => { openBrowser(fileBrowser.list!.home) }}>{Icon(P.IconFolderCloseMedium, 14)}</P.Button>
                     : null}
-                  <P.Button variant="ghost" size="sm" onClick={() => { setFileBrowser(null) }} aria-label="关闭浏览器">{Icon(P.IconCloseOutline16, 14)}</P.Button>
+                  <P.Button variant="ghost" size="sm" onClick={() => { setFileBrowser(null) }} aria-label="关闭浏览器">{Icon(P.IconCloseOutlineMedium, 14)}</P.Button>
                 </span>
               </div>
               {fileBrowser.error ? <div className="dsgc-err">{fileBrowser.error}</div> : null}
@@ -186,7 +186,7 @@ export function AsidePanel(props: AsidePanelProps): ReactNode {
                             className={'dsgc-fbrow' + (e.hidden ? ' dim' : '') + ' dir'}
                             onClick={() => { openBrowser(e.path) }}
                           >
-                            {Icon(e.hidden ? P.IconFolderClose16 : P.IconFolderOpenOutline16, 14)}
+                            {Icon(e.hidden ? P.IconFolderCloseMedium : P.IconFolderOpenOutlineMedium, 14)}
                             <span className="dsgc-fbname">{e.name}/</span>
                           </button>
                           )

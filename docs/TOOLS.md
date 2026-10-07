@@ -26,7 +26,7 @@ grill-me 确认项：
 | 9 | 成本兜底（B1） | 每次调用计入地板成本 `max(output, 100)` 字符进 32k 预算；**连续 6 次空输出或完全相同调用**（同 tool + 同 args）即强制收尾——只拦死循环模式，不构成正常使用的次数上限 |
 | 10 | 降级触发（B2） | 「不支持 tools」以 `finish {kind:'error', failure:{message, code}}` 到达（非 throw、无稳定错误码）；判定 = `kind==='error'` 且 `failure.message` 匹配 `/tool/i`（或 code ∈ {INVALID_REQUEST, PI_AI_ERROR} + 文本含 tool）→ 去 tools 重试一次 |
 | 11 | 确认等待唤醒（B3） | 等待器注册双路径唤醒句柄（stop action + 插件 dispose）；stop 时 kill 正在执行的子进程；`confirmCommand` **同步三查**（`run.running` + `pendingConfirm` 非空 + `toolCallId` 匹配）全过才置空放行 |
-| 12 | 回注契约 | tool-result 挂**独立 user-role 消息**（一次调用一条，`source {kind:'tool', callId}`）；assistant 消息（含 tool-call 块，带 `source {kind:'model', provider, model}`）**必须在其前** |
+| 12 | 回注契约 | 工具结果挂**独立 `role: 'tool'` 消息**（一次调用一条，`{toolCallId, isError, content}` + `source {kind:'tool', callId}`）；assistant 消息（含 tool-call 块，带 `source {kind:'model', provider, model}`）**必须在其前** |
 | 13 | 收尾路径 | 32k 累计或死循环触发收尾时，**工具历史折叠为纯文本摘要**重新发起收尾请求（不带 tools、不带 tool-call/tool-result 块）——规避无 tools 参数携带工具历史被 Anthropic 类协议 400 |
 
 ## 1. 工具集定义（传给模型的 ToolSchema）
@@ -101,7 +101,7 @@ speak(g, sess, role):
       recent.push(sig(tool,args,output))；连续 6 次空输出或完全相同 → 触发收尾（§3.5）
       回注 msgs：
         assistant 消息：content = [本轮 text 块?, ...toolCall 块]，source {kind:'model', provider, model}
-        每个 tool 结果一条 user-role 消息：content = [ToolResultBlock{toolCallId, content:[text], isError}]，source {kind:'tool', callId}
+        每个 tool 结果一条 tool-role 消息：{role:'tool', toolCallId, isError, content:[text]}，source {kind:'tool', callId}
         （assistant 在前、结果消息在后、一调用一条——dsh-agent-loop createToolResultMessage 惯例）
       若 budgetUsed ≥ 32k → 触发收尾（§3.5）
       continue
@@ -210,7 +210,7 @@ const TRANSCRIPT_TOOL_SUMMARY = 200       // transcript 中工具输出摘要截
 ## 9. 验证清单（实现完成的判定标准）
 
 - [ ] 全链路：角色 `list_dir` → `read_file` → `run_command`（确认后执行）→ 输出回注 → 最终发言的 `toolCalls` 完整记录
-- [ ] 回注契约：assistant 消息在前、每工具一条 user-role 结果消息（stub llm 断言收到的 messages 结构）
+- [ ] 回注契约：assistant 消息在前、每工具一条 tool-role 结果消息（stub llm 断言收到的 messages 结构）
 - [ ] 沙箱：`../` 逃逸、绝对路径越界、软链逃逸、**分隔符陷阱**（workspaceDir=/tmp/foo 时 /tmp/foobar 拒绝）均被拒；未设工作区时只读工具报「未设置工作区」
 - [ ] 确认流：允许 → 执行；拒绝 → 角色收到拒绝说明并继续发言；停止 → 命令作废、**执行中子进程被 kill**
 - [ ] 三查闸门：stale toolCallId / 停止后的迟到确认 / 并发双确认均被拒
@@ -242,4 +242,4 @@ const TRANSCRIPT_TOOL_SUMMARY = 200       // transcript 中工具输出摘要截
 | `client.js` | 工具折叠行 + pending 确认卡片（命令全文）+ composer 权限档位选择器（含风险确认弹窗）+ snapshot 适配 |
 | `README.md` / `PRODUCT.md` | 功能与约束条目更新（含撤销「不注册模型可见工具」约束） |
 
-实现需对齐的 dsh-llm 契约（评审已核实）：`ToolCallBlock {type:'tool-call', id, name, arguments:rawJsonString}`；`ToolResultBlock {toolCallId, content:[TextBlock], isError}` 挂 user-role 消息（`source {kind:'tool', callId}`）；assistant 消息带 `source {kind:'model', provider, model}`；错误经 `finish {kind:'error', failure:{message, code}}` 到达。
+实现需对齐的 dsh-llm 契约（评审已核实）：`ToolCallBlock {type:'tool-call', id, name, arguments:rawJsonString}`；工具结果为 tool-role 消息 `{role:'tool', toolCallId, isError, content:[TextBlock]}`（`source {kind:'tool', callId}`；0.2 起不再有 `tool-result` 内容块）；assistant 消息带 `source {kind:'model', provider, model}`；错误经 `finish {kind:'error', failure:{message, code}}` 到达。

@@ -2,7 +2,7 @@
  * 左侧导航栏组件（群组 → 会话目录树；群组行与会话行共用重命名/删除三件套）。
  * @module dsh-group-chat/client/components
  */
-import type { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { type ClientSnapshot } from '../lib/model.ts';
 /** 目录树节点编辑态形状（群组/会话共用）。 */
 type NodeEdit = {

@@ -60,7 +60,7 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
             {!snap.run.partial && !snap.run.partialReasoning
               ? (
                 <div className="dsgc-pending">
-                  {Icon(P.IconThinkOutline14, 14)}
+                  {Icon(P.IconThinkOutlineMedium, 14)}
                   <span>思考中</span>
                   <span className="dsgc-pendingdots" aria-hidden="true"><i /><i /><i /></span>
                 </div>
@@ -77,7 +77,7 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
     ? (
       <div key="__confirm" className="dsgc-confirm">
         <div className="dsgc-confirmtitle">
-          {Icon(P.IconWarningOutline16, 14)}
+          {Icon(P.IconWarningOutlineMedium, 14)}
           {(lr ? lr.name : '角色') + ' 请求执行命令（工作区内）'}
         </div>
         <div className="dsgc-confirmcmd">{String((pc.args && pc.args.command) || '')}</div>

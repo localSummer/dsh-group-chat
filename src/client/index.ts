@@ -4,7 +4,7 @@
  * 经 window.__ModuleLoader__.load 注册（由 tsdown 预设的 banner/footer 闭包
  * 工厂外壳生成）；factory 返回 Cordis 客户端插件：
  *  - 「模型群聊」设置页（settings.section）：启停开关，写 host 的 group-chat
- *    设置命名空间（settings.yaml 持久化）
+ *    设置命名空间（ctx.configForms，写入 profile 的 cordis.patch.yml）
  *  - 启用时挂载：侧边栏「群聊」入口（sidebar.panellist）+ 中央主面板（main）
  *  - 面板数据走 /api/group-chat/*（fetch + SSE），Host 半持有全部状态
  *  - DSW 原语（@deepseek-ai/dsh-client-ui-primitives，shell 静态种子模块）
@@ -19,8 +19,8 @@
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
-// Type-only：拉入浏览器面的 Context 合并（ctx.settingsScope）。
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
+// Type-only：拉入浏览器面的 Context 合并（ctx.configForms）。
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Type-only：拉入 ctx.slots 合并（renderer 自 0.1.2 起拥有槽位注册表）。
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
@@ -40,7 +40,7 @@ const SETTINGS_NAMESPACE = 'group-chat'
 export const name = 'group-chat-client'
 
 /** Required services. */
-export const inject = ['slots', 'settingsScope']
+export const inject = ['slots', 'configForms']
 
 /**
  * Shell 布局槽位的类型声明镜像（运行时由外壳的 layout/sidebar 包声明）：
@@ -63,7 +63,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 export function apply(ctx: ClientContext): void {
   injectStyles()
 
-  const scope: SettingsScope<GroupChatSettings> = ctx.settingsScope.bind({ namespace: SETTINGS_NAMESPACE })
+  const scope = ctx.configForms.get<GroupChatSettings>(SETTINGS_NAMESPACE)
 
   // 设置页常驻注册（禁用时也保留入口，便于重新启用）
   ctx.slots.inject('settings.section', () =>
@@ -75,7 +75,7 @@ export function apply(ctx: ClientContext): void {
         label: () => '模型群聊',
         inject: () => ({ settingsScope: scope }),
       },
-      (props: { settingsScope: SettingsScope<GroupChatSettings> }) => h(GroupChatSettingsSection, props),
+      (props: { settingsScope: ConfigForm<GroupChatSettings> }) => h(GroupChatSettingsSection, props),
     ),
   )
 

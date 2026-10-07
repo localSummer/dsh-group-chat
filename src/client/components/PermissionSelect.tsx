@@ -137,7 +137,7 @@ export function PermissionSelect(props: PermissionSelectProps): ReactNode {
           >
             <span className="dsgc-permicon" aria-hidden>{Glyph()}</span>
             <span className="dsgc-permlabel">{TIER_LABELS[tier]}</span>
-            <span className={'dsgc-permchevron' + (open ? ' open' : '')} aria-hidden>{Icon(P.IconChevronDownOutline14, 14)}</span>
+            <span className={'dsgc-permchevron' + (open ? ' open' : '')} aria-hidden>{Icon(P.IconChevronDownOutlineMedium, 14)}</span>
           </button>
         )}
       />

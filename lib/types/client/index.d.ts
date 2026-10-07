@@ -4,7 +4,7 @@
  * 经 window.__ModuleLoader__.load 注册（由 tsdown 预设的 banner/footer 闭包
  * 工厂外壳生成）；factory 返回 Cordis 客户端插件：
  *  - 「模型群聊」设置页（settings.section）：启停开关，写 host 的 group-chat
- *    设置命名空间（settings.yaml 持久化）
+ *    设置命名空间（ctx.configForms，写入 profile 的 cordis.patch.yml）
  *  - 启用时挂载：侧边栏「群聊」入口（sidebar.panellist）+ 中央主面板（main）
  *  - 面板数据走 /api/group-chat/*（fetch + SSE），Host 半持有全部状态
  *  - DSW 原语（@deepseek-ai/dsh-client-ui-primitives，shell 静态种子模块）

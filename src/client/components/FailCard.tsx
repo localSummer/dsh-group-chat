@@ -19,7 +19,7 @@ export function FailCard(props: FailCardProps): ReactNode {
   return (
     <div className="dsgc-fail">
       <div className="dsgc-failhead">
-        <span className="dsgc-failicon" aria-hidden="true">{Icon(P.IconWarningOutline16, 14)}</span>
+        <span className="dsgc-failicon" aria-hidden="true">{Icon(P.IconWarningOutlineMedium, 14)}</span>
         <div className="dsgc-failcopy">
           <div className="dsgc-failtitle">{view.title}</div>
           {view.detail ? <div className="dsgc-faildetail">{view.detail}</div> : null}

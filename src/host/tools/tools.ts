@@ -112,7 +112,7 @@ export function createTools(core: HostState, touch: () => void): Tools {
           : { mode: 'workspace-write' as const, workspaceRoot: root },
         signal: abort.signal,
       })
-      const r = await shell.run(spec)
+      const r = await (await shell.execute(spec)).result()
       let text = r.stdout.text + r.stderr.text
       if (r.stdout.truncated || r.stderr.truncated) text += '\n[输出采集超限，已截断（保留末尾）]'
       if (r.sandbox?.denied) text += '\n[沙箱拦截了越界的文件操作]'

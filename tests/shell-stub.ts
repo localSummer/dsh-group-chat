@@ -1,5 +1,5 @@
 /**
- * ctx.shell 测试桩：对齐 ShellExecutor 契约（resolve 透传补默认、run 跑
+ * ctx.shell 测试桩：对齐 ShellExecutor 契约（resolve 透传补默认、execute().result() 跑
  * 本地 bash、超时/中止由 spawn signal 承担）。供 tools-sandbox / service
  * 冒烟在脱离沙箱栈的情况下验证档位映射与输出格式化。
  */
@@ -10,7 +10,7 @@ import type { HostState } from '../src/host/state.ts'
 export function fakeShell(): NonNullable<HostState['shell']> {
   return {
     resolve: (request: ShellExecRequest): ShellExecSpec => ({ ...request }) as ShellExecSpec,
-    run: (spec: ShellExecSpec) => new Promise((resolve) => {
+    execute: async (spec: ShellExecSpec) => ({ result: () => new Promise((resolve) => {
       const child = spawn('bash', ['-c', spec.command], { cwd: spec.workdir, signal: spec.signal })
       let out = ''
       let err = ''
@@ -27,6 +27,6 @@ export function fakeShell(): NonNullable<HostState['shell']> {
       })
       child.on('error', (e) => { err += String(e); settled(null) })
       child.on('close', settled)
-    }),
+    }) }),
   } as unknown as NonNullable<HostState['shell']>
 }

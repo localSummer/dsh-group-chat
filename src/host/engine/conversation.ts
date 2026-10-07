@@ -289,8 +289,8 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       if (run.stopping) break
       // 中断（stop break）时半成品工具调用随循环退出整体丢弃
       if (round.tcs.length === 0) break
-      // 回注契约（TOOLS.md §3.3）：assistant 消息（text + tool-call 块）在前，每工具一条 user-role 结果消息在后
-      const assistantContent: Message['content'] = []
+      // 回注契约（TOOLS.md §3.3）：assistant 消息（text + tool-call 块）在前，每工具一条 tool-role 结果消息在后
+      const assistantContent: Message['content'][number][] = []
       if (round.acc.trim()) assistantContent.push({ type: 'text', text: round.acc })
       for (const tc of round.tcs) assistantContent.push({ type: 'tool-call', id: tc.id as WireToolCallId, name: tc.name, arguments: tc.args })
       msgs.push({ id: ('g' + core.revision + '-a' + msgs.length) as Message['id'], role: 'assistant', content: assistantContent, source: { kind: 'model', provider: role.provider, model: role.model } })
@@ -305,8 +305,10 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
         budgetUsed += Math.max(output.length, TOOL_FLOOR_COST_CHARS)
         msgs.push({
           id: ('g' + core.revision + '-t' + msgs.length) as Message['id'],
-          role: 'user',
-          content: [{ type: 'tool-result', toolCallId: tc.id as WireToolCallId, content: [{ type: 'text', text: output || '（无输出）' }], isError: res.status === 'error' }],
+          role: 'tool',
+          toolCallId: tc.id as WireToolCallId,
+          isError: res.status === 'error',
+          content: [{ type: 'text', text: output || '（无输出）' }],
           source: { kind: 'tool', callId: tc.id as WireToolCallId },
         })
         // 死循环检测（B1）：连续空输出或与上一次完全相同的调用

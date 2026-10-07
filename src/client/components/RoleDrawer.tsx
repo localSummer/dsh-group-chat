@@ -80,9 +80,9 @@ export function RoleDrawer(props: RoleDrawerProps): ReactNode {
   return (
     <div className={'dsgc-drawer' + (closing ? ' closing' : '')} role="dialog" aria-modal="false" aria-label={draft.id ? '编辑角色' : '添加角色'}>
       <div className="dsgc-drawerhead">
-        {Icon(P.IconUserOutline16, 16)}
+        {Icon(P.IconUserOutlineMedium, 16)}
         <span className="dsgc-drawertitle">{draft.id ? '编辑角色' : '添加角色'}</span>
-        <P.Button variant="ghost" size="sm" onClick={close} aria-label="关闭">{Icon(P.IconCloseOutline16, 16)}</P.Button>
+        <P.Button variant="ghost" size="sm" onClick={close} aria-label="关闭">{Icon(P.IconCloseOutlineMedium, 16)}</P.Button>
       </div>
       <div className="dsgc-drawerbody">
         <div className="dsgc-form">

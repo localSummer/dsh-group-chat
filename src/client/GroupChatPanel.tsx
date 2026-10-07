@@ -151,7 +151,7 @@ export function GroupChatPanel(): ReactNode {
   if (!snap) {
     return (
       <div className="dsgc-root">
-        <div className="dsgc-loading">{Icon(P.IconLoadingOutline16, 16)}加载中…</div>
+        <div className="dsgc-loading">{Icon(P.IconLoadingOutlineMedium, 16)}加载中…</div>
       </div>
     )
   }
@@ -332,7 +332,7 @@ export function GroupChatPanel(): ReactNode {
           <P.Toast
             key={toast.seq}
             text={toast.text}
-            icon={Icon(P.IconWarningOutline16, 16)}
+            icon={Icon(P.IconWarningOutlineMedium, 16)}
             anchor={inputRef.current}
             onDone={() => { setToast(null) }}
           />
