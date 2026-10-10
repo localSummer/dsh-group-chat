@@ -83,7 +83,7 @@ export const CSS = [
   '.dsgc-addsess:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));color:var(--dsw-alias-label-primary,inherit)}',
   '.dsgc-rename{font:inherit;font-weight:400;font-size:12.5px;min-width:0;flex:1;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.3));background:var(--dsw-specific-input-major,var(--dsw-alias-bg-layer-3,transparent));color:inherit;border-radius:6px;padding:1px 6px;outline:none;transition:border-color .16s}',
   '.dsgc-rename:focus{border-color:var(--dsw-alias-state-business-primary,#4f6ef7)}',
-  '.dsgc-hint{font-size:12px;color:var(--dsw-alias-label-tertiary,inherit);line-height:1.5;text-wrap:balance}',
+  '.dsgc-hint{font-size:12px;color:var(--dsw-alias-label-tertiary,inherit);line-height:24px;text-wrap:balance}',
   /* ===== 中央会话区 ===== */
   '.dsgc-chat{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}',
   /* 接缝收合钮：钉在会话区两缘、垂直居中、各控其侧（图标方向相反的 chevron）。

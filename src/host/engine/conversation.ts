@@ -8,7 +8,7 @@ import { realpathSync } from 'node:fs'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import { constraintBlock, formatTranscriptLine, prefixIds, squeezedMessages, tempTranscript, WINDOW_SIZE } from '../../core/constraints.ts'
 import { unwrapSpeakFailure } from '../../core/errors.ts'
-import { TOOL_FLOOR_COST_CHARS, TOOL_REPEAT_LIMIT, TOOL_RESULTS_TOTAL_MAX, TRANSCRIPT_TOOL_SUMMARY } from '../../core/tools.ts'
+import { TOOL_FLOOR_COST_CHARS, TOOL_REPEAT_LIMIT, TOOL_RESULTS_TOTAL_MAX } from '../../core/tools.ts'
 import type { GroupRecord, MessageRecord, RoleRecord, SessionRecord, SpeakResult, ToolCallRecord } from '../../core/types.ts'
 import { asEffort } from '../../core/types.ts'
 import type { HostState } from '../state.ts'
@@ -150,7 +150,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
             : g.permissionTier === 'full_access'
               ? '、执行 shell 命令（命令将直接执行、无需确认，请谨慎并优先用于运行测试）'
               : '') +
-          '。需要事实依据时优先用工具查看，不要凭空猜测。'
+          '。需要事实依据时优先用工具查看，不要凭空猜测。先定位，再读与当前问题相关的片段；够回答就停，不要为了看全把文件从头翻到尾。'
         : '',
       '\n# 发言要求',
       '- 直接输出「' + role.name + '」本轮的发言内容本身：不要输出名字前缀、引号、动作旁白或代码围栏',
@@ -236,7 +236,8 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       return { acc, rAcc, errorFinish, maxTokens, tcs }
     }
 
-    // 强制收尾：工具历史折叠为纯文本摘要（不带 tools、不带工具块），规避无 tools 参数携带工具历史被拒
+    // 强制收尾：工具历史折叠为纯文本（保留已回注片段，不带 tools、不带工具块），
+    // 规避无 tools 参数携带工具历史被拒。200 字摘要只用于后续角色的 transcript。
     const wrapUp = (note: string): void => {
       const lines = toolCalls.map((c) => {
         let brief = ''
@@ -247,13 +248,13 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
         }
         if (brief.length > 80) brief = brief.slice(0, 80) + '…'
         const ob = String(c.output || '')
-        return '[工具] ' + c.tool + ' ' + brief + ' → ' + c.status + (ob ? '：' + (ob.length > TRANSCRIPT_TOOL_SUMMARY ? ob.slice(0, TRANSCRIPT_TOOL_SUMMARY) + '…' : ob) : '')
+        return '[工具] ' + c.tool + ' ' + brief + ' → ' + c.status + (ob ? '：\n' + ob : '')
       })
       msgs.length = 1
       msgs.push({
         id: ('g' + core.revision + '-w' + msgs.length) as Message['id'],
         role: 'user',
-        content: [{ type: 'text', text: (texts.length ? '你此前的发言草稿：\n' + texts.join('\n\n') + '\n\n' : '') + '你的工具执行记录（摘要）：\n' + lines.join('\n') + '\n\n' + note + '，请基于以上记录输出最终发言。' }],
+        content: [{ type: 'text', text: (texts.length ? '你此前的发言草稿：\n' + texts.join('\n\n') + '\n\n' : '') + '你的工具执行记录：\n' + lines.join('\n\n') + '\n\n' + note }],
         source: { kind: 'user' },
       })
       toolsOff = true
@@ -318,11 +319,11 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
         lastSig = sig
       }
       if (budgetUsed >= TOOL_RESULTS_TOTAL_MAX) {
-        wrapUp('已达工具结果累计上限')
+        wrapUp('请按已读内容直接发言，不要说明读取是如何被停下的；没读到正文的路径不要编造。')
         continue
       }
       if (streak >= TOOL_REPEAT_LIMIT) {
-        wrapUp('检测到重复或空输出的工具调用')
+        wrapUp('检测到重复调用。请按已读内容直接发言，不要说明读取是如何被停下的；没读到正文的路径不要编造。')
         continue
       }
     }

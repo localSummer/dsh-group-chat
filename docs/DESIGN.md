@@ -290,6 +290,8 @@ P.DisclosureRow 只管摘要行：12px 行（hover 换底），IconThinkOutline1
 ### 角色抽屉
 右侧滑出 380px：`bg-layer-2` + 左缘 `border-l2` + 向左投影 + `.18s ease-out` 入场动画（translateX 24px + 淡入）；头（标题 + ghost 关闭）/ 体（滚动，12px 间距表单：名称、标识色调色盘、人设 textarea、提供方/模型 select、温度、深度思考 P.Switch）/ 脚（取消 outline + 保存 primary）。Escape 关闭。
 
+抽屉打开即挂载、即时滑出；模型目录（`models` 动作）后台补载，提供方位在目录未到时显示「正在加载模型目录…」，失败才出现「重试」——网络往返不得把入场卡成「无反馈→突然闪现」。新建时名称框聚焦必须走 `focus({ preventScroll: true })`（ref + 挂载 effect，不用 `autoFocus`）：入场动画起点 translateX 32px 使抽屉暂时超出宿主 `centerCol`（`overflow:hidden` 仍可被程序滚动）右缘，`autoFocus` 的焦点 scroll-into-view 会把 `centerCol` 横向滚出数 px 再随动画逐帧归零，表现为整页横向抖动。
+
 ### 文件浏览器
 右栏内联凹陷面板：路径行（11px 截断）+ 工具行（选定此目录 primary sm / 上一级 / 主目录 / 关闭）+ 列表（目录在前、名称带 `/` 后缀、隐藏项 opacity .55、文件行惰性无 hover、尺寸 10.5px 经 P.fileSizeText）。与目录树同一平铺行语言。
 

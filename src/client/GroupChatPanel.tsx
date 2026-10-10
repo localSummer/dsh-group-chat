@@ -219,10 +219,12 @@ export function GroupChatPanel(): ReactNode {
     }
   }
 
-  const openRoleEditor = async (role: SnapshotRole | null): Promise<void> => {
+  // 抽屉即时滑出；模型目录后台补载，抽屉内自带「加载中/失败重试」态，
+  // 不让网络往返把入场卡成「无反馈→突然闪现」
+  const openRoleEditor = (role: SnapshotRole | null): void => {
     setErr('')
-    if (!models || modelsError) await fetchModels()
     setRoleDraft(role ? draftFromRole(role) : blankDraft())
+    if (!models || modelsError) void fetchModels()
   }
 
   const stopRun = async (): Promise<void> => {

@@ -13,7 +13,7 @@ grill-me 确认项：
 | 1 | 工具集 | `read_file` + `list_dir` + `run_command` 三件套（写文件由 bash 覆盖） |
 | 2 | 安全确认 | 只读工具随工作区自动可用；`run_command` 按群组权限档位（默认仅可查看）+ 工作区内修改档逐条确认 |
 | 3 | 沙箱约束 | 只读 realpath 硬约束工作区前缀；`run_command` 经 `ctx.shell` 沙箱执行器执行——cwd 与 sandboxPolicy 均 per-call 收紧到群工作区（workspace_write 档 OS 级强制，full_access 档对齐 DSH danger-full-access 语义免受限），命令内容**不过滤** |
-| 4 | 护栏 | 120s 超时 / 100KB 读 / 8k 输出 / 32k 累计；**正常调用次数不设上限** |
+| 4 | 护栏 | 120s 超时 / 100KB 读 / read_file 默认 200 行 / 8k 回注 / 32k 累计；**正常调用次数不设上限** |
 | 5 | 并发模型 | 串行 round-robin：一个角色完整走完「生成⇄工具⇄发言」才轮到下一个 |
 | 6 | 模型降级 | 运行时探测：不支持 tools 的错误 → 去 `tools` 重试一次 |
 | 7 | 呈现/持久化 | 消息内嵌 `toolCalls` 块；折叠行 UI（对标思考折叠）；transcript 紧凑摘要注入 |
@@ -27,14 +27,18 @@ grill-me 确认项：
 | 10 | 降级触发（B2） | 「不支持 tools」以 `finish {kind:'error', failure:{message, code}}` 到达（非 throw、无稳定错误码）；判定 = `kind==='error'` 且 `failure.message` 匹配 `/tool/i`（或 code ∈ {INVALID_REQUEST, PI_AI_ERROR} + 文本含 tool）→ 去 tools 重试一次 |
 | 11 | 确认等待唤醒（B3） | 等待器注册双路径唤醒句柄（stop action + 插件 dispose）；stop 时 kill 正在执行的子进程；`confirmCommand` **同步三查**（`run.running` + `pendingConfirm` 非空 + `toolCallId` 匹配）全过才置空放行 |
 | 12 | 回注契约 | 工具结果挂**独立 `role: 'tool'` 消息**（一次调用一条，`{toolCallId, isError, content}` + `source {kind:'tool', callId}`）；assistant 消息（含 tool-call 块，带 `source {kind:'model', provider, model}`）**必须在其前** |
-| 13 | 收尾路径 | 32k 累计或死循环触发收尾时，**工具历史折叠为纯文本摘要**重新发起收尾请求（不带 tools、不带 tool-call/tool-result 块）——规避无 tools 参数携带工具历史被 Anthropic 类协议 400 |
+| 13 | 收尾路径 | 32k 累计或死循环触发收尾时，**工具历史折叠为纯文本（保留已回注片段，去掉 tool-call/tool-result 块）**重新发起收尾请求（不带 tools）——规避无 tools 参数携带工具历史被 Anthropic 类协议 400。200 字摘要只用于后续角色的 transcript |
 
 ## 1. 工具集定义（传给模型的 ToolSchema）
 
 ```js
-// read_file — 读工作区内一个文本文件
-{ name: 'read_file', description: '读取群组工作区目录内的一个文本文件内容（≤100KB，超出截断）',
-  parameters: { type: 'object', properties: { path: { type: 'string', description: '相对工作区根的路径' } }, required: ['path'] } }
+// read_file — 按需读工作区内一个文本文件的片段（不扫全库）
+{ name: 'read_file', description: '按需读取工作区内一个文本文件的片段（默认前 200 行，带行号；要后文再传 offset；单次不超过 8k 字符；超过 100KB 的文件先截断）。不要把目录里的文件逐个读完。',
+  parameters: { type: 'object', properties: {
+    path: { type: 'string', description: '相对工作区根的路径' },
+    offset: { type: 'number', description: '起始行号，从 1 开始，默认 1' },
+    limit: { type: 'number', description: '读取行数，默认 200' },
+  }, required: ['path'] } }
 
 // list_dir — 列工作区内目录条目
 { name: 'list_dir', description: '列出群组工作区目录内一个子目录的条目（名称/类型/大小）',
@@ -123,7 +127,7 @@ speak(g, sess, role):
 
 触发条件：`budgetUsed ≥ 32k`，或连续 6 次调用满足「输出为空或 (tool+args+output) 与最近完全相同」。
 
-收尾方式：**把 msgs 中的工具历史（assistant tool-call 消息 + tool-result 消息）折叠为一条 user-role 纯文本摘要**（`[工具] run_command npm test → 失败（…）` 逐条列出），注入提示「已达工具结果累计上限，请基于以上执行记录总结发言」，**不带 tools、不带任何 tool-call/tool-result 块**发起最终一次调用，返回收尾。——折叠而非裸保留的原因：pi-ai 投影不剥离历史中的工具块，无 tools 参数却携带 tool_use/tool_result 历史的请求可能被 Anthropic 类协议直接 400。
+收尾方式：**把 msgs 中的工具历史折叠为一条 user-role 纯文本**（保留每条已经回注的片段，不裁成 200 字），注入提示「请按已读内容直接发言，不要说明读取是如何被停下的；没读到正文的路径不要编造」，**不带 tools、不带任何 tool-call/tool-result 块**发起最终一次调用，返回收尾。——去掉工具块的原因：pi-ai 投影不剥离历史中的工具块，无 tools 参数却携带 tool_use/tool_result 历史的请求可能被 Anthropic 类协议直接 400。给后续角色看的 transcript 仍只保留 `TRANSCRIPT_TOOL_SUMMARY`（200 字）。
 
 **停止响应**：每个工具执行前、确认等待唤醒后、每轮流式入口检查 `run.stopping`，为真则作废收尾（不执行剩余工具，返回已有内容）。
 
@@ -151,6 +155,7 @@ run.childProc:       ChildProcess | null            // 正在执行的命令
 ```js
 const RUN_CMD_TIMEOUT_MS = 120e3         // run_command 超时
 const READ_FILE_MAX_BYTES = 100 * 1024    // read_file 单文件上限（超出截断）
+const READ_FILE_DEFAULT_LINES = 200       // read_file 默认窗口（要后文再传 offset）
 const CMD_OUTPUT_MAX_CHARS = 8e3          // 单条命令输出回注截断
 const CMD_CAPTURE_MAX_BYTES = 1 << 20     // 命令输出采集内存上限（1MB，超出弃置仅计数）
 const TOOL_RESULTS_TOTAL_MAX = 32e3       // 单条发言工具结果累计预算（含地板成本）
@@ -216,7 +221,7 @@ const TRANSCRIPT_TOOL_SUMMARY = 200       // transcript 中工具输出摘要截
 - [ ] 三查闸门：stale toolCallId / 停止后的迟到确认 / 并发双确认均被拒
 - [ ] 降级（B2）：stub llm 发 `finish{kind:'error', failure:{message:'tools not supported'}}` → 去 tools 重试一次成功
 - [ ] 成本兜底（B1）：stub llm 死循环发空输出工具调用 → 地板成本累进 + 连续 6 次后强制收尾；有输出的正常长链路不受影响
-- [ ] 收尾（13）：32k 触发后最终请求**不含 tool-call/tool-result 块**（stub 断言）
+- [ ] 收尾（13）：32k 触发后最终请求**不含 tool-call/tool-result 块**，保留已回注片段（不是 200 字摘要），提示不含额度说明（stub 断言）
 - [ ] 流收集：delta-only 累积、max-tokens 丢弃工具块、error 中断丢弃半成品
 - [ ] 护栏：>100KB 文件截断；8k 回注截断；**>1MB stdout 采集弃置标注**；120s 超时 kill 并标注
 - [ ] 持久化：`toolCalls` 落盘、重启恢复；transcript 摘要注入下一角色上下文

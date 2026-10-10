@@ -32,6 +32,13 @@ export function RoleDrawer(props: RoleDrawerProps): ReactNode {
   const closingRef = useRef(false)
   const [formError, setFormError] = useState('')
   const [effortsInfo, setEffortsInfo] = useState<EffortsResponse | null>(null)
+  const nameInputRef = useRef<HTMLInputElement | null>(null)
+  // 新建时聚焦名称框：必须 preventScroll——抽屉入场动画起点（translateX 32px）
+  // 超出宿主 centerCol 右缘，浏览器焦点 scroll-into-view 会把 centerCol
+  // 横向滚出几个 px 再随动画逐帧归零，表现为整页抖动
+  useEffect(() => {
+    if (!draft.id) nameInputRef.current?.focus({ preventScroll: true })
+  }, [])
   const close = (): void => {
     if (closingRef.current) return
     closingRef.current = true
@@ -91,7 +98,7 @@ export function RoleDrawer(props: RoleDrawerProps): ReactNode {
             <input
               className="dsgc-input"
               value={draft.name}
-              autoFocus={!draft.id}
+              ref={nameInputRef}
               onChange={(e) => { set(Object.assign({}, draft, { name: e.target.value })) }}
               placeholder="例如：产品经理"
             />
@@ -132,8 +139,14 @@ export function RoleDrawer(props: RoleDrawerProps): ReactNode {
                 )
               : (
                 <div className="dsgc-selhint">
-                  {(props.modelsError ? '模型目录加载失败：' + props.modelsError : '暂无可用 provider') + ' '}
-                  <P.Button variant="outline" size="sm" onClick={props.onRetryModels}>重试</P.Button>
+                  {props.modelsError
+                    ? ('模型目录加载失败：' + props.modelsError + ' ')
+                    : props.models
+                      ? '暂无可用 provider '
+                      : '正在加载模型目录…'}
+                  {props.modelsError || props.models
+                    ? <P.Button variant="outline" size="sm" onClick={props.onRetryModels}>重试</P.Button>
+                    : null}
                 </div>
                 )}
           </div>

@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { READ_FILE_MAX_BYTES } from '../src/core/tools.ts'
+import { CMD_OUTPUT_MAX_CHARS, READ_FILE_DEFAULT_LINES, READ_FILE_MAX_BYTES } from '../src/core/tools.ts'
 import { createTools } from '../src/host/tools/tools.ts'
 import type { GroupRecord, PermissionTier, RunState, ToolExecution } from '../src/core/types.ts'
 import type { HostState } from '../src/host/state.ts'
@@ -52,7 +52,8 @@ describe('read_file / list_dir 沙箱边界', () => {
   it('工作区内文件可读', async () => {
     const res = await exec(group('workspace_write'), 'read_file', { path: 'a.md' })
     expect(res.status).toBe('ok')
-    expect(res.output).toBe('hello')
+    expect(res.output).toContain('a.md （第 1–1 行，共 1 行）')
+    expect(res.output).toContain('1| hello')
   })
 
   it('../ 相对路径逃逸到工作区外被拒', async () => {
@@ -90,8 +91,41 @@ describe('read_file / list_dir 沙箱边界', () => {
     writeFileSync(big, 'x'.repeat(READ_FILE_MAX_BYTES + 100))
     const res = await exec(group('workspace_write'), 'read_file', { path: 'big.txt' })
     expect(res.status).toBe('ok')
-    expect(res.output.length).toBeLessThanOrEqual(READ_FILE_MAX_BYTES + 30)
-    expect(res.output).toContain('已截断')
+    expect(res.output.length).toBeLessThanOrEqual(CMD_OUTPUT_MAX_CHARS)
+    expect(res.output.startsWith('big.txt （')).toBe(true)
+    expect(res.output.split('\n')[0]).toContain('已截断')
+  })
+
+  it('默认只返回前 200 行', async () => {
+    const n = READ_FILE_DEFAULT_LINES + 50
+    const body = Array.from({ length: n }, (_, i) => 'L' + (i + 1)).join('\n')
+    writeFileSync(join(root, 'lines.txt'), body)
+    const res = await exec(group('workspace_write'), 'read_file', { path: 'lines.txt' })
+    expect(res.status).toBe('ok')
+    expect(res.output).toContain('第 1–' + READ_FILE_DEFAULT_LINES + ' 行，共 ' + n + ' 行')
+    expect(res.output).toContain('1| L1')
+    expect(res.output).toContain(READ_FILE_DEFAULT_LINES + '| L' + READ_FILE_DEFAULT_LINES)
+    expect(res.output).not.toContain('L' + (READ_FILE_DEFAULT_LINES + 1))
+  })
+
+  it('offset 与 limit 命中指定行', async () => {
+    const n = READ_FILE_DEFAULT_LINES + 50
+    writeFileSync(join(root, 'lines.txt'), Array.from({ length: n }, (_, i) => 'L' + (i + 1)).join('\n'))
+    const res = await exec(group('workspace_write'), 'read_file', { path: 'lines.txt', offset: 210, limit: 3 })
+    expect(res.status).toBe('ok')
+    expect(res.output).toContain('210| L210')
+    expect(res.output).toContain('212| L212')
+    expect(res.output).not.toContain('209| L209')
+    expect(res.output).not.toContain('213| L213')
+  })
+
+  it('过大的 limit 仍不超过 8k', async () => {
+    const body = Array.from({ length: 300 }, () => 'z'.repeat(80)).join('\n')
+    writeFileSync(join(root, 'wide.txt'), body)
+    const res = await exec(group('workspace_write'), 'read_file', { path: 'wide.txt', limit: 100000 })
+    expect(res.status).toBe('ok')
+    expect(res.output.length).toBeLessThanOrEqual(CMD_OUTPUT_MAX_CHARS)
+    expect(res.output).toContain('因长度')
   })
 
   it('list_dir 列工作区内条目', async () => {

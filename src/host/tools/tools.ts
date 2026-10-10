@@ -8,7 +8,7 @@
 
 import { closeSync, openSync, readSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { isAbsolute, join, sep } from 'node:path'
-import { CMD_CAPTURE_MAX_BYTES, CMD_OUTPUT_MAX_CHARS, READ_FILE_MAX_BYTES, RUN_CMD_TIMEOUT_MS, TOOL_SCHEMAS } from '../../core/tools.ts'
+import { CMD_CAPTURE_MAX_BYTES, CMD_OUTPUT_MAX_CHARS, READ_FILE_DEFAULT_LINES, READ_FILE_MAX_BYTES, RUN_CMD_TIMEOUT_MS, TOOL_SCHEMAS } from '../../core/tools.ts'
 import type { GroupRecord, PendingConfirm, ToolExecution } from '../../core/types.ts'
 import type { HostState } from '../state.ts'
 
@@ -24,6 +24,45 @@ export interface Tools {
   wakeConfirm: () => void
   /** kill 正在执行的命令子进程。 */
   killChild: () => void
+}
+
+/** 缺省或非法时用 fallback；只接受 ≥1 的整数。 */
+function positiveInt(raw: unknown, fallback: number): number {
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : NaN
+  if (!Number.isFinite(n) || n < 1) return fallback
+  return Math.floor(n)
+}
+
+/** 按行切出本次回注的窗口，整段不超过 CMD_OUTPUT_MAX_CHARS。 */
+function formatReadWindow(label: string, text: string, fileCut: boolean, offset: number, limit: number): string {
+  const fileNote = fileCut ? '（文件超过 100KB，已截断）' : ''
+  if (text === '') return label + ' （空文件）' + fileNote
+  const lines = text.split('\n')
+  if (text.endsWith('\n')) lines.pop()
+  const total = lines.length
+  if (offset > total) return label + ' （共 ' + total + ' 行，起始行 ' + offset + ' 超出范围）' + fileNote
+  const chosen = lines.slice(offset - 1, offset - 1 + limit)
+  let kept = chosen.map((line, i) => (offset + i) + '| ' + line)
+  let lenCut = false
+  const build = (): string => {
+    const end = kept.length ? offset + kept.length - 1 : offset
+    let head = label + ' （第 ' + offset + '–' + end + ' 行，共 ' + total + ' 行）' + fileNote
+    if (lenCut) head += '（本次因长度停在第 ' + end + ' 行）'
+    return kept.length ? head + '\n' + kept.join('\n') : head
+  }
+  while (kept.length > 0 && build().length > CMD_OUTPUT_MAX_CHARS) {
+    lenCut = true
+    if (kept.length > 1) {
+      kept.pop()
+      continue
+    }
+    const over = build().length - CMD_OUTPUT_MAX_CHARS
+    const next = kept[0].slice(0, Math.max(0, kept[0].length - over - 1))
+    if (next === kept[0]) break
+    kept[0] = next
+  }
+  const out = build()
+  return out.length > CMD_OUTPUT_MAX_CHARS ? out.slice(0, CMD_OUTPUT_MAX_CHARS) : out
 }
 
 /** 创建工具面。 */
@@ -55,9 +94,9 @@ export function createTools(core: HostState, touch: () => void): Tools {
       fd = openSync(r.target, 'r')
       const buf = Buffer.alloc(READ_FILE_MAX_BYTES + 1)
       const n = readSync(fd, buf, 0, buf.length, 0)
-      let text = buf.subarray(0, Math.min(n, READ_FILE_MAX_BYTES)).toString('utf8')
-      if (n > READ_FILE_MAX_BYTES) text += '\n…(文件超过 100KB，已截断)'
-      return { status: 'ok', output: text || '（空文件）' }
+      const text = buf.subarray(0, Math.min(n, READ_FILE_MAX_BYTES)).toString('utf8')
+      const label = args.path === undefined || args.path === null || String(args.path).trim() === '' ? '.' : String(args.path)
+      return { status: 'ok', output: formatReadWindow(label, text, n > READ_FILE_MAX_BYTES, positiveInt(args.offset, 1), positiveInt(args.limit, READ_FILE_DEFAULT_LINES)) }
     } catch (e) {
       return { status: 'error', output: '读取失败：' + String((e && (e as Error).message) || e) }
     } finally {
