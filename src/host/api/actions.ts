@@ -1,13 +1,16 @@
 /**
  * 动作分发（handleAction，POST /api/group-chat/action 的载荷）：
  * mutate（13 种 CRUD/配置/回应操作）| send | retrySpeak | stop | confirmCommand | models | efforts。
+ * 图片上传走独立路由 POST /api/group-chat/upload（action 路由的 1MB 请求体上限
+ * 装不下图片字节），上传落 durable ref 后由 send 引用。
  * @module dsh-group-chat/host/api/actions
  */
 
 import { rmSync, unlinkSync } from 'node:fs'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { isSpeakFailure, repairFailedMessage } from '../../core/errors.ts'
-import type { BrowseResult, EffortOptions, GroupRecord, ModelCatalog, MutateArgs, RoleRecord, SendArgs, Snapshot } from '../../core/types.ts'
-import { asEffort, asNumber, asPermissionTier, REACTION_EMOJIS } from '../../core/types.ts'
+import type { BrowseResult, EffortOptions, GroupRecord, ModelCatalog, MutateArgs, RoleRecord, SendArgs, SessionRecord, Snapshot, UploadResult } from '../../core/types.ts'
+import { asEffort, asImageMediaType, asNumber, asPermissionTier, REACTION_EMOJIS, sanitizeImages } from '../../core/types.ts'
 import { PALETTE } from '../state.ts'
 import type { HostState } from '../state.ts'
 import type { Conversation } from '../engine/index.ts'
@@ -16,6 +19,8 @@ import type { Materials } from '../materials/index.ts'
 /** 动作面。 */
 export interface Actions {
   handleAction: (body: Record<string, unknown>) => Promise<unknown>
+  /** 图片上传：base64 → durable ref（独立路由用，绕过 action 的 1MB 请求体上限）。 */
+  uploadImage: (body: Record<string, unknown>) => Promise<UploadResult>
 }
 
 /** 创建动作分发面。 */
@@ -34,6 +39,20 @@ export function createActions(core: HostState, deps: {
 }): Actions {
   const { llm, groups, sessions, roles, messages, run } = core
   const { touch, snapshot, schedulePersist, dropDirty, appendMessage, runLoop, wakeConfirm, killChild, browse, fileSearch, disposeFileSearch } = deps
+
+  /**
+   * 从某条消息往前找最近一条带图的用户消息，取其图片引用。
+   * 用于重试：重试的是一次角色发言，需要还原该轮用户发的图（否则模型只看到
+   * 「附 N 张图片」标记）。找不到则返回空数组。
+   */
+  const nearestUserImages = (sess: SessionRecord, fromId: string): ImageAttachmentRef[] => {
+    const idx = sess.messageIds.indexOf(fromId)
+    for (let i = (idx >= 0 ? idx : sess.messageIds.length) - 1; i >= 0; i--) {
+      const m = messages.get(sess.messageIds[i])
+      if (m && m.speaker === 'user' && Array.isArray(m.images) && m.images.length > 0) return m.images
+    }
+    return []
+  }
 
   const mutate = (args: MutateArgs): Snapshot => {
     // 直接属性别名保持判别联合收窄（调用方 handleAction 已保证 body 为对象）
@@ -252,7 +271,10 @@ export function createActions(core: HostState, deps: {
     if (!parts.length) return { ok: false, error: '群内还没有启用的角色，请先添加角色' }
     const rounds = Math.max(1, Math.min(10, Math.floor(Number(args.rounds) || 1)))
     const text = String(args.text || '').trim().slice(0, 32000)
-    if (text) appendMessage(sess, 'user', text)
+    // 图片：仅接受已由 uploadImage 落盘的 durable ref（字段完整性由 sanitizeImages 兜底）
+    const images = sanitizeImages(args.images)
+    // 纯图片消息也允许（无文本但带图）
+    if (text || images) appendMessage(sess, 'user', text, images ? { images } : undefined)
     const queue: string[] = []
     for (let i = 0; i < rounds; i++) for (const rid of parts) queue.push(rid)
     run.running = true
@@ -262,6 +284,8 @@ export function createActions(core: HostState, deps: {
     run.stopping = false
     run.finished = null // 新 run 覆盖旧的「输出完毕」未读标记
     run.replaceMessageId = null
+    // 本次 run 携带的图片（speak 注入角色上下文；run 结束清空）
+    run.imageRefs = images ?? []
     touch()
     runLoop(sess).catch((e) => console.error('group-chat run failed', e))
     return { ok: true }
@@ -292,6 +316,9 @@ export function createActions(core: HostState, deps: {
     run.stopping = false
     run.finished = null
     run.replaceMessageId = msg.id
+    // 重试沿用该次发言所属轮次的用户图片：从失败消息往前找最近一条带图的用户
+    // 消息（不找则重试看不到原图，只会对着「附 N 张图片」标记空谈）
+    run.imageRefs = nearestUserImages(sess, msg.id)
     touch()
     runLoop(sess, { replaceMessageId: msg.id }).catch((e) => console.error('group-chat retry failed', e))
     return { ok: true }
@@ -381,5 +408,30 @@ export function createActions(core: HostState, deps: {
     return { ok: false, error: 'unknown-action' }
   }
 
-  return { handleAction }
+  /**
+   * 图片上传：base64 → harness durable ref。字节由 attachment 服务校验、归一化
+   * （超限自动降采样）并持有，本插件只保留不透明引用；声明 mediaType 与实际
+   * 字节不符时 saveImage 抛错，不污染存储。
+   */
+  const uploadImage = async (body: Record<string, unknown>): Promise<UploadResult> => {
+    const attachments = core.attachments()
+    if (!attachments) return { ok: false, error: '当前环境未挂载图片存储服务' }
+    const mediaType = asImageMediaType(body.mediaType)
+    if (mediaType === undefined) return { ok: false, error: '不支持的图片格式（仅支持 PNG / JPEG / WebP / GIF）' }
+    const raw = String(body.data || '')
+    if (!raw) return { ok: false, error: '图片内容为空' }
+    // data URI 前缀（data:image/png;base64,）允许携带但只取载荷段
+    const comma = raw.indexOf(',')
+    const b64 = comma >= 0 ? raw.slice(comma + 1) : raw
+    if (!b64) return { ok: false, error: '图片内容为空' }
+    const name = typeof body.name === 'string' && body.name ? body.name : undefined
+    try {
+      const image = await attachments.saveImage({ data: Buffer.from(b64, 'base64'), mediaType, name })
+      return { ok: true, image }
+    } catch (e) {
+      return { ok: false, error: String((e && (e as Error).message) || e) }
+    }
+  }
+
+  return { handleAction, uploadImage }
 }

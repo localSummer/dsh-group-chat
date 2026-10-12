@@ -57,6 +57,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       if (extra.failedRoleId !== undefined) msg.failedRoleId = extra.failedRoleId
       if (Array.isArray(extra.toolCalls) && extra.toolCalls.length > 0) msg.toolCalls = extra.toolCalls
       if (typeof extra.durationMs === 'number' && extra.durationMs > 0) msg.durationMs = extra.durationMs
+      if (Array.isArray(extra.images) && extra.images.length > 0) msg.images = extra.images
     }
     messages.set(msg.id, msg)
     sess.messageIds.push(msg.id)
@@ -184,7 +185,18 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       if (effort !== undefined) baseOpts.reasoningEffort = effort
     }
 
-    const msgs: Message[] = [{ id: ('g' + core.revision + '-m0') as Message['id'], role: 'user', content: [{ type: 'text', text: intro }], source: { kind: 'user' } }]
+    const msgs: Message[] = [{
+      id: ('g' + core.revision + '-m0') as Message['id'],
+      role: 'user',
+      // 文本 + 本次 run 携带的图片。图片用 DSH 的 ImageBlock 契约（durable
+      // attachment 引用，provider 格式由 adapter 翻译）；不支持图片的模型由
+      // harness 自动 projectImagesForTextModel 降级为文本占位，此处不判断能力。
+      content: [
+        { type: 'text', text: intro },
+        ...run.imageRefs.map((ref) => ({ type: 'image' as const, attachment: ref })),
+      ],
+      source: { kind: 'user' },
+    }]
     const toolCalls: ToolCallRecord[] = []
     const texts: string[] = []
     const reasonings: string[] = []
@@ -397,6 +409,7 @@ export function createConversation(core: HostState, deps: { touch: () => void, s
       run.commandAbort = null
       run.stopping = false
       run.replaceMessageId = null
+      run.imageRefs = []
       touch()
     }
     // 本轮有新消息落盘，或原地重试覆盖了失败卡 → 后台整理标题/主题 + 窗口外约束

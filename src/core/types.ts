@@ -4,6 +4,8 @@
  * @module dsh-group-chat/core/types
  */
 
+import type { ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment'
+
 /**
  * 群组权限档位（对齐主会话 /permission 三档）：
  * - view_only 仅可查看：只保留 read_file/list_dir，run_command 从 schema 剔除
@@ -114,6 +116,35 @@ export function sanitizeReactions(value: unknown): string[] | undefined {
   return REACTION_EMOJIS.filter((e) => set.has(e))
 }
 
+/** 单条 durable 图片引用安全化：字段齐全且 mediaType 在合法集内才保留。 */
+function sanitizeImageRef(value: unknown): ImageAttachmentRef | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const r = value as Partial<ImageAttachmentRef>
+  const mediaType = asImageMediaType(r.mediaType)
+  if (typeof r.attachmentId !== 'string' || !r.attachmentId || mediaType === undefined) return undefined
+  if (typeof r.bytes !== 'number' || typeof r.width !== 'number' || typeof r.height !== 'number') return undefined
+  return {
+    attachmentId: r.attachmentId as ImageAttachmentRef['attachmentId'],
+    mediaType,
+    bytes: r.bytes,
+    width: r.width,
+    height: r.height,
+    ...(typeof r.name === 'string' && r.name ? { name: r.name } : {}),
+    ...(r.originalDimensions ? { originalDimensions: r.originalDimensions } : {}),
+  }
+}
+
+/** 图片引用集合安全化（hydrate 用）：丢弃残缺条目；空则 undefined。 */
+export function sanitizeImages(value: unknown): ImageAttachmentRef[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const out: ImageAttachmentRef[] = []
+  for (const item of value) {
+    const ref = sanitizeImageRef(item)
+    if (ref) out.push(ref)
+  }
+  return out.length ? out : undefined
+}
+
 /** 消息（user / system / 角色发言共用一条记录）。 */
 export interface MessageRecord {
   id: string
@@ -133,6 +164,11 @@ export interface MessageRecord {
   reactions?: string[]
   /** 该次发言的生成总耗时（回话开始 turnStartedAt → 落卡时刻），毫秒；用户/系统消息无。 */
   durationMs?: number
+  /**
+   * 图片附件：durable 引用（字节由 harness attachment 服务持有，本插件只存 ref）。
+   * 仅用户消息携带；注入角色上下文时按 provider 能力翻译或降级为文本占位。
+   */
+  images?: ImageAttachmentRef[]
   ts: number
 }
 
@@ -178,6 +214,12 @@ export interface RunState {
   finished: RunFinished | null
   /** 原地重试时被覆盖的失败消息 id；普通 send 为 null。 */
   replaceMessageId: string | null
+  /**
+   * 本次 run 携带的图片引用（来自触发 run 的那条用户消息）。挂在 run 上而非
+   * 「最后一条消息」：多角色轮次里第二个发言人之前最后一条已是角色消息，
+   * 按最后一条取会丢图。run 结束清空。
+   */
+  imageRefs: ImageAttachmentRef[]
 }
 
 /** 角色发言的引擎产物。 */
@@ -198,8 +240,13 @@ export interface ToolExecution {
 /** 模型目录（models action 的缓存载荷）。 */
 export interface ModelCatalog {
   at: number
-  providers: { id: string, name: string }[]
-  modelsByProvider: Record<string, { id: string, name?: string }[]>
+  providers: { id: string; name: string }[]
+  /**
+   * 各 provider 下的模型。`inputModalities` 由 harness 原样透传（来自 provider
+   * 配置的 `input: [text, image]`），是「该模型能否看图」的权威能力位；
+   * 缺省表示未知（不当作不支持）。
+   */
+  modelsByProvider: Record<string, { id: string; name?: string; inputModalities?: readonly string[] }[]>
 }
 
 /** 推理级别选项（efforts action 的载荷）。 */
@@ -266,8 +313,25 @@ export type MutateArgs =
 export interface SendArgs {
   sessionId: string
   text?: string
+  /** 已上传的图片引用（先经 upload 动作落 durable ref，再随 send 提交）。 */
+  images?: ImageAttachmentRef[]
   participantRoleIds?: string[]
   rounds?: number
+}
+
+/** upload 动作的响应：落盘后的 durable 引用。 */
+export interface UploadResult {
+  ok: boolean
+  image?: ImageAttachmentRef
+  error?: string
+}
+
+/** 图片上传的合法 mediaType 白名单（与 harness ImageMediaType 一致，挡 SVG 等可执行格式）。 */
+export const IMAGE_MEDIA_TYPES: readonly ImageMediaType[] = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+
+/** mediaType 安全化：白名单内原样，其余 undefined。 */
+export function asImageMediaType(value: unknown): ImageMediaType | undefined {
+  return typeof value === 'string' && (IMAGE_MEDIA_TYPES as readonly string[]).includes(value) ? value as ImageMediaType : undefined
 }
 
 /** 可选数值参数安全化：数字则原样，否则 undefined。 */

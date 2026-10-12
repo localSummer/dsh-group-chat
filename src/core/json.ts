@@ -18,6 +18,7 @@ export function messageJson(m: Partial<MessageRecord> | undefined): Record<strin
   if (Array.isArray(m.toolCalls) && m.toolCalls.length > 0) o.toolCalls = m.toolCalls
   if (Array.isArray(m.reactions) && m.reactions.length > 0) o.reactions = m.reactions
   if (typeof m.durationMs === 'number' && m.durationMs > 0) o.durationMs = m.durationMs
+  if (Array.isArray(m.images) && m.images.length > 0) o.images = m.images
   return o
 }
 

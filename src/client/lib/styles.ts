@@ -430,7 +430,7 @@ export const CSS = [
   '.dsgc-entryIcon svg{width:18px;height:18px;display:block}',
   '[data-sidebar-collapsed] .dsgc-entryOverlay,[class*="collapsed"] .dsgc-entryOverlay{justify-content:center;padding:0}',
   '[data-sidebar-collapsed] [class*="panelRow"]:has(.dsgc-entryOverlay),[class*="collapsed"] [class*="panelRow"]:has(.dsgc-entryOverlay){margin:0 auto}',
-  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-tcaret,.dsgc-folder .flap,.dsgc-folder .card1,.dsgc-folder .card2,.dsgc-tcollapse,.dsgc-tcollapse-in,.dsgc-tcollapse.open,.dsgc-tcollapse.open .dsgc-tcollapse-in,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,.dsgc-cmore,.dsgc-msgops,.dsgc-msgop,.dsgc-failmore,.dsgc-clip::before,.dsgc-clip::after,.dsgc-fold,.dsgc-fold-inner,.dsgc-fold.open,.dsgc-fold.open .dsgc-fold-inner,.dsgc-cdel-bin,.dsgc-cdel-yes,.dsgc-cdel-no,.dsgc-cdel-lid,.dsgc-cdel-panel,.dsgc-cdel.armed .dsgc-cdel-panel,.dsgc-roll-col,.dsgc-roll-strip,.dsgc-rtrack,.dsgc-rtrack-step,.dsgc-repick,.dsgc-repickitem,.dsgc-repills,.dsgc-repill,.dsgc-refly,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-loading svg,.dsgc-pendingdots i,.dsgc-typing,.dsgc-constraints,.dsgc-hovertip,.dsgc-fail,.dsgc-rtrack,.dsgc-rtrack-step.cur::after,.dsgc-refly{animation:none}.dsgc-typing{background-position:0 0;background-size:100% 100%}}',
+  '@media (prefers-reduced-motion:reduce){.dsgc-dot,.dsgc-partchip,.dsgc-mentionitem,.dsgc-grow-row,.dsgc-sess-row,.dsgc-opbtn,.dsgc-addsess,.dsgc-topic,.dsgc-role,.dsgc-rename,.dsgc-input,.dsgc-select,.dsgc-textarea,.dsgc-fbrow,.dsgc-tcaret,.dsgc-folder .flap,.dsgc-folder .card1,.dsgc-folder .card2,.dsgc-tcollapse,.dsgc-tcollapse-in,.dsgc-tcollapse.open,.dsgc-tcollapse.open .dsgc-tcollapse-in,.dsgc-roleops,.dsgc-roundbtn,.dsgc-permtrigger,.dsgc-permchevron,.dsgc-tobtn,.dsgc-seambtn,.dsgc-aside,.dsgc-aside.closed,.dsgc-nav,.dsgc-nav.closed,.dsgc-clearbtn,.dsgc-cmore,.dsgc-msgops,.dsgc-msgop,.dsgc-failmore,.dsgc-clip::before,.dsgc-clip::after,.dsgc-fold,.dsgc-fold-inner,.dsgc-fold.open,.dsgc-fold.open .dsgc-fold-inner,.dsgc-cdel-bin,.dsgc-cdel-yes,.dsgc-cdel-no,.dsgc-cdel-lid,.dsgc-cdel-panel,.dsgc-cdel.armed .dsgc-cdel-panel,.dsgc-roll-col,.dsgc-roll-strip,.dsgc-rtrack,.dsgc-rtrack-step,.dsgc-repick,.dsgc-repickitem,.dsgc-repills,.dsgc-repill,.dsgc-refly,[class*="panelRow"]:has(.dsgc-entryOverlay){transition:none}.dsgc-dot:hover{transform:none}.dsgc-drawer,.dsgc-msg,.dsgc-sysmsg,.dsgc-mention,.dsgc-tobottom,.dsgc-err,.dsgc-empty,.dsgc-fb,.dsgc-loading svg,.dsgc-pendingdots i,.dsgc-typing,.dsgc-constraints,.dsgc-hovertip,.dsgc-fail,.dsgc-rtrack,.dsgc-rtrack-step.cur::after,.dsgc-refly,.dsgc-lightbox{animation:none}.dsgc-typing{background-position:0 0;background-size:100% 100%}}',
   /* ===== 设置页（同一卡片语言） ===== */
   '.dgcs-page{display:flex;flex-direction:column;gap:14px;padding:4px 0}',
   '.dgcs-head{display:flex;flex-direction:column;gap:6px}',
@@ -440,6 +440,28 @@ export const CSS = [
   '.dgcs-cardtext{display:flex;flex-direction:column;gap:3px;min-width:0}',
   '.dgcs-cardtitle{font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary,inherit)}',
   '.dgcs-cardhint{font-size:12px;color:var(--dsw-alias-label-tertiary,inherit)}',
+  /* 待发图片：文本框上方单独一行，72 方图，不进 contenteditable */
+  '.dsgc-previews{display:flex;flex-wrap:wrap;gap:8px;padding:2px 14px 0}',
+  '.dsgc-preview{position:relative;width:72px;height:72px;flex:none;border-radius:8px;overflow:hidden;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.2));background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.06))}',
+  '.dsgc-preview img{display:block;width:72px;height:72px;object-fit:cover}',
+  '.dsgc-preview-ban{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#fff;pointer-events:none}',
+  '.dsgc-preview-x{position:absolute;top:2px;right:2px;z-index:1;width:18px;height:18px;padding:0;border:none;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}',
+  '.dsgc-preview-x:hover{background:rgba(0,0,0,.75)}',
+  /* 发送行左侧的添加图片按钮：与权限选择器同高、同灰阶 */
+  '.dsgc-attachbtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:6px;background:none;color:var(--dsw-alias-label-secondary,inherit);cursor:pointer;transition:background-color .12s,color .12s}',
+  '.dsgc-attachbtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.15));color:var(--dsw-alias-label-primary,inherit)}',
+  '.dsgc-attachbtn:disabled{opacity:.4;cursor:default}',
+  '.dsgc-attachbtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}',
+  /* 消息缩略图：与待发预览同为 72 方图；在消息列宽内换行，点击打开看图层 */
+  '.dsgc-msgimages{display:flex;flex-wrap:wrap;gap:8px;align-self:stretch;max-width:100%}',
+  '.dsgc-msg.mine .dsgc-msgimages{justify-content:flex-end}',
+  '.dsgc-msgimagebtn{flex:none;width:72px;height:72px;padding:0;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.2));border-radius:8px;overflow:hidden;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.06));cursor:zoom-in;line-height:0}',
+  '.dsgc-msgimage{display:block;width:72px;height:72px;object-fit:cover}',
+  '.dsgc-lightbox{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.72);animation:dsgc-fade-in .18s ease-out}',
+  '.dsgc-lightbox img{max-width:90%;max-height:90%;object-fit:contain;border-radius:8px}',
+  '.dsgc-lightbox-x{position:absolute;top:12px;right:12px;width:32px;height:32px;padding:0;border:none;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}',
+  '.dsgc-lightbox-x:hover{background:rgba(0,0,0,.75)}',
+  '.dsgc-preview-x:focus-visible,.dsgc-msgimagebtn:focus-visible,.dsgc-lightbox-x:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,var(--dsw-alias-state-business-primary,#4f6ef7));outline-offset:1px}',
 ].join('\n')
 
 /** 工厂执行时幂等注入样式标签（loader 卸载时按 data-plugin 摘除）。 */

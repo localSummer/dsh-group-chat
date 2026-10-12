@@ -4,6 +4,7 @@
  */
 
 import type { ReactNode } from 'react'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { Icon, P } from '../lib/ui.ts'
 import { MessageFlow } from './MessageFlow.tsx'
 import { Composer } from './Composer.tsx'
@@ -50,6 +51,16 @@ interface ChatPanelProps {
   onDragOverCE: (e: React.DragEvent<HTMLDivElement>) => void
   insertChip: (role: SnapshotRole) => void
   insertFileChip: (path: string, kind: 'file' | 'directory') => void
+  /** 选择/拖入图片文件（面板负责上传，Composer 只管转发 File[]）。 */
+  onImageFiles: (files: File[]) => void
+  /** 有图片正在上传：禁用发送，避免图片静默丢失。 */
+  uploading: boolean
+  /** 待发图片，显示在文本框上方，不进文本区。 */
+  images: ImageAttachmentRef[]
+  onRemoveImage: (index: number) => void
+  /** 当前参与角色是否都支持图片（决定上传按钮可用性）。 */
+  imagesSupported: boolean
+  onOpenImage: (image: ImageAttachmentRef) => void
   sendMsg: () => Promise<void>
   stopRun: () => Promise<void>
   action: (payload: Record<string, unknown>) => Promise<unknown>
@@ -99,6 +110,12 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
     onDragOverCE,
     insertChip,
     insertFileChip,
+    onImageFiles,
+    uploading,
+    images,
+    onRemoveImage,
+    imagesSupported,
+    onOpenImage,
     sendMsg,
     stopRun,
     action,
@@ -122,6 +139,7 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
       action={action}
       onRetrySpeak={onRetrySpeak}
       onToggleReaction={onToggleReaction}
+      onOpenImage={onOpenImage}
     />
   )
 
@@ -217,6 +235,11 @@ export function ChatPanel(props: ChatPanelProps): ReactNode {
         onDragOverCE={onDragOverCE}
         insertChip={insertChip}
         insertFileChip={insertFileChip}
+        onImageFiles={onImageFiles}
+        uploading={uploading}
+        images={images}
+        onRemoveImage={onRemoveImage}
+        imagesSupported={imagesSupported}
         sendMsg={sendMsg}
         stopRun={stopRun}
         mutate={mutate}

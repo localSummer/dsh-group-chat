@@ -4,8 +4,9 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { execCommand, queryAtCaret, serializeInput, chipHtml, fileChipHtml } from '../utils/utils.ts'
-import { readComposerDraft, writeComposerDraft } from '../lib/composer-draft.ts'
+import { detachImageChips, readComposerDraft, writeComposerDraft } from '../lib/composer-draft.ts'
 import type { AtToken } from '../../shared/file-mention-grammar.ts'
 import type { SnapshotRole } from '../lib/model.ts'
 
@@ -46,6 +47,10 @@ export function useComposerInput(
   setMention: (val: AtToken | null) => void,
   setMentionIdx: (val: number) => void,
   sessionId?: string | null,
+  /** 粘贴/拖入图片文件时的回调（由面板负责上传；本 hook 不碰网络）。 */
+  onImageFiles?: (files: File[]) => void,
+  /** 待发图片。打字写草稿时一并落槽，避免只改文字把图片草稿冲掉。 */
+  imagesRef?: { current: ImageAttachmentRef[] },
 ) {
   const sessionIdRef = useRef(sessionId)
   sessionIdRef.current = sessionId
@@ -56,8 +61,8 @@ export function useComposerInput(
     if (!el) return
     const text = serializeInput(el)
     setInput(text)
-    writeComposerDraft(sessionIdRef.current, el.innerHTML, text)
-  }, [inputRef, setInput])
+    writeComposerDraft(sessionIdRef.current, el.innerHTML, text, imagesRef ? imagesRef.current : [])
+  }, [inputRef, setInput, imagesRef])
 
   const onInputCE = useCallback((): void => {
     syncFromDOM()
@@ -65,22 +70,35 @@ export function useComposerInput(
     setMentionIdx(0)
   }, [syncFromDOM, setMention, setMentionIdx])
 
-  /** 粘贴/拖放强制纯文本 */
+  /** 粘贴：有图片文件则交给上传回调，否则回退到强制纯文本。 */
   const onPasteCE = useCallback((e: ReactClipboardEvent<HTMLDivElement>): void => {
+    const files = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'))
+    if (files.length > 0 && onImageFiles) {
+      e.preventDefault()
+      onImageFiles(files)
+      return
+    }
     e.preventDefault()
     const text = e.clipboardData.getData('text/plain')
     if (text) execCommand('insertText', text)
-  }, [])
+  }, [onImageFiles])
 
   const onDragOverCE = useCallback((e: ReactDragEvent<HTMLDivElement>): void => {
     e.preventDefault()
   }, [])
 
+  /** 拖放：有图片文件则交给上传回调，否则回退到强制纯文本。 */
   const onDropCE = useCallback((e: ReactDragEvent<HTMLDivElement>): void => {
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    if (files.length > 0 && onImageFiles) {
+      e.preventDefault()
+      onImageFiles(files)
+      return
+    }
     e.preventDefault()
     const text = e.dataTransfer.getData('text/plain')
     if (text) execCommand('insertText', text)
-  }, [])
+  }, [onImageFiles])
 
   return {
     syncFromDOM,
@@ -100,25 +118,35 @@ export function useComposerDraft(
   inputRef: React.RefObject<HTMLDivElement>,
   setInput: (val: string) => void,
   setMention: (val: AtToken | null) => void,
+  /** 待发图片。切会话时随草稿保存并恢复。 */
+  imagesRef: { current: ImageAttachmentRef[] },
+  setImages: (images: ImageAttachmentRef[]) => void,
 ): void {
   const prevIdRef = useRef<string | null>(null)
   useLayoutEffect(() => {
     const el = inputRef.current
     const prev = prevIdRef.current
     const next = sessionId || null
-    if (el && prev && prev !== next) writeComposerDraft(prev, el.innerHTML, serializeInput(el))
+    if (el && prev && prev !== next) writeComposerDraft(prev, el.innerHTML, serializeInput(el), imagesRef.current)
     prevIdRef.current = next
     if (!next) return
     const draft = readComposerDraft(next)
-    if (el) el.innerHTML = draft.html
+    const detached = detachImageChips(draft.html)
+    const images = draft.images.length > 0 ? draft.images : detached.images
+    if (el) el.innerHTML = detached.html
     setInput(draft.text)
     setMention(null)
+    imagesRef.current = images
+    setImages(images)
+    if (detached.html !== draft.html || detached.images.length > 0) {
+      writeComposerDraft(next, detached.html, draft.text, images)
+    }
     return () => {
       const node = inputRef.current
       const id = prevIdRef.current
-      if (node && id) writeComposerDraft(id, node.innerHTML, serializeInput(node))
+      if (node && id) writeComposerDraft(id, node.innerHTML, serializeInput(node), imagesRef.current)
     }
-  }, [sessionId, inputRef, setInput, setMention])
+  }, [sessionId, inputRef, setInput, setMention, imagesRef, setImages])
 }
 
 export function useMentionChip(

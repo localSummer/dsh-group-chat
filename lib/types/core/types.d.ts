@@ -3,6 +3,7 @@
  * 数据模型：Group 1..N Session，消息挂在会话上；角色与工作区目录挂在群组上。
  * @module dsh-group-chat/core/types
  */
+import type { ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment';
 /**
  * 群组权限档位（对齐主会话 /permission 三档）：
  * - view_only 仅可查看：只保留 read_file/list_dir，run_command 从 schema 剔除
@@ -83,6 +84,8 @@ export interface ToolCallRecord {
 export declare const REACTION_EMOJIS: readonly string[];
 /** 回应集合安全化：仅保留白名单内条目、去重并按白名单顺序排列；空则 undefined。 */
 export declare function sanitizeReactions(value: unknown): string[] | undefined;
+/** 图片引用集合安全化（hydrate 用）：丢弃残缺条目；空则 undefined。 */
+export declare function sanitizeImages(value: unknown): ImageAttachmentRef[] | undefined;
 /** 消息（user / system / 角色发言共用一条记录）。 */
 export interface MessageRecord {
     id: string;
@@ -102,6 +105,11 @@ export interface MessageRecord {
     reactions?: string[];
     /** 该次发言的生成总耗时（回话开始 turnStartedAt → 落卡时刻），毫秒；用户/系统消息无。 */
     durationMs?: number;
+    /**
+     * 图片附件：durable 引用（字节由 harness attachment 服务持有，本插件只存 ref）。
+     * 仅用户消息携带；注入角色上下文时按 provider 能力翻译或降级为文本占位。
+     */
+    images?: ImageAttachmentRef[];
     ts: number;
 }
 /** run_command 确认闸门的待确认载荷。 */
@@ -147,6 +155,12 @@ export interface RunState {
     finished: RunFinished | null;
     /** 原地重试时被覆盖的失败消息 id；普通 send 为 null。 */
     replaceMessageId: string | null;
+    /**
+     * 本次 run 携带的图片引用（来自触发 run 的那条用户消息）。挂在 run 上而非
+     * 「最后一条消息」：多角色轮次里第二个发言人之前最后一条已是角色消息，
+     * 按最后一条取会丢图。run 结束清空。
+     */
+    imageRefs: ImageAttachmentRef[];
 }
 /** 角色发言的引擎产物。 */
 export interface SpeakResult {
@@ -168,9 +182,15 @@ export interface ModelCatalog {
         id: string;
         name: string;
     }[];
+    /**
+     * 各 provider 下的模型。`inputModalities` 由 harness 原样透传（来自 provider
+     * 配置的 `input: [text, image]`），是「该模型能否看图」的权威能力位；
+     * 缺省表示未知（不当作不支持）。
+     */
     modelsByProvider: Record<string, {
         id: string;
         name?: string;
+        inputModalities?: readonly string[];
     }[]>;
 }
 /** 推理级别选项（efforts action 的载荷）。 */
@@ -282,9 +302,21 @@ export type MutateArgs = {
 export interface SendArgs {
     sessionId: string;
     text?: string;
+    /** 已上传的图片引用（先经 upload 动作落 durable ref，再随 send 提交）。 */
+    images?: ImageAttachmentRef[];
     participantRoleIds?: string[];
     rounds?: number;
 }
+/** upload 动作的响应：落盘后的 durable 引用。 */
+export interface UploadResult {
+    ok: boolean;
+    image?: ImageAttachmentRef;
+    error?: string;
+}
+/** 图片上传的合法 mediaType 白名单（与 harness ImageMediaType 一致，挡 SVG 等可执行格式）。 */
+export declare const IMAGE_MEDIA_TYPES: readonly ImageMediaType[];
+/** mediaType 安全化：白名单内原样，其余 undefined。 */
+export declare function asImageMediaType(value: unknown): ImageMediaType | undefined;
 /** 可选数值参数安全化：数字则原样，否则 undefined。 */
 export declare function asNumber(value: unknown): number | undefined;
 /** 可选字符串参数安全化：非 default 的非空字符串则原样，否则 undefined。 */

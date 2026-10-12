@@ -18,6 +18,7 @@ DSH Web GUI 的「模型群聊」插件：多模型角色群组对话面板。
 - **清空会话**：会话头可清空本会话消息（含结论备忘），确认弹窗说明范围与不可恢复；对话进行中需先停止
 - **多轮对话**：发送前用 chips 选择本轮参与角色；发送后按顺序自动多轮（1–10 轮，一轮 = 参与角色各说一次，轮数数字为滚轮动画），可随时停止；run 进行时消息流下方显示发言计划进度轨道（步点随发言推进交棒）。被 @ 的成员优先作为本轮参与角色
 - **@点名**：裸 `@` 弹出成员候选（↑↓ 选择、Enter/Tab 插入）；`@` 后继续键入则在群工作区内检索文件，插入 `@path` 芯片（只写入路径，不把文件正文再灌进 prompt）
+- **图片输入**：输入框支持添加图片——回形针按钮选文件、`Ctrl/Cmd+V` 粘贴截图、或拖入图片文件（PNG / JPEG / WebP / GIF）；文本框上方单独显示缩略图（可逐张移除），发送后在消息气泡外以缩略图展示，点击可在面板内放大。图片走 DSH 的 durable attachment 通道（字节不进群聊存储，只落引用），只注入本次发言的角色上下文；不支持图片的模型由 harness 自动降级为文本占位；参与角色中有人明确不支持图片时，添加、粘贴和拖放都会拒绝。已选图片不自动删除，但须先移除才能发送
 - **三区工作台**：左栏导航（搜索 + 目录树）；中栏会话流（色环头像 + 模型徽章 + 绝对时钟消息时间〔对齐主会话：同日 HH:mm / 同年 M月D日 HH:mm / 跨年 Y年M月D日 HH:mm〕，贴底自动跟随、可回到底部）；右栏上下文（角色卡 + 工作区目录）。左右栏均可经接缝钮收起，窄面板时右栏覆盖式呈现
 - **群组工作区目录**：每个群组指定一个目录（群级、全会话共享；无独立笔记或文件清单）。角色发言时自动读取目录**根下一层**文本文件（扩展名白名单、跳过隐藏项、最多 20 个；单文件 16k / 总量 48k 截断）注入全体角色 system 提示词的「共享资料」块；支持 `~`、绝对路径与相对 DSH 工作区根解析，右栏内置目录选择浏览器；未设置则不注入、不暴露工具
 - **工具执行（docs/TOOLS.md）**：设置工作区后角色可调用 `read_file` / `list_dir` 主动查看工作区（realpath 硬边界，逃逸/软链越界一律拒绝）；**权限档位**于消息输入框下方左下角芯片切换（对齐主会话 `/permission` 三档：仅可查看 / 工作区内修改 / 完全权限；默认仅可查看，按群组记忆持久化）——工作区内修改档角色可请求执行 shell 命令（经 DSH `ctx.shell` 沙箱执行器：cwd 与沙箱策略均收紧到工作区、超时 120s），**每条命令在会话流内逐条确认**（允许 / 拒绝 / 停止，命令全文展示不截断）；完全权限档免确认直接执行（对齐 DSH danger-full-access 语义），切换时经主会话同款风险确认弹窗；工具调用以折叠行内嵌于角色消息（含耗时与状态），摘要注入后续发言上下文；不支持 tools 的模型自动降级为纯文本
@@ -111,7 +112,8 @@ dsh plugin --profile web remove @roaming-ai/dsh-group-chat
 
 - **ledger.json**（`schema: 3`）：群组 id/名/`permissionTier` + 会话 id 归属与顺序。v2 遗留 `allowCommands` 读取时迁移（true → 工作区内修改，false/无 → 仅可查看）
 - **roles.json**：角色定义；`groupId` 由目录归属，不写入文件
-- **session-\<uuid\>.json**：名称/主题/`createdAt`/消息；可选 `namePinned` / `topicPinned`、`constraints` / `constraintsUpToSeq`（空数组与水位 0 省略）、消息上的 `toolCalls` / `error` / `failedRoleId`
+- **session-\<uuid\>.json**：名称/主题/`createdAt`/消息；可选 `namePinned` / `topicPinned`、`constraints` / `constraintsUpToSeq`（空数组与水位 0 省略）、消息上的 `toolCalls` / `error` / `failedRoleId` / `reactions` / `images`
+- **图片附件**：消息的 `images` 只存 durable 引用（`attachmentId` / `mediaType` / 尺寸 / 名称），字节由 harness attachment 服务持有（`~/.dsh/attachments/v1/`），不进本目录也不进快照
 - 工作区文件内容不写入本目录；每次发言由 materials 实时读盘。全量保留，不裁剪
 - 事件驱动写：变更按文件标脏，同一 tick 内合并；流式 partial 不落盘。会话文件与 `roles.json` 紧凑序列化，ledger pretty
 - 原子写（`@deepseek-ai/dsh-atomic-write` 的 `writeFileAtomic`：wx 独占创建 + 随机后缀 tmp + rename，无 per-file fsync 对齐 DSH 基座标准；每个实际发生 rename 的目录一次 fsync）、单实例 `.lock`（PID 存活检测，崩溃残留自动清理）

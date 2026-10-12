@@ -31,6 +31,7 @@ export function execCommand(commandId: 'delete' | 'insertHTML' | 'insertText' | 
  * contenteditable 输入区 → 纯文本序列化（发送/参与判定的唯一事实源）：
  * 文本节点原样；<br> → 换行；角色芯片（.dsgc-chipin[data-role-id]）展开回「@名字␠」；
  * 文件芯片（.dsgc-chipin[data-kind=file]）展开回「@path」或「@"path with spaces"」；
+ * 图片芯片不进文本（待发图片在预览条，不在文本区）。
  * DIV/P 块前补换行（防粘贴残留的块级包裹）。
  */
 export function serializeInput(root: HTMLElement): string {
@@ -40,6 +41,8 @@ export function serializeInput(root: HTMLElement): string {
     const el = node as HTMLElement
     if (el.tagName === 'BR') return '\n'
     if (el.classList.contains('dsgc-chipin')) {
+      // 图片芯片：不进文本（图片按 ref 随 send 提交）
+      if (el.dataset.kind === 'image') return ''
       // 角色芯片
       if (el.dataset.roleId) {
         return '@' + (el.dataset.name || '') + ' '

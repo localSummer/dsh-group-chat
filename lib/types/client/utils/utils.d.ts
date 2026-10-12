@@ -10,6 +10,7 @@ export declare function execCommand(commandId: 'delete' | 'insertHTML' | 'insert
  * contenteditable 输入区 → 纯文本序列化（发送/参与判定的唯一事实源）：
  * 文本节点原样；<br> → 换行；角色芯片（.dsgc-chipin[data-role-id]）展开回「@名字␠」；
  * 文件芯片（.dsgc-chipin[data-kind=file]）展开回「@path」或「@"path with spaces"」；
+ * 图片芯片不进文本（待发图片在预览条，不在文本区）。
  * DIV/P 块前补换行（防粘贴残留的块级包裹）。
  */
 export declare function serializeInput(root: HTMLElement): string;

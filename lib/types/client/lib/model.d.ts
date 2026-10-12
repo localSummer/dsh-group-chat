@@ -28,12 +28,22 @@ export interface ModelsResponse {
         id: string;
         name?: string;
     }[];
+    /** inputModalities 由 harness 透传，是「该模型能否看图」的权威能力位。 */
     modelsByProvider?: Record<string, {
         id: string;
         name?: string;
+        inputModalities?: readonly string[];
     }[]>;
     error?: string;
 }
+/**
+ * 参与角色是否都支持图片输入（用于上传按钮的可用性）。
+ * 能力未知（无 models 目录 / 模型未声明 inputModalities）时不判为不支持。
+ */
+export declare function rolesAcceptImages(roles: readonly {
+    provider: string;
+    model: string;
+}[], models: ModelsResponse | null): boolean;
 /** efforts action 的响应形态。 */
 export interface EffortsResponse {
     ok: boolean;

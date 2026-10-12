@@ -31,7 +31,7 @@ export declare function prefixIds(ids: string[], untilId?: string): string[];
 export declare function squeezedMessages(messages: Map<string, MessageRecord>, sess: SessionRecord, untilId?: string): MessageRecord[];
 /** 说话人展示名（折叠输入 / transcript 共用）。 */
 export declare function speakerLabel(speaker: string, roleName?: string): string;
-/** 单条消息压成 transcript 行（正文 8k + 工具一行摘要）。 */
+/** 单条消息压成 transcript 行（正文 8k + 工具一行摘要 + 图片计数标记）。 */
 export declare function formatTranscriptLine(m: MessageRecord, name: string): string;
 /**
  * 单轮折叠消耗前缀：从最旧挤出起，最多 40 条 / 16k；系统行与失败卡计入消耗但不进模型。

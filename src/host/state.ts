@@ -13,6 +13,8 @@ import type {} from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-shell'
 import type {} from '@deepseek-ai/dsh-workspace'
+// 类型合并：ctx.attachments（durable 图片存储；dsh-base 默认挂载 attachment-local）
+import type {} from '@deepseek-ai/dsh-attachment'
 import type { Store } from './persistence/store.ts'
 import type { GroupRecord, LastCreated, MessageRecord, RoleRecord, RunState, SessionRecord } from '../core/types.ts'
 
@@ -38,6 +40,12 @@ export interface HostState {
   llm: Context['llm']
   fs: Context['fs']
   shell: Context['shell']
+  /**
+   * durable 图片存储（dsh-base 默认挂载 attachment-local）。
+   * 惰性读取：cordis 的服务按 fiber 异步激活，构造时捕获可能拿到 undefined
+   * 且永不恢复；每次调用重读，缺位时图片功能走明确错误而非崩溃。
+   */
+  attachments: () => Context['attachments'] | undefined
   groups: Map<string, GroupRecord>
   sessions: Map<string, SessionRecord>
   roles: Map<string, RoleRecord>
@@ -62,11 +70,17 @@ export function createHostState(ctx: Context): HostState {
     llm: ctx.llm,
     fs: ctx.fs,
     shell: ctx.shell,
+    // attachments 经 ctx.get 惰性读取（dsh-base 默认挂载 attachment-local）。
+    // 每次调用重读以跟随 cordis 的异步服务激活——若在构造时捕获，插件激活
+    // 早于 attachment fiber 时会永远拿到 undefined。
+    // 不走声明式 inject：attachment 缺位时整个插件（群聊主功能）不应无法激活，
+    // 图片功能自行降级为明确错误更稳。
+    attachments: () => ctx.get('attachments'),
     groups: new Map(),
     sessions: new Map(),
     roles: new Map(),
     messages: new Map(),
-    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], queueIndex: 0, turnStartedAt: null, pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null },
+    run: { running: false, sessionId: null, currentRoleId: null, partial: '', partialReasoning: '', stopping: false, queue: [], queueIndex: 0, turnStartedAt: null, pendingConfirm: null, confirmSignal: null, commandAbort: null, finished: null, replaceMessageId: null, imageRefs: [] },
     store: null,
     revision: 1,
     idSeq: 1,

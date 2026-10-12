@@ -12,7 +12,8 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { Snapshot } from '../core/types.ts'
+import type { ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment'
+import type { Snapshot, UploadResult } from '../core/types.ts'
 import { createActions } from './api/index.ts'
 import { createBroadcast } from './broadcast.ts'
 import { createConversation } from './engine/index.ts'
@@ -25,6 +26,14 @@ import { createTools } from './tools/index.ts'
 export interface GroupChatService {
   snapshot(): Snapshot
   handleAction(body: unknown): Promise<unknown>
+  /** 图片上传：base64 → durable ref（独立路由，绕过 action 的 1MB 请求体上限）。 */
+  uploadImage(body: Record<string, unknown>): Promise<UploadResult>
+  /**
+   * 读回一张已落盘图片的字节（客户端渲染用）。群聊消息不是 DSH session 事件，
+   * 走不了 harness 的 session 授权图片 URL，故由本插件自持读取面。只放行本插件
+   * 消息引用过的 id，以及本进程内刚上传、尚未写入消息的 id（输入框预览）。
+   */
+  readImage(attachmentId: string): Promise<{ data: Uint8Array, mediaType: ImageMediaType } | null>
   subscribePush(push: () => void): () => void
   /** 设置停用时中止正在进行的群聊。 */
   stopAll(): void
@@ -42,6 +51,8 @@ export function createGroupChatService(ctx: Context): GroupChatService {
   const materials = createMaterials(core)
   const tools = createTools(core, bus.touch)
   const conversation = createConversation(core, { touch: bus.touch, schedulePersist: persist.schedulePersist, materials, tools })
+  // 本进程上传过的引用。未发送的图还不在消息表里，预览仍要能读；进程重启后草稿一并消失。
+  const uploaded = new Map<string, ImageAttachmentRef>()
   const actions = createActions(core, {
     touch: bus.touch,
     snapshot: bus.snapshot,
@@ -59,6 +70,32 @@ export function createGroupChatService(ctx: Context): GroupChatService {
   return {
     snapshot: bus.snapshot,
     handleAction: actions.handleAction,
+    async uploadImage(body: Record<string, unknown>): Promise<UploadResult> {
+      const res = await actions.uploadImage(body)
+      if (res.ok && res.image) uploaded.set(String(res.image.attachmentId), res.image)
+      return res
+    },
+    async readImage(attachmentId: string): Promise<{ data: Uint8Array, mediaType: ImageMediaType } | null> {
+      const attachments = core.attachments()
+      if (!attachments || !attachmentId) return null
+      // 授权：消息里引用过，或本进程刚上传（输入框预览）。不放行任意 id。
+      let ref: ImageAttachmentRef | undefined
+      for (const m of core.messages.values()) {
+        const hit = m.images?.find((r) => r.attachmentId === attachmentId)
+        if (hit) {
+          ref = hit
+          break
+        }
+      }
+      if (!ref) ref = uploaded.get(attachmentId)
+      if (!ref) return null
+      try {
+        const stored = await attachments.readImage(ref)
+        return { data: stored.data, mediaType: stored.ref.mediaType }
+      } catch {
+        return null
+      }
+    },
     subscribePush: bus.subscribePush,
     stopAll(): void {
       if (core.run.running) {

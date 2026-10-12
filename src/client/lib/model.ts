@@ -24,8 +24,25 @@ export type ClientSnapshot = Snapshot & { ok: boolean }
 export interface ModelsResponse {
   ok: boolean
   providers?: { id: string, name?: string }[]
-  modelsByProvider?: Record<string, { id: string, name?: string }[]>
+  /** inputModalities 由 harness 透传，是「该模型能否看图」的权威能力位。 */
+  modelsByProvider?: Record<string, { id: string, name?: string, inputModalities?: readonly string[] }[]>
   error?: string
+}
+
+/**
+ * 参与角色是否都支持图片输入（用于上传按钮的可用性）。
+ * 能力未知（无 models 目录 / 模型未声明 inputModalities）时不判为不支持。
+ */
+export function rolesAcceptImages(
+  roles: readonly { provider: string, model: string }[],
+  models: ModelsResponse | null,
+): boolean {
+  if (!models || !models.modelsByProvider) return true
+  return roles.every((r) => {
+    const entry = models.modelsByProvider?.[r.provider]?.find((m) => m.id === r.model)
+    if (!entry || !Array.isArray(entry.inputModalities)) return true
+    return entry.inputModalities.includes('image')
+  })
 }
 
 /** efforts action 的响应形态。 */

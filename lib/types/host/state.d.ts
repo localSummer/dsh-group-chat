@@ -28,6 +28,12 @@ export interface HostState {
     llm: Context['llm'];
     fs: Context['fs'];
     shell: Context['shell'];
+    /**
+     * durable 图片存储（dsh-base 默认挂载 attachment-local）。
+     * 惰性读取：cordis 的服务按 fiber 异步激活，构造时捕获可能拿到 undefined
+     * 且永不恢复；每次调用重读，缺位时图片功能走明确错误而非崩溃。
+     */
+    attachments: () => Context['attachments'] | undefined;
     groups: Map<string, GroupRecord>;
     sessions: Map<string, SessionRecord>;
     roles: Map<string, RoleRecord>;

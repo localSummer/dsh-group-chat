@@ -4,6 +4,7 @@
  */
 
 import type { ReactNode, CSSProperties } from 'react'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { WINDOW_SIZE } from '../../core/constraints.ts'
 import { Icon, P } from '../lib/ui.ts'
 import { Bubble } from './Bubble.tsx'
@@ -23,10 +24,11 @@ interface MessageFlowProps {
   onRetrySpeak: (messageId: string) => void
   /** 表情回应（用户标注）：经 Bubble/MsgActions 触发 toggle。 */
   onToggleReaction: (messageId: string, emoji: string) => void
+  onOpenImage: (image: ImageAttachmentRef) => void
 }
 
 export function MessageFlow(props: MessageFlowProps): ReactNode {
-  const { snap, sess, busyNow, msgById, action, onRetrySpeak, onToggleReaction } = props
+  const { snap, sess, busyNow, msgById, action, onRetrySpeak, onToggleReaction, onOpenImage } = props
 
   const bubbles: ReactNode[] = []
   const replaceId = busyNow ? snap.run.replaceMessageId : null
@@ -116,7 +118,7 @@ export function MessageFlow(props: MessageFlowProps): ReactNode {
         livePlaced = true
         continue
       }
-      bubbles.push(<Bubble key={m.id} m={m} role={role} busy={!!snap.run.running} onRetry={onRetrySpeak} onToggleReaction={onToggleReaction} />)
+      bubbles.push(<Bubble key={m.id} m={m} role={role} busy={!!snap.run.running} onRetry={onRetrySpeak} onToggleReaction={onToggleReaction} onOpenImage={onOpenImage} />)
     }
   }
 

@@ -6,8 +6,11 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-/** 请求体上限 1MB。 */
+/** 请求体上限 1MB（普通动作）。 */
 const BODY_LIMIT = 1024 * 1024
+
+/** 图片上传请求体上限：单张 20MB 原始字节经 base64 膨胀约 4/3，留余量。 */
+const UPLOAD_BODY_LIMIT = 28 * 1024 * 1024
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' }
 
@@ -60,16 +63,21 @@ export function isTrustedRequest(req: IncomingMessage): boolean {
 }
 
 /** 读有界 JSON 请求体；超限抛 'body-too-large'（路由映射 413）。 */
-export async function readBody(req: IncomingMessage): Promise<unknown> {
+export async function readBody(req: IncomingMessage, limit: number = BODY_LIMIT): Promise<unknown> {
   const chunks: Buffer[] = []
   let size = 0
   for await (const chunk of req) {
     const buffer = chunk as Buffer
     size += buffer.length
-    if (size > BODY_LIMIT) throw new Error('body-too-large')
+    if (size > limit) throw new Error('body-too-large')
     chunks.push(buffer)
   }
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+}
+
+/** 图片上传请求体读取（上限独立，避免普通动作被大体积上传拖累）。 */
+export function readUploadBody(req: IncomingMessage): Promise<unknown> {
+  return readBody(req, UPLOAD_BODY_LIMIT)
 }
 
 /** 写 JSON 响应；调用方可追加/覆盖默认头。 */

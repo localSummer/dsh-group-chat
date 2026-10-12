@@ -11,11 +11,23 @@
  * @module dsh-group-chat/host/service
  */
 import type { Context } from '@deepseek-ai/cordis';
-import type { Snapshot } from '../core/types.ts';
+import type { ImageMediaType } from '@deepseek-ai/dsh-attachment';
+import type { Snapshot, UploadResult } from '../core/types.ts';
 /** 服务对路由/入口暴露的面。 */
 export interface GroupChatService {
     snapshot(): Snapshot;
     handleAction(body: unknown): Promise<unknown>;
+    /** 图片上传：base64 → durable ref（独立路由，绕过 action 的 1MB 请求体上限）。 */
+    uploadImage(body: Record<string, unknown>): Promise<UploadResult>;
+    /**
+     * 读回一张已落盘图片的字节（客户端渲染用）。群聊消息不是 DSH session 事件，
+     * 走不了 harness 的 session 授权图片 URL，故由本插件自持读取面。只放行本插件
+     * 消息引用过的 id，以及本进程内刚上传、尚未写入消息的 id（输入框预览）。
+     */
+    readImage(attachmentId: string): Promise<{
+        data: Uint8Array;
+        mediaType: ImageMediaType;
+    } | null>;
     subscribePush(push: () => void): () => void;
     /** 设置停用时中止正在进行的群聊。 */
     stopAll(): void;

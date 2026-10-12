@@ -2,7 +2,8 @@
  * 消息输入编辑器组件
  * @module dsh-group-chat/client/components
  */
-import type { ReactNode, KeyboardEvent as ReactKeyboardEvent, ClipboardEvent as ReactClipboardEvent, DragEvent as ReactDragEvent } from 'react';
+import { type ReactNode, type KeyboardEvent as ReactKeyboardEvent, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import { type ClientSnapshot, type SnapshotRole } from '../lib/model.ts';
 import type { AtToken } from '../../shared/file-mention-grammar.ts';
 interface ComposerProps {
@@ -39,6 +40,16 @@ interface ComposerProps {
     onDragOverCE: (e: ReactDragEvent<HTMLDivElement>) => void;
     insertChip: (role: SnapshotRole) => void;
     insertFileChip: (path: string, kind: 'file' | 'directory') => void;
+    /** 选择/拖入图片文件（面板负责上传，Composer 只管转发 File[]）。 */
+    onImageFiles: (files: File[]) => void;
+    /** 有图片正在上传：禁用发送，避免图片静默丢失。 */
+    uploading: boolean;
+    /** 待发图片，显示在文本框上方。 */
+    images: ImageAttachmentRef[];
+    /** 按预览条上的下标移除。同一张图多次上传时 attachmentId 相同，不能按 id 删。 */
+    onRemoveImage: (index: number) => void;
+    /** 当前参与角色是否都支持图片（决定上传按钮可用性）。 */
+    imagesSupported: boolean;
     sendMsg: () => Promise<void>;
     stopRun: () => Promise<void>;
     mutate: (args: Record<string, unknown>) => Promise<unknown>;

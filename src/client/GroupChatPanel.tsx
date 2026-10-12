@@ -7,19 +7,39 @@
  * @module dsh-group-chat/client/panel
  */
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { Icon, P } from './lib/ui.ts'
 import { api } from './lib/api.ts'
 import { RoleDrawer } from './components/RoleDrawer.tsx'
 import { NavPanel } from './components/NavPanel.tsx'
 import { AsidePanel } from './components/AsidePanel.tsx'
 import { ChatPanel } from './components/ChatPanel.tsx'
+import { ImageLightbox } from './components/ImageLightbox.tsx'
 import { useGroupChatState, type ActionOk } from './hooks/useGroupChatState.ts'
 import { useComposerEffects, useComposerInput, useComposerDraft, useMentionChip, useInputKeyboard } from './hooks/useComposer.ts'
 import { useFileSearch } from './hooks/useFileSearch.ts'
 import { useMentionCandidates, useMentionedRoles, useSafeMentionIndex } from './hooks/useMentionState.ts'
-import { clearComposerDraft } from './lib/composer-draft.ts'
-import { draftFromRole, blankDraft, groupById, roleById, sessById, type ClientSnapshot, type ModelsResponse, type SnapshotRole } from './lib/model.ts'
+import { clearComposerDraft, writeComposerDraft } from './lib/composer-draft.ts'
+import { serializeInput } from './utils/utils.ts'
+import { draftFromRole, blankDraft, groupById, roleById, rolesAcceptImages, sessById, type ClientSnapshot, type ModelsResponse, type SnapshotRole } from './lib/model.ts'
+
+/** upload action 的响应形态。 */
+interface UploadResponse {
+  ok: boolean
+  image?: ImageAttachmentRef
+  error?: string
+}
+
+/** File → data URI（upload 端点的入参形态）。 */
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('读取图片失败'))
+    reader.readAsDataURL(file)
+  })
+}
 
 export function GroupChatPanel(): ReactNode {
   const state = useGroupChatState()
@@ -88,8 +108,49 @@ export function GroupChatPanel(): ReactNode {
     sess = group.sessionIds.length ? sessById(snap, group.sessionIds[group.sessionIds.length - 1]) : null
   }
 
-  const { syncFromDOM, onInputCE, onPasteCE, onDragOverCE, onDropCE } = useComposerInput(inputRef, setInput, setMention, setMentionIdx, sess ? sess.id : null)
-  useComposerDraft(sess ? sess.id : null, inputRef, setInput, setMention)
+  // 图片上传：文件 → upload 端点 → durable ref → 文本框上方的预览条。
+  // 上传中计数用于禁用发送（避免上传未完成就发送、图片静默丢失）。
+  const [uploading, setUploading] = useState(0)
+  const [pendingImages, setPendingImages] = useState<ImageAttachmentRef[]>([])
+  const [viewImage, setViewImage] = useState<ImageAttachmentRef | null>(null)
+  const imagesRef = useRef<ImageAttachmentRef[]>([])
+  const imagesSupportedRef = useRef(true)
+  const sessIdRef = useRef<string | null>(sess ? sess.id : null)
+  imagesRef.current = pendingImages
+  sessIdRef.current = sess ? sess.id : null
+
+  const commitImages = useCallback((next: ImageAttachmentRef[]): void => {
+    imagesRef.current = next
+    setPendingImages(next)
+    const el = inputRef.current
+    writeComposerDraft(sessIdRef.current, el ? el.innerHTML : '', el ? serializeInput(el) : '', next)
+  }, [inputRef])
+
+  const uploadImages = useCallback(async (files: File[]): Promise<void> => {
+    if (!imagesSupportedRef.current) {
+      setToast({ text: '当前参与角色不支持图片输入', seq: Date.now() })
+      return
+    }
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) continue
+      setUploading((n) => n + 1)
+      try {
+        const data = await readAsDataUrl(file)
+        const res = await api.upload({ data, mediaType: file.type, name: file.name }) as UploadResponse
+        if (res && res.ok && res.image) commitImages(imagesRef.current.concat([res.image]))
+        else setErr(res && res.error ? String(res.error) : '图片上传失败')
+      } catch (e) {
+        setErr(String((e && (e as Error).message) || e))
+      } finally {
+        setUploading((n) => n - 1)
+      }
+    }
+  }, [setErr, commitImages, setToast])
+
+  const { syncFromDOM, onInputCE, onPasteCE, onDragOverCE, onDropCE } = useComposerInput(
+    inputRef, setInput, setMention, setMentionIdx, sess ? sess.id : null, (files) => { void uploadImages(files) }, imagesRef,
+  )
+  useComposerDraft(sess ? sess.id : null, inputRef, setInput, setMention, imagesRef, setPendingImages)
 
   const enabledRoles = group ? group.roleIds.map((id) => roleById(snap!, id)).filter((r): r is SnapshotRole => !!r && r.enabled) : []
   const participants = partsSel || enabledRoles.map((r) => r.id)
@@ -115,12 +176,54 @@ export function GroupChatPanel(): ReactNode {
   
   const mentionedRoles = useMentionedRoles(input, enabledRoles)
 
+  // 模型目录拉取：图片能力判定（inputModalities）与角色抽屉共用。
+  // 必须是 useCallback 且声明在所有条件早退之前——下面的预载 effect 会引用它，
+  // 若声明在早退之后，首帧（snap 为 null 的冷启动）effect 会踩 TDZ 抛
+  // ReferenceError，而本面板无 ErrorBoundary，会整棵树白屏。
+  const fetchModels = useCallback(async (): Promise<void> => {
+    try {
+      const m = await api.action({ kind: 'models' }) as ModelsResponse
+      if (m && m.ok && Array.isArray(m.providers)) {
+        setModels(m)
+        setModelsError(null)
+        return
+      }
+      setModelsError(m && m.error ? String(m.error) : '响应异常')
+    } catch (e) {
+      setModelsError(String((e && (e as Error).message) || e))
+    }
+  }, [setModels, setModelsError])
+
+  // 图片可用性：本次实际发言的角色（@点名优先，否则勾选集合）是否都支持图片输入。
+  // 能力来自 harness 透传的 inputModalities；模型目录未加载时不判为不支持。
+  const speakingRoles = mentionedRoles.length ? mentionedRoles : enabledRoles.filter((r) => participants.includes(r.id))
+  const imagesSupported = rolesAcceptImages(speakingRoles, models)
+  imagesSupportedRef.current = imagesSupported
+
+  // 模型目录后台预载：图片能力判定需要 inputModalities（此前只在打开角色抽屉时才拉）
+  useEffect(() => {
+    if (!models && !modelsError) void fetchModels()
+  }, [fetchModels, models, modelsError])
+
   const { insertChip, insertFileChip } = useMentionChip(inputRef, setMention, setMentionIdx, syncFromDOM)
 
   const sendMsg = useCallback(async (): Promise<void> => {
     if (busyNow || !sess || sendingRef.current) return
-    // 空内容不可发送（按钮 disabled 之外，Enter 路径在此静默拦截）
-    if (!input.trim()) return
+    // 上传未完成不发：避免图片静默丢失（芯片还没插入）。按钮态已由 Composer 的
+    // disabled 反映，此处兜住 Enter 路径并给出提示，避免「按了没反应」。
+    if (uploading > 0) {
+      setToast({ text: '图片上传中，请稍候', seq: Date.now() })
+      return
+    }
+    const el = inputRef.current
+    const images = imagesRef.current
+    // 已选图片但当前发言角色有人不支持：不自动删图，拒绝发送，让用户自己移除或换角色。
+    if (images.length > 0 && !imagesSupported) {
+      setToast({ text: '当前参与角色不支持图片，请先移除后再发送', seq: Date.now() })
+      return
+    }
+    // 空内容不可发送（纯图片消息允许：有图即可）
+    if (!input.trim() && images.length === 0) return
     sendingRef.current = true
     try {
       if (!participants.length && !mentionedRoles.length) {
@@ -128,10 +231,18 @@ export function GroupChatPanel(): ReactNode {
         return
       }
       const parts = mentionedRoles.length ? mentionedRoles.map((r) => r.id) : participants
-      const res = await action({ kind: 'send', sessionId: sess.id, text: input, participantRoleIds: parts, rounds }) as ActionOk | null
+      const res = await action({
+        kind: 'send',
+        sessionId: sess.id,
+        text: input,
+        images: images.length > 0 ? images : undefined,
+        participantRoleIds: parts,
+        rounds,
+      }) as ActionOk | null
       if (res && !res.ok && res.error) setErr(res.error)
       else if (res && res.ok) {
-        const el = inputRef.current
+        imagesRef.current = []
+        setPendingImages([])
         if (el) el.innerHTML = ''
         setInput('')
         setMention(null)
@@ -143,7 +254,7 @@ export function GroupChatPanel(): ReactNode {
     } finally {
       sendingRef.current = false
     }
-  }, [busyNow, sess, sendingRef, mentionedRoles, participants, action, rounds, input, inputRef, setInput, setMention, setErr, setAtBottom, syncFromDOM])
+  }, [busyNow, sess, sendingRef, uploading, imagesSupported, mentionedRoles, participants, action, rounds, input, inputRef, setInput, setMention, setErr, setAtBottom, syncFromDOM])
 
   const { onInputKeyDown } = useInputKeyboard(mention, mentionCandidates, mentionIdxC, setMentionIdx, insertChip, insertFileChip, fileCandidates, setMention, sendMsg)
 
@@ -205,20 +316,6 @@ export function GroupChatPanel(): ReactNode {
   }
 
   // ---- 动作 ----
-  const fetchModels = async (): Promise<void> => {
-    try {
-      const m = await api.action({ kind: 'models' }) as ModelsResponse
-      if (m && m.ok && Array.isArray(m.providers)) {
-        setModels(m)
-        setModelsError(null)
-        return
-      }
-      setModelsError(m && m.error ? String(m.error) : '响应异常')
-    } catch (e) {
-      setModelsError(String((e && (e as Error).message) || e))
-    }
-  }
-
   // 抽屉即时滑出；模型目录后台补载，抽屉内自带「加载中/失败重试」态，
   // 不让网络往返把入场卡成「无反馈→突然闪现」
   const openRoleEditor = (role: SnapshotRole | null): void => {
@@ -291,6 +388,12 @@ export function GroupChatPanel(): ReactNode {
         onDragOverCE={onDragOverCE}
         insertChip={insertChip}
         insertFileChip={insertFileChip}
+        onImageFiles={(files) => { void uploadImages(files) }}
+        uploading={uploading > 0}
+        images={pendingImages}
+        onRemoveImage={(index) => { commitImages(pendingImages.filter((_, i) => i !== index)) }}
+        imagesSupported={imagesSupported}
+        onOpenImage={setViewImage}
         sendMsg={sendMsg}
         stopRun={stopRun}
         action={action}
@@ -351,6 +454,15 @@ export function GroupChatPanel(): ReactNode {
             onRetryModels={() => { fetchModels() }}
             mutate={mutate}
             onCancel={() => { setRoleDraft(null) }}
+          />
+          )
+        : null}
+      {viewImage
+        ? (
+          <ImageLightbox
+            src={api.imageUrl(String(viewImage.attachmentId))}
+            name={viewImage.name || '图片'}
+            onClose={() => { setViewImage(null) }}
           />
           )
         : null}

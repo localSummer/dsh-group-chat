@@ -8,6 +8,7 @@
  * @module dsh-group-chat/client/Bubble
  */
 import { type ReactNode } from 'react';
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import { type SnapshotRole } from '../lib/model.ts';
 import type { SnapshotMessage } from '../lib/model.ts';
 export interface BubbleProps {
@@ -18,7 +19,8 @@ export interface BubbleProps {
     onRetry?: (messageId: string) => void;
     /** 表情回应（用户标注）经稳定回调下传；失败卡与系统通知不提供。 */
     onToggleReaction?: (messageId: string, emoji: string) => void;
+    onOpenImage?: (image: ImageAttachmentRef) => void;
 }
-declare function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps): ReactNode;
+declare function BubbleInner({ m, role, busy, onRetry, onToggleReaction, onOpenImage }: BubbleProps): ReactNode;
 export declare const Bubble: import("react").MemoExoticComponent<typeof BubbleInner>;
 export {};

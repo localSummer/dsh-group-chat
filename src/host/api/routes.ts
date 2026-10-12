@@ -2,12 +2,14 @@
  * HTTP 路由（经 webServer 暴露）：
  *   GET  /api/group-chat/state   全量快照
  *   POST /api/group-chat/action   { kind: mutate|send|stop|confirmCommand|models|efforts|browse|fileSearch, ... }
+ *   POST /api/group-chat/upload   { data, mediaType, name } → durable 图片引用
+ *   GET  /api/group-chat/image/<attachmentId>   图片字节（客户端渲染用）
  *   GET  /api/group-chat/events   SSE，状态变化时推送节流后的全量快照
  * @module dsh-group-chat/host/api/routes
  */
 
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
-import { isTrustedRequest, readBody, writeJson } from './http.ts'
+import { isTrustedRequest, readBody, readUploadBody, writeJson } from './http.ts'
 import type { GroupChatService } from '../service.ts'
 
 const API_PREFIX = '/api/group-chat'
@@ -50,6 +52,39 @@ export function makeGroupChatRoutes(service: GroupChatService): WebRoute[] {
           const message = e instanceof Error ? e.message : String(e)
           writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
         }
+      },
+    },
+    {
+      kind: 'exact',
+      path: API_PREFIX + '/upload',
+      handler: async (req, res) => {
+        if (req.method !== 'POST') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+        if (!guard(req, res)) return
+        if (!String(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+          return writeJson(res, 415, { ok: false, error: 'json-required' })
+        }
+        try {
+          const body = await readUploadBody(req)
+          writeJson(res, 200, await service.uploadImage(body as Record<string, unknown>), { 'cache-control': 'no-store' })
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e)
+          writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
+        }
+      },
+    },
+    {
+      kind: 'prefix',
+      path: API_PREFIX + '/image',
+      handler: async (req, res) => {
+        if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+        if (!guard(req, res)) return
+        const id = decodeURIComponent((req.url || '').slice(API_PREFIX.length + '/image/'.length).split('?')[0])
+        const image = await service.readImage(id)
+        if (!image) return writeJson(res, 404, { ok: false, error: 'not-found' })
+        // 短 TTL 而非 immutable/1 年：字节不可变值得缓存（避免每次渲染重取），
+        // 但清空消息承诺「永久删除」，长缓存会让已删消息的图在浏览器里长期驻留
+        res.writeHead(200, { 'content-type': image.mediaType, 'cache-control': 'private, max-age=300' })
+        res.end(Buffer.from(image.data))
       },
     },
     {

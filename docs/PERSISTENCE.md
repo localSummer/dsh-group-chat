@@ -139,6 +139,28 @@ grill-me 确认项：
 | `toolCalls` | `{tool,args,status,output,durationMs?}[]` | ✗ | 工具调用记录；无则省略 |
 | `reactions` | string[] | ✗ | 用户表情回应（标注用，不注入角色上下文）；白名单 `REACTION_EMOJIS`（👍 👎 ❤️ 😂 🤔 🎉），空则省略 |
 | `durationMs` | number | ✗ | 该次发言的生成总耗时（回话开始 → 落卡时刻）；≤0/缺省省略；用户/系统消息无 |
+| `images` | `ImageAttachmentRef[]` | ✗ | 用户消息的图片附件（durable 引用，非字节）；空则省略 |
+
+图片附件（`images`，可选）：
+
+只存 **durable 引用**，不存图片字节。字节由 harness 的 attachment 服务持有
+（`~/.dsh/attachments/v1/`，经 `ctx.attachments` 访问），插件侧只落一份可序列化的
+`ImageAttachmentRef`：
+
+```json
+{ "attachmentId": "…", "mediaType": "image/png", "bytes": 12345, "width": 800, "height": 600, "name": "shot.png" }
+```
+
+- **为什么不内联 base64**：图片进会话 JSON 会让单文件膨胀到几十 MB（原子写要整文件
+  重写）、SSE 全量快照每次广播都带字节。走 attachment 服务后快照只推引用。
+- `mediaType` 限定 PNG / JPEG / WebP / GIF（`IMAGE_MEDIA_TYPES`，挡 SVG 等可执行格式）；
+  `saveImage` 会校验声明类型与实际字节一致，不一致则拒绝（不污染存储）。
+- 归一化（尺寸/字节上限、EXIF 方向、降采样）由 attachment 服务承担，插件不做。
+- hydrate 走 `sanitizeImages`：逐条校验 `attachmentId` / `mediaType` / `bytes` / `width` /
+  `height` 齐全，残缺条目丢弃；全空则省略字段。
+- 快照推 `images`（客户端据此渲染缩略图，字节另经 `GET /api/group-chat/image/<id>` 读取）。
+- 仅用户消息携带；角色上下文只注入**本次 run** 的图片（历史图片在 transcript 里留
+  「［附 N 张图片］」文本标记，不重复注入）。
 
 会话级约束备忘（可选，schema 仍为 1）：
 
@@ -153,6 +175,7 @@ grill-me 确认项：
 - `error: true` 标记发言失败卡；现形态 `speaker` 为角色 id，并写可选 `failedRoleId`（刷新后可重试）。兼容读取旧系统错误行（`speaker:"system"` + `error:true`、文案「角色「名」发言失败：…」）：hydrate 时按群内恰好一名命中迁到该角色并补 `failedRoleId`、剥前缀；对不上则保留系统行。客户端同样按角色名解析，重试按钮不依赖重启。可选字段无则省略
 - `constraints` hydrate 走 `sanitizeConstraints`（非法 kind / 空 text 丢条目；最多 12 条、总长 1200）；快照只推 `constraints`，不推水位
 - `reactions` hydrate 走 `sanitizeReactions`（白名单过滤 + 去重 + 按白名单顺序排列；全非法/空 → 省略字段）；`reactMessage` 为 toggle 语义（已带移除、未带按白名单顺序并入），原地重试覆盖消息正文时保留该字段
+- `images` hydrate 走 `sanitizeImages`（逐条校验引用字段齐全，残缺丢弃；全空 → 省略字段）。图片字节不在本存储内，引用指向 harness attachment 服务；引用失效时客户端缩略图 404，消息其余内容不受影响
 - `clearMessages` 同时清 `constraints` 与 `constraintsUpToSeq`
 
 ### 3.4 workspaceDir（群组工作区目录设置）

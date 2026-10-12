@@ -73,11 +73,16 @@ export function speakerLabel(speaker: string, roleName?: string): string {
   return roleName || '成员'
 }
 
-/** 单条消息压成 transcript 行（正文 8k + 工具一行摘要）。 */
+/** 单条消息压成 transcript 行（正文 8k + 工具一行摘要 + 图片计数标记）。 */
 export function formatTranscriptLine(m: MessageRecord, name: string): string {
   let text = m.text || ''
   if (text.length > 8000) text = text.slice(0, 8000) + '…(已截断)'
   let line = '【' + name + '】' + text
+  // 历史消息中的图片只留标记：真实图片块只随本次 run 注入（避免每轮重发历史图，
+  // 与 harness 的图片 offload 语义一致）
+  if (Array.isArray(m.images) && m.images.length > 0) {
+    line += (text ? ' ' : '') + '［附 ' + m.images.length + ' 张图片］'
+  }
   if (Array.isArray(m.toolCalls)) {
     for (const c of m.toolCalls) {
       if (!c || typeof c.tool !== 'string') continue

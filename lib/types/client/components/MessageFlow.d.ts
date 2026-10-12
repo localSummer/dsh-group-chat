@@ -3,6 +3,7 @@
  * @module dsh-group-chat/client/components
  */
 import type { ReactNode } from 'react';
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import { type ClientSnapshot } from '../lib/model.ts';
 interface MessageFlowProps {
     snap: ClientSnapshot;
@@ -13,6 +14,7 @@ interface MessageFlowProps {
     onRetrySpeak: (messageId: string) => void;
     /** 表情回应（用户标注）：经 Bubble/MsgActions 触发 toggle。 */
     onToggleReaction: (messageId: string, emoji: string) => void;
+    onOpenImage: (image: ImageAttachmentRef) => void;
 }
 export declare function MessageFlow(props: MessageFlowProps): ReactNode;
 export {};

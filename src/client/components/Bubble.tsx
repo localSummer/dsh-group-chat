@@ -9,7 +9,9 @@
  */
 
 import { memo, type ReactNode } from 'react'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { P } from '../lib/ui.ts'
+import { api } from '../lib/api.ts'
 import { classifySpeakFailure, formatSpeakFailureCopy, isSpeakFailure } from '../../core/errors.ts'
 import { fmtClock, MD_LABELS, type SnapshotRole } from '../lib/model.ts'
 import type { SnapshotMessage } from '../lib/model.ts'
@@ -26,9 +28,10 @@ export interface BubbleProps {
   onRetry?: (messageId: string) => void
   /** 表情回应（用户标注）经稳定回调下传；失败卡与系统通知不提供。 */
   onToggleReaction?: (messageId: string, emoji: string) => void
+  onOpenImage?: (image: ImageAttachmentRef) => void
 }
 
-function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps): ReactNode {
+function BubbleInner({ m, role, busy, onRetry, onToggleReaction, onOpenImage }: BubbleProps): ReactNode {
   const isUser = m.speaker === 'user'
   const isFail = isSpeakFailure(m)
   const isSys = m.speaker === 'system' && !isFail && !role
@@ -61,7 +64,34 @@ function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps):
         {isFail
           ? <FailCard raw={m.text} />
           : isUser
-            ? <div className="dsgc-msgtext">{m.text}</div>
+            ? (
+              <>
+                {m.text ? <div className="dsgc-msgtext">{m.text}</div> : null}
+                {Array.isArray(m.images) && m.images.length > 0
+                  ? (
+                    <div className="dsgc-msgimages">
+                      {m.images.map((img, index) => (
+                        <button
+                          key={String(img.attachmentId) + ':' + index}
+                          type="button"
+                          className="dsgc-msgimagebtn"
+                          aria-label={img.name || '查看图片'}
+                          onClick={() => { if (onOpenImage) onOpenImage(img) }}
+                        >
+                          <img
+                            className="dsgc-msgimage"
+                            src={api.imageUrl(String(img.attachmentId))}
+                            alt={img.name || '图片'}
+                            width={72}
+                            height={72}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    )
+                  : null}
+              </>
+              )
             : (
               <div className="dsgc-msgtext">
                 {m.reasoning ? <ThinkRow text={m.reasoning} /> : null}
@@ -86,7 +116,7 @@ function BubbleInner({ m, role, busy, onRetry, onToggleReaction }: BubbleProps):
 
 /** 渲染相关字段的值比较（消息不可变；角色仅名/色参与渲染）。 */
 function bubblePropsEqual(a: BubbleProps, b: BubbleProps): boolean {
-  if (a.busy !== b.busy || (a.onRetry == null) !== (b.onRetry == null) || (a.onToggleReaction == null) !== (b.onToggleReaction == null)) return false
+  if (a.busy !== b.busy || (a.onRetry == null) !== (b.onRetry == null) || (a.onToggleReaction == null) !== (b.onToggleReaction == null) || (a.onOpenImage == null) !== (b.onOpenImage == null)) return false
   const x = a.m
   const y = b.m
   if (x !== y) {
@@ -94,6 +124,9 @@ function bubblePropsEqual(a: BubbleProps, b: BubbleProps): boolean {
     const ra = Array.isArray(x.reactions) ? x.reactions.join('') : ''
     const rb = Array.isArray(y.reactions) ? y.reactions.join('') : ''
     if (ra !== rb) return false
+    const ia = Array.isArray(x.images) ? x.images.map((i) => i.attachmentId).join('\u0000') : ''
+    const ib = Array.isArray(y.images) ? y.images.map((i) => i.attachmentId).join('\u0000') : ''
+    if (ia !== ib) return false
     const ta = Array.isArray(x.toolCalls) ? x.toolCalls : []
     const tb = Array.isArray(y.toolCalls) ? y.toolCalls : []
     if (ta.length !== tb.length) return false
